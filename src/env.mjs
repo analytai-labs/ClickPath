@@ -1,0 +1,93 @@
+import { createEnv } from "@t3-oss/env-nextjs";
+import { z } from "zod";
+
+export const env = createEnv({
+  /**
+   * Specify your server-side environment variables schema here. This way you can ensure the app
+   * isn't built with invalid env vars.
+   */
+  server: {
+    DATABASE_URL: z
+      .string()
+      .url()
+      .refine(
+        (str) => !str.includes("YOUR_DATABASE_URL_HERE"),
+        "You forgot to change the default URL"
+      ),
+    GEOLOCATION_API_KEY: z.string().optional(),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    RESEND_API_KEY: z.string().optional(),
+    WEBHOOK_SECRET: z.string().optional(),
+    REDIS_URL: z.string().url(),
+    UMAMI_TRACKING_ID: z.string().optional(),
+    UMAMI_URL: z.string().url().optional(),
+    DISCORD_WEBHOOK_URL: z.string().url().optional(),
+    // Google Safe Browsing & Web Risk (same key, Web Risk requires billing enabled)
+    GOOGLE_SAFE_BROWSING_API_KEY: z.string().optional(),
+    // Cloudflare R2 Storage (S3-compatible)
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET_NAME: z.string().optional(),
+    R2_PUBLIC_URL: z.string().url().optional(),
+    // Secret key used to HMAC visitor IPs before storage.
+    // Optional for backwards compatibility — when unset, we fall back to plain
+    // SHA-256, which preserves old behavior but is trivially reversible.
+    IP_HASH_SECRET: z.string().min(16).optional(),
+    // Secret key used to HMAC-sign verified-click tokens issued to destination-page
+    // beacons. Optional: when unset, tokens are not issued and no verification
+    // events are accepted — the feature is effectively disabled.
+    VERIFIED_CLICKS_SECRET: z.string().min(32).optional(),
+  },
+
+  /**
+   * Specify your client-side environment variables schema here. This way you can ensure the app
+   * isn't built with invalid env vars. To expose them to the client, prefix them with
+   * `NEXT_PUBLIC_`.
+   */
+  client: {
+    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_APP_URL: z.string().url(),
+  },
+
+  /**
+   * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
+   * middlewares) or client-side so we need to destruct manually.
+   */
+  runtimeEnv: {
+    // Server-side env vars
+    DATABASE_URL: process.env.DATABASE_URL,
+    GEOLOCATION_API_KEY: process.env.GEOLOCATION_API_KEY,
+    NODE_ENV: process.env.NODE_ENV,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    WEBHOOK_SECRET: process.env.WEBHOOK_SECRET,
+    REDIS_URL: process.env.REDIS_URL,
+    UMAMI_TRACKING_ID: process.env.UMAMI_TRACKING_ID,
+    UMAMI_URL: process.env.UMAMI_URL,
+    DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
+    // Google Safe Browsing & Web Risk
+    GOOGLE_SAFE_BROWSING_API_KEY: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
+    // Cloudflare R2 Storage
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
+    R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
+    IP_HASH_SECRET: process.env.IP_HASH_SECRET,
+    VERIFIED_CLICKS_SECRET: process.env.VERIFIED_CLICKS_SECRET,
+    // Client-side env vars
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  },
+  /**
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
+   * useful for Docker builds.
+   */
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  /**
+   * Makes it so that empty strings are treated as undefined.
+   * `SOME_VAR: z.string()` and `SOME_VAR=''` will throw an error.
+   */
+  emptyStringAsUndefined: true,
+});
