@@ -1,11 +1,8 @@
-import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { getPlanCaps, isUnlimitedDomains, resolvePlan } from "@/lib/billing/plans";
 import { logger } from "@/lib/logger";
 import { createTRPCRouter, workspaceProcedure } from "@/server/api/trpc";
-import { customDomain } from "@/server/db/schema";
-import { workspaceFilter } from "@/server/lib/workspace";
 
 import * as input from "./domains.input";
 import * as services from "./domains.service";
@@ -16,20 +13,18 @@ export const customDomainRouter = createTRPCRouter({
   create: workspaceProcedure
     .input(input.createCustomDomainSchema)
     .mutation(async ({ ctx, input }) => {
-      const user = await ctx.db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, ctx.auth.userId),
-        with: { subscriptions: true },
+      const user = await ctx.prisma.user.findFirst({
+        where: { id: ctx.auth.userId },
+        include: { subscription: true },
       });
 
-      const plan = resolvePlan(user?.subscriptions);
+      const plan = resolvePlan(user?.subscription);
 
       if (!isUnlimitedDomains(plan)) {
         const caps = getPlanCaps(plan);
-        const domainCount = await ctx.db
-          .select({ count: count() })
-          .from(customDomain)
-          .where(workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId))
-          .then((res) => res[0]?.count ?? 0);
+        const domainCount = await ctx.prisma.customDomain.count({
+          where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }
+        });
 
         if (domainCount >= (caps.domainLimit ?? 0)) {
            throw new Error(
@@ -147,13 +142,16 @@ export const customDomainRouter = createTRPCRouter({
         );
 
         if (domainData.verified) {
-          await ctx.db
-            .update(customDomain)
-            .set({
+          await ctx.prisma.customDomain.updateMany({
+            where: {
+              domain,
+              ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+            },
+            data: {
               status,
-              verificationDetails: JSON.stringify(verificationDetails.challenges),
-            })
-            .where(and(eq(customDomain.domain, domain), workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId)));
+              verificationDetails: verificationDetails.challenges,
+            }
+          });
         }
 
         return {
@@ -164,10 +162,13 @@ export const customDomainRouter = createTRPCRouter({
 
       if (configData.misconfigured === false) {
         // everything is all clear
-        await ctx.db
-          .update(customDomain)
-          .set({ status: "active" })
-          .where(and(eq(customDomain.domain, domain), workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId)));
+        await ctx.prisma.customDomain.updateMany({
+          where: {
+            domain,
+            ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+          },
+          data: { status: "active" }
+        });
 
         return {
           status: "active",

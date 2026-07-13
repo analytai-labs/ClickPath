@@ -1,11 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, inArray, ne, sum } from "drizzle-orm";
 
 import { isSubscriptionEntitled, PLAN_CAPS, resolvePlan } from "@/lib/billing/plans";
-import { customDomain, link, linkVisit, linkVisitDailySummary } from "@/server/db/schema";
 import {
   requirePermission,
-  workspaceFilter,
   workspaceOwnership,
 } from "@/server/lib/workspace";
 
@@ -24,8 +21,8 @@ export async function addDomainToUserAccount(
 
   const userId = ctx.auth.userId;
 
-  const userSubscription = await ctx.db.query.subscription.findFirst({
-    where: (table, { eq }) => eq(table.userId, userId),
+  const userSubscription = await ctx.prisma.subscription.findFirst({
+    where: { userId },
   });
 
   if (!isSubscriptionEntitled(userSubscription)) {
@@ -37,12 +34,9 @@ export async function addDomainToUserAccount(
   const domainLimit = PLAN_CAPS[plan].domainLimit;
 
   if (domainLimit !== undefined) {
-    const existingDomainsCount = await ctx.db
-      .select({ count: count() })
-      .from(customDomain)
-      .where(workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId));
-
-    const existingCount = existingDomainsCount[0]?.count ?? 0;
+    const existingCount = await ctx.prisma.customDomain.count({
+      where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }
+    });
 
     if (existingCount >= domainLimit) {
       throw new Error(
@@ -57,11 +51,11 @@ export async function addDomainToUserAccount(
   const ownership = workspaceOwnership(ctx.workspace);
 
   // Check if the domain already exists in the current workspace
-  const existingDomainInWorkspace = await ctx.db.query.customDomain.findFirst({
-    where: and(
-      eq(customDomain.domain, domain),
-      workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId)
-    ),
+  const existingDomainInWorkspace = await ctx.prisma.customDomain.findFirst({
+    where: {
+      domain,
+      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+    }
   });
 
   if (existingDomainInWorkspace) {
@@ -106,12 +100,14 @@ export async function addDomainToUserAccount(
         return challenge;
       }) ?? [];
 
-      await ctx.db.insert(customDomain).values({
-        userId: ownership.userId,
-        teamId: ownership.teamId,
-        domain: domain,
-        status: wellConfigured ? "active" : "pending",
-        verificationDetails: verificationDetails,
+      await ctx.prisma.customDomain.create({
+        data: {
+          userId: ownership.userId,
+          teamId: ownership.teamId,
+          domain: domain,
+          status: wellConfigured ? "active" : "pending",
+          verificationDetails: verificationDetails,
+        }
       });
 
       return { success: true };
@@ -152,12 +148,14 @@ export async function addDomainToUserAccount(
       wellConfigured = !data.misconfigured;
     }
 
-    await ctx.db.insert(customDomain).values({
-      userId: ownership.userId,
-      teamId: ownership.teamId,
-      domain: domain,
-      status: wellConfigured ? "active" : "pending",
-      verificationDetails: verificationDetails,
+    await ctx.prisma.customDomain.create({
+      data: {
+        userId: ownership.userId,
+        teamId: ownership.teamId,
+        domain: domain,
+        status: wellConfigured ? "active" : "pending",
+        verificationDetails: verificationDetails,
+      }
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -170,8 +168,8 @@ export async function addDomainToUserAccount(
 }
 
 export async function getCustomDomainsForUser(ctx: WorkspaceTRPCContext) {
-  const customDomains = await ctx.db.query.customDomain.findMany({
-    where: workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId),
+  const customDomains = await ctx.prisma.customDomain.findMany({
+    where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }
   });
 
   return customDomains;
@@ -181,11 +179,13 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
   // Check permission for domain deletion (owners only in team workspaces)
   requirePermission(ctx.workspace, "domains.delete", "delete custom domains. Only team owners can manage domains");
 
-  const domain = await ctx.db.query.customDomain.findFirst({
-    where: and(
-      eq(customDomain.id, domainId),
-      workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId)
-    ),
+  const workspaceWhere = ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null };
+
+  const domain = await ctx.prisma.customDomain.findFirst({
+    where: {
+      id: domainId,
+      ...workspaceWhere
+    }
   });
 
   if (!domain) {
@@ -196,29 +196,39 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
   }
 
   // Start a transaction to ensure all operations succeed or fail together
-  return await ctx.db.transaction(async (tx) => {
+  return await ctx.prisma.$transaction(async (tx) => {
     // Delete all links associated with this domain
-    const linksToDelete = await tx
-      .select({ id: link.id })
-      .from(link)
-      .where(and(eq(link.domain, domain.domain!), workspaceFilter(ctx.workspace, link.userId, link.teamId)));
+    const linksToDelete = await tx.link.findMany({
+      where: {
+        domain: domain.domain!,
+        ...workspaceWhere
+      },
+      select: { id: true }
+    });
 
     const linkIds = linksToDelete.map((link) => link.id);
 
     // delete all link visits
     if (linkIds.length > 0) {
-      await tx.delete(linkVisit).where(inArray(linkVisit.linkId, linkIds));
+      await tx.linkVisit.deleteMany({
+        where: { linkId: { in: linkIds } }
+      });
     }
 
     // delete all links
-    await tx.delete(link).where(and(eq(link.domain, domain.domain!), workspaceFilter(ctx.workspace, link.userId, link.teamId)));
+    await tx.link.deleteMany({
+      where: {
+        domain: domain.domain!,
+        ...workspaceWhere
+      }
+    });
 
     // Check if other workspaces are using this domain BEFORE deleting
-    const otherWorkspacesUsingDomain = await tx.query.customDomain.findFirst({
-      where: and(
-        eq(customDomain.domain, domain.domain!),
-        ne(customDomain.id, domainId)
-      ),
+    const otherWorkspacesUsingDomain = await tx.customDomain.findFirst({
+      where: {
+        domain: domain.domain!,
+        id: { not: domainId }
+      }
     });
 
     // If no other workspaces use this domain, delete from Vercel first
@@ -227,21 +237,28 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
     }
 
     // Delete the domain record from our database
-    await tx.delete(customDomain).where(eq(customDomain.id, domainId));
+    await tx.customDomain.delete({
+      where: { id: domainId }
+    });
 
     return { success: true, message: "Domain and associated links deleted successfully" };
   });
 }
 
 export async function getDomainStatistics(ctx: WorkspaceTRPCContext, domain: string) {
+  const workspaceWhere = ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null };
+
   // Get all links for this domain in the current workspace
-  const domainLinks = await ctx.db
-    .select({
-      id: link.id,
-      createdAt: link.createdAt,
-    })
-    .from(link)
-    .where(and(eq(link.domain, domain), workspaceFilter(ctx.workspace, link.userId, link.teamId)));
+  const domainLinks = await ctx.prisma.link.findMany({
+    where: {
+      domain,
+      ...workspaceWhere
+    },
+    select: {
+      id: true,
+      createdAt: true
+    }
+  });
 
   const linkIds = domainLinks.map((l) => l.id);
 
@@ -252,19 +269,17 @@ export async function getDomainStatistics(ctx: WorkspaceTRPCContext, domain: str
   // analytics cleanup job)
   let totalClicks = 0;
   if (linkIds.length > 0) {
-    const [clicksResult, archivedResult] = await Promise.all([
-      ctx.db
-        .select({ count: count() })
-        .from(linkVisit)
-        .where(inArray(linkVisit.linkId, linkIds)),
-      ctx.db
-        .select({ total: sum(linkVisitDailySummary.clicks) })
-        .from(linkVisitDailySummary)
-        .where(inArray(linkVisitDailySummary.linkId, linkIds)),
+    const [clicksCount, archivedResult] = await Promise.all([
+      ctx.prisma.linkVisit.count({
+        where: { linkId: { in: linkIds } }
+      }),
+      ctx.prisma.linkVisitDailySummary.aggregate({
+        _sum: { clicks: true },
+        where: { linkId: { in: linkIds } }
+      })
     ]);
 
-    totalClicks =
-      (clicksResult[0]?.count ?? 0) + (Number(archivedResult[0]?.total) || 0);
+    totalClicks = clicksCount + (Number(archivedResult._sum.clicks) || 0);
   }
 
   // Find last used date (most recent link creation)

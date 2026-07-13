@@ -1,12 +1,13 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { Prisma } from "@prisma/client";
 
-import { link, linkTag, tag } from "@/server/db/schema";
-import {
-  workspaceFilter,
-  workspaceOwnership,
-} from "@/server/lib/workspace";
+import { workspaceOwnership } from "@/server/lib/workspace";
 
-import type { ProtectedTRPCContext, WorkspaceTRPCContext } from "../../trpc";
+import type { WorkspaceTRPCContext } from "../../trpc";
+
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) => 
+  workspace.type === "team" 
+    ? { teamId: workspace.teamId } 
+    : { userId: workspace.userId, teamId: null };
 
 // Create a new tag if it doesn't exist
 // Uses transaction to prevent race conditions for personal workspace tags
@@ -19,11 +20,11 @@ export const createTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
   // For personal workspaces, we need atomic check-and-insert
   if (ctx.workspace.type === "team") {
     // Check if tag already exists for this team
-    const existingTag = await ctx.db.query.tag.findFirst({
-      where: and(
-        eq(tag.name, normalizedName),
-        eq(tag.teamId, ctx.workspace.teamId)
-      ),
+    const existingTag = await ctx.prisma.tag.findFirst({
+      where: {
+        name: normalizedName,
+        teamId: ctx.workspace.teamId,
+      },
     });
 
     if (existingTag) {
@@ -34,40 +35,23 @@ export const createTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
     // Handle race condition: if another request creates the tag between our check and insert,
     // catch the duplicate key error and return the existing tag
     try {
-      const [result] = await ctx.db.insert(tag).values({
-        name: normalizedName,
-        userId: ownership.userId,
-        teamId: ownership.teamId,
+      const createdTag = await ctx.prisma.tag.create({
+        data: {
+          name: normalizedName,
+          userId: ownership.userId,
+          teamId: ownership.teamId,
+        },
       });
 
-      return {
-        id: result.insertId,
-        name: normalizedName,
-        userId: ownership.userId,
-        teamId: ownership.teamId,
-      };
+      return createdTag;
     } catch (error) {
-      // Check if this is a duplicate key error (MySQL error code 1062).
-      // drizzle-orm >= 0.44 wraps driver errors in DrizzleQueryError, so the
-      // original mysql2 error lives at error.cause.
-      const cause =
-        error instanceof Error && error.cause instanceof Error
-          ? error.cause
-          : error;
-      const isDuplicateKey = (candidate: unknown) =>
-        candidate instanceof Error &&
-        (candidate.message.includes("Duplicate entry") ||
-          candidate.message.includes("ER_DUP_ENTRY") ||
-          (candidate as { code?: string }).code === "ER_DUP_ENTRY");
-      const isDuplicateKeyError = isDuplicateKey(error) || isDuplicateKey(cause);
-
-      if (isDuplicateKeyError) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         // Another request created the tag concurrently, fetch and return it
-        const createdTag = await ctx.db.query.tag.findFirst({
-          where: and(
-            eq(tag.name, normalizedName),
-            eq(tag.teamId, ctx.workspace.teamId)
-          ),
+        const createdTag = await ctx.prisma.tag.findFirst({
+          where: {
+            name: normalizedName,
+            teamId: ctx.workspace.teamId,
+          },
         });
 
         if (createdTag) {
@@ -82,14 +66,14 @@ export const createTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
 
   // Personal workspace: use transaction for atomic check-and-insert
   // This prevents race conditions since MySQL allows multiple NULL values in unique constraint
-  return ctx.db.transaction(async (tx) => {
+  return ctx.prisma.$transaction(async (tx) => {
     // Check if tag already exists for this user's personal workspace
-    const existingTag = await tx.query.tag.findFirst({
-      where: and(
-        eq(tag.name, normalizedName),
-        eq(tag.userId, ctx.auth.userId),
-        isNull(tag.teamId) // Personal workspace has null teamId
-      ),
+    const existingTag = await tx.tag.findFirst({
+      where: {
+        name: normalizedName,
+        userId: ctx.auth.userId,
+        teamId: null,
+      },
     });
 
     if (existingTag) {
@@ -97,26 +81,23 @@ export const createTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
     }
 
     // Create new tag within transaction
-    const [result] = await tx.insert(tag).values({
-      name: normalizedName,
-      userId: ownership.userId,
-      teamId: null,
+    const createdTag = await tx.tag.create({
+      data: {
+        name: normalizedName,
+        userId: ownership.userId,
+        teamId: null,
+      },
     });
 
-    return {
-      id: result.insertId,
-      name: normalizedName,
-      userId: ownership.userId,
-      teamId: null,
-    };
+    return createdTag;
   });
 };
 
 // Get all tags for a workspace
 export const getUserTags = async (ctx: WorkspaceTRPCContext) => {
-  return ctx.db.query.tag.findMany({
-    where: workspaceFilter(ctx.workspace, tag.userId, tag.teamId),
-    orderBy: (tag) => tag.name,
+  return ctx.prisma.tag.findMany({
+    where: getWorkspaceWhere(ctx.workspace),
+    orderBy: { name: "asc" },
   });
 };
 
@@ -127,11 +108,11 @@ export const associateTagsWithLink = async (
   tagNames: string[]
 ) => {
   // Verify the link belongs to the current workspace before modifying
-  const linkRecord = await ctx.db.query.link.findFirst({
-    where: and(
-      eq(link.id, linkId),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId)
-    ),
+  const linkRecord = await ctx.prisma.link.findFirst({
+    where: {
+      id: linkId,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!linkRecord) {
@@ -140,16 +121,14 @@ export const associateTagsWithLink = async (
   }
 
   // First, remove all existing tag associations for this link
-  await ctx.db.delete(linkTag).where(eq(linkTag.linkId, linkId));
+  await ctx.prisma.linkTag.deleteMany({
+    where: { linkId },
+  });
 
   if (!tagNames.length) return;
 
   // Create or get tags and create associations
-  const tagPromises = tagNames.map(async (tagName) => {
-    const tagRecord = await createTag(ctx, tagName);
-    return tagRecord;
-  });
-
+  const tagPromises = tagNames.map((tagName) => createTag(ctx, tagName));
   const tags = await Promise.all(tagPromises);
 
   // Create link-tag associations
@@ -158,7 +137,9 @@ export const associateTagsWithLink = async (
     tagId: Number(tag.id),
   }));
 
-  await ctx.db.insert(linkTag).values(linkTagValues);
+  await ctx.prisma.linkTag.createMany({
+    data: linkTagValues,
+  });
 };
 
 // Get tags for a specific link
@@ -168,11 +149,11 @@ export const getTagsForLink = async (
   linkId: number
 ) => {
   // Verify the link belongs to the current workspace
-  const linkRecord = await ctx.db.query.link.findFirst({
-    where: and(
-      eq(link.id, linkId),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId)
-    ),
+  const linkRecord = await ctx.prisma.link.findFirst({
+    where: {
+      id: linkId,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!linkRecord) {
@@ -180,16 +161,15 @@ export const getTagsForLink = async (
     return [];
   }
 
-  const result = await ctx.db
-    .select({
-      id: tag.id,
-      name: tag.name,
-    })
-    .from(linkTag)
-    .innerJoin(tag, eq(linkTag.tagId, tag.id))
-    .where(eq(linkTag.linkId, linkId));
+  const result = await ctx.prisma.linkTag.findMany({
+    where: { linkId },
+    include: { tag: true },
+  });
 
-  return result;
+  return result.map((r) => ({
+    id: r.tag.id,
+    name: r.tag.name,
+  }));
 };
 
 // Get links by tag
@@ -197,23 +177,21 @@ export const getLinksByTag = async (
   ctx: WorkspaceTRPCContext,
   tagName: string
 ) => {
-  const tagRecord = await ctx.db.query.tag.findFirst({
-    where: and(
-      eq(tag.name, tagName.toLowerCase().trim()),
-      workspaceFilter(ctx.workspace, tag.userId, tag.teamId)
-    ),
+  const tagRecord = await ctx.prisma.tag.findFirst({
+    where: {
+      name: tagName.toLowerCase().trim(),
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!tagRecord) {
     return [];
   }
 
-  const result = await ctx.db
-    .select({
-      linkId: linkTag.linkId,
-    })
-    .from(linkTag)
-    .where(eq(linkTag.tagId, tagRecord.id));
+  const result = await ctx.prisma.linkTag.findMany({
+    where: { tagId: tagRecord.id },
+    select: { linkId: true },
+  });
 
   return result.map((r) => r.linkId);
 };

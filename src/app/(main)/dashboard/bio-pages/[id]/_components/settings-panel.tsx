@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Plan } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
-import type { BioPageTheme } from "@/server/db/schema";
+import type { BioPageTheme } from "@/server/db/types";
 
 export type BioSettingsDraft = {
   slug: string;

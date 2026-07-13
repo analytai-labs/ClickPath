@@ -1,20 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { getPlanCaps } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
-import {
-  customDomain,
-  link,
-  linkTag,
-  qrcode,
-} from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import {
   getTeamWorkspaceContextById,
   getUserTeams,
 } from "@/server/lib/workspace/workspace.service";
 import {
-  workspaceFilter,
   workspaceOwnership,
 } from "@/server/lib/workspace";
 import { getUserPlanContext } from "@/server/lib/user-plan";
@@ -78,12 +71,11 @@ export async function getAvailableWorkspaces(
   const workspaces: AvailableWorkspace[] = [];
 
   // Get personal workspace info
-  const personalLinkCount = await ctx.db
-    .select({ count: sql<number>`count(*)` })
-    .from(link)
-    .where(and(eq(link.userId, ctx.auth.userId), isNull(link.teamId)));
+  const personalLinkCount = await prisma.link.count({
+    where: { userId: ctx.auth.userId, teamId: null }
+  });
 
-  const planCtx = await getUserPlanContext(ctx.auth.userId, ctx.db);
+  const planCtx = await getUserPlanContext(ctx.auth.userId, prisma as any);
   const personalPlan = planCtx?.plan ?? "free";
   const personalLimit = planCtx?.caps.linksLimit;
 
@@ -97,19 +89,18 @@ export async function getAvailableWorkspaces(
     slug: null,
     role: "owner",
     plan: personalPlan,
-    linkCount: Number(personalLinkCount[0]?.count ?? 0),
+    linkCount: personalLinkCount,
     linkLimit: personalLimit,
     isCurrent: isCurrentPersonal,
   });
 
   // Get user's teams
-  const userTeams = await getUserTeams(ctx.auth.userId, ctx.db);
+  const userTeams = await getUserTeams(ctx.auth.userId, prisma as any);
 
   for (const { team, role } of userTeams) {
-    const teamLinkCount = await ctx.db
-      .select({ count: sql<number>`count(*)` })
-      .from(link)
-      .where(eq(link.teamId, team.id));
+    const teamLinkCount = await prisma.link.count({
+      where: { teamId: team.id }
+    });
 
     const isCurrent =
       ctx.workspace.type === "team" && ctx.workspace.teamId === team.id;
@@ -122,7 +113,7 @@ export async function getAvailableWorkspaces(
       slug: team.slug,
       role: role as "owner" | "admin" | "member",
       plan: "ultra", // Teams always have Ultra
-      linkCount: Number(teamLinkCount[0]?.count ?? 0),
+      linkCount: teamLinkCount,
       linkLimit: undefined, // Teams have unlimited links
       isCurrent,
     });
@@ -184,7 +175,7 @@ export async function validateTransfer(
       targetWorkspace = await getTeamWorkspaceContextById(
         ctx.auth.userId,
         targetTeamId,
-        ctx.db
+        prisma as any
       );
     } catch {
       errors.push({
@@ -201,7 +192,7 @@ export async function validateTransfer(
     }
   } else {
     // Personal workspace
-    const planCtx = await getUserPlanContext(ctx.auth.userId, ctx.db);
+    const planCtx = await getUserPlanContext(ctx.auth.userId, prisma as any);
     targetWorkspace = {
       type: "personal",
       userId: ctx.auth.userId,
@@ -233,11 +224,11 @@ export async function validateTransfer(
   }
 
   // Verify all links exist and belong to source workspace
-  const sourceLinks = await ctx.db.query.link.findMany({
-    where: and(
-      inArray(link.id, linkIds),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId)
-    ),
+  const sourceLinks = await prisma.link.findMany({
+    where: {
+      id: { in: linkIds },
+      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+    }
   });
 
   if (sourceLinks.length !== linkIds.length) {
@@ -256,23 +247,22 @@ export async function validateTransfer(
 
   // Check target workspace link limits (only for personal workspace)
   if (targetWorkspace.type === "personal") {
-    const planCtx = await getUserPlanContext(ctx.auth.userId, ctx.db);
+    const planCtx = await getUserPlanContext(ctx.auth.userId, prisma as any);
     const limit = planCtx?.caps.linksLimit;
 
     if (limit !== undefined) {
-      const currentCount = await ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(link)
-        .where(and(eq(link.userId, ctx.auth.userId), isNull(link.teamId)));
+      const currentCount = await prisma.link.count({
+        where: { userId: ctx.auth.userId, teamId: null }
+      });
 
-      const newTotal = Number(currentCount[0]?.count ?? 0) + linkIds.length;
+      const newTotal = currentCount + linkIds.length;
 
       if (newTotal > limit) {
         errors.push({
           type: "LIMIT_EXCEEDED",
-          message: `Transfer would exceed target workspace limit. Current: ${currentCount[0]?.count ?? 0}, Limit: ${limit}, Transferring: ${linkIds.length}`,
+          message: `Transfer would exceed target workspace limit. Current: ${currentCount}, Limit: ${limit}, Transferring: ${linkIds.length}`,
           details: {
-            currentCount: Number(currentCount[0]?.count ?? 0),
+            currentCount: currentCount,
             limit,
             transferring: linkIds.length,
           },
@@ -282,8 +272,7 @@ export async function validateTransfer(
   }
 
   // Check for alias collisions in target workspace
-  const aliases = sourceLinks.map((l) => l.alias).filter(Boolean) as string[];
-  const domains = [...new Set(sourceLinks.map((l) => l.domain))];
+  const domains = Array.from(new Set(sourceLinks.map((l) => l.domain)));
 
   for (const domain of domains) {
     const aliasesForDomain = sourceLinks
@@ -293,18 +282,14 @@ export async function validateTransfer(
 
     if (aliasesForDomain.length === 0) continue;
 
-    const existingAliases = await ctx.db
-      .select({ alias: link.alias })
-      .from(link)
-      .where(
-        and(
-          inArray(link.alias, aliasesForDomain),
-          eq(link.domain, domain),
-          targetWorkspace.type === "team"
-            ? eq(link.teamId, targetWorkspace.teamId)
-            : and(eq(link.userId, ctx.auth.userId), isNull(link.teamId))
-        )
-      );
+    const existingAliases = await prisma.link.findMany({
+      select: { alias: true },
+      where: {
+        alias: { in: aliasesForDomain },
+        domain: domain,
+        ...(targetWorkspace.type === "team" ? { teamId: targetWorkspace.teamId } : { userId: ctx.auth.userId, teamId: null })
+      }
+    });
 
     if (existingAliases.length > 0) {
       errors.push({
@@ -324,13 +309,11 @@ export async function validateTransfer(
   ];
 
   if (customDomains.length > 0) {
-    const targetDomains = await ctx.db.query.customDomain.findMany({
-      where: and(
-        inArray(customDomain.domain, customDomains),
-        targetWorkspace.type === "team"
-          ? eq(customDomain.teamId, targetWorkspace.teamId)
-          : and(eq(customDomain.userId, ctx.auth.userId), isNull(customDomain.teamId))
-      ),
+    const targetDomains = await prisma.customDomain.findMany({
+      where: {
+        domain: { in: customDomains },
+        ...(targetWorkspace.type === "team" ? { teamId: targetWorkspace.teamId } : { userId: ctx.auth.userId, teamId: null })
+      }
     });
 
     const targetDomainSet = new Set(targetDomains.map((d) => d.domain));
@@ -347,16 +330,15 @@ export async function validateTransfer(
 
   // Calculate warnings
   // Tags to be dropped
-  const tagCount = await ctx.db
-    .select({ count: sql<number>`count(*)` })
-    .from(linkTag)
-    .where(inArray(linkTag.linkId, linkIds));
+  const tagCount = await prisma.linkTag.count({
+    where: { linkId: { in: linkIds } }
+  });
 
-  if (Number(tagCount[0]?.count ?? 0) > 0) {
+  if (tagCount > 0) {
     warnings.push({
       type: "TAGS_DROPPED",
-      message: `${tagCount[0]?.count} tag associations will be removed (tags are workspace-specific)`,
-      count: Number(tagCount[0]?.count ?? 0),
+      message: `${tagCount} tag associations will be removed (tags are workspace-specific)`,
+      count: tagCount,
     });
   }
 
@@ -371,16 +353,15 @@ export async function validateTransfer(
   }
 
   // QR codes to be transferred
-  const qrCodeCount = await ctx.db
-    .select({ count: sql<number>`count(*)` })
-    .from(qrcode)
-    .where(inArray(qrcode.linkId, linkIds));
+  const qrCodeCount = await prisma.qrCode.count({
+    where: { linkId: { in: linkIds } }
+  });
 
-  if (Number(qrCodeCount[0]?.count ?? 0) > 0) {
+  if (qrCodeCount > 0) {
     warnings.push({
       type: "QR_TRANSFERRED",
-      message: `${qrCodeCount[0]?.count} QR codes will be transferred with the links`,
-      count: Number(qrCodeCount[0]?.count ?? 0),
+      message: `${qrCodeCount} QR codes will be transferred with the links`,
+      count: qrCodeCount,
     });
   }
 
@@ -423,36 +404,34 @@ export async function transferLinksToWorkspace(
   const targetOwnership = workspaceOwnership(validation.targetWorkspace);
 
   // Execute transfer in transaction
-  return await ctx.db.transaction(async (tx) => {
+  return await prisma.$transaction(async (tx) => {
     // 1. Update link ownership and reset folder
-    await tx
-      .update(link)
-      .set({
+    await tx.link.updateMany({
+      where: {
+        id: { in: linkIds },
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+      },
+      data: {
         userId: targetOwnership.userId,
         teamId: targetOwnership.teamId,
         folderId: null, // Reset folder assignment
         campaignId: null, // Campaigns are workspace-scoped too
-      })
-      .where(
-        and(
-          inArray(link.id, linkIds),
-          workspaceFilter(ctx.workspace, link.userId, link.teamId)
-        )
-      );
+      }
+    });
 
     // 2. Delete tag associations (tags are workspace-scoped)
-    await tx
-      .delete(linkTag)
-      .where(inArray(linkTag.linkId, linkIds));
+    await tx.linkTag.deleteMany({
+      where: { linkId: { in: linkIds } }
+    });
 
     // 3. Transfer QR codes
-    await tx
-      .update(qrcode)
-      .set({
+    await tx.qrCode.updateMany({
+      where: { linkId: { in: linkIds } },
+      data: {
         userId: targetOwnership.userId,
         teamId: targetOwnership.teamId,
-      })
-      .where(inArray(qrcode.linkId, linkIds));
+      }
+    });
 
     // Note: linkVisit and uniqueLinkVisit are NOT updated
     // They reference linkId, not workspace, so analytics are preserved

@@ -1,8 +1,5 @@
-import { and, eq, isNull } from "drizzle-orm";
-
 import { logger } from "@/lib/logger";
-import { db } from "@/server/db";
-import { link, linkMilestone, user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { sendLinkMilestoneEmail } from "@/server/lib/notifications/link-milestone";
 import { getTotalClicks } from "@/server/lib/total-clicks";
 
@@ -19,18 +16,16 @@ export async function checkAndFireMilestones(
 ): Promise<void> {
   try {
     // Fast path: check if any pending milestones exist for this link
-    const pendingMilestones = await db
-      .select({
-        id: linkMilestone.id,
-        threshold: linkMilestone.threshold,
-      })
-      .from(linkMilestone)
-      .where(
-        and(
-          eq(linkMilestone.linkId, linkId),
-          isNull(linkMilestone.notifiedAt),
-        ),
-      );
+    const pendingMilestones = await prisma.linkMilestone.findMany({
+      where: {
+        linkId: linkId,
+        notifiedAt: null,
+      },
+      select: {
+        id: true,
+        threshold: true,
+      },
+    });
 
     if (pendingMilestones.length === 0) return;
 
@@ -45,13 +40,13 @@ export async function checkAndFireMilestones(
 
     // Fetch user info and link info for the email
     const [linkOwner, linkRecord] = await Promise.all([
-      db.query.user.findFirst({
-        where: eq(user.id, userId),
-        columns: { email: true, name: true },
+      prisma.user.findFirst({
+        where: { id: userId },
+        select: { email: true, name: true },
       }),
-      db.query.link.findFirst({
-        where: eq(link.id, linkId),
-        columns: { alias: true, name: true },
+      prisma.link.findFirst({
+        where: { id: linkId },
+        select: { alias: true, name: true },
       }),
     ]);
 
@@ -61,17 +56,17 @@ export async function checkAndFireMilestones(
     // then send emails in parallel
     const emailPromises: Promise<void>[] = [];
     for (const milestone of reachedMilestones) {
-      const updateResult = await db
-        .update(linkMilestone)
-        .set({ notifiedAt: new Date() })
-        .where(
-          and(
-            eq(linkMilestone.id, milestone.id),
-            isNull(linkMilestone.notifiedAt),
-          ),
-        );
+      const updateResult = await prisma.linkMilestone.updateMany({
+        where: {
+          id: milestone.id,
+          notifiedAt: null,
+        },
+        data: {
+          notifiedAt: new Date(),
+        },
+      });
 
-      if (updateResult[0].affectedRows === 1) {
+      if (updateResult.count === 1) {
         emailPromises.push(
           sendLinkMilestoneEmail({
             email: linkOwner.email,

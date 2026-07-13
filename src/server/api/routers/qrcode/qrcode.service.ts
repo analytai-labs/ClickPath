@@ -1,25 +1,15 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, inArray, sql, sum } from "drizzle-orm";
 
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { assertUrlSafe } from "@/server/lib/phishing";
-import {
-  link,
-  linkVisit,
-  linkVisitDailySummary,
-  qrcode,
-  qrPreset,
-  uniqueLinkVisit,
-} from "@/server/db/schema";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import {
   insertHiddenTrackingLink,
   prepareHiddenTrackingLink,
 } from "@/server/lib/tracking-link";
 import {
-  workspaceFilter,
   workspaceOwnership,
 } from "@/server/lib/workspace";
 
@@ -65,12 +55,9 @@ export const createQrCode = userFacing(
     // Only check limits for free plan personal workspaces
     if (workspacePlan === "free" && !isTeamWorkspace) {
       // Count QR codes in the personal workspace (exclude team QR codes)
-      const qrCodeCountResult = await ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(qrcode)
-        .where(workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId));
-
-      const currentCount = Number(qrCodeCountResult[0]?.count ?? 0);
+      const currentCount = await ctx.prisma.qrCode.count({
+        where: { userId: ctx.workspace.userId, teamId: null },
+      });
 
       if (currentCount >= FREE_QR_CODE_LIMIT) {
         throw new TRPCError({
@@ -107,22 +94,24 @@ export const createQrCode = userFacing(
       throw error;
     }
 
-    const { insertedQrCodeId } = await ctx.db.transaction(async (tx) => {
+    const { insertedQrCodeId } = await ctx.prisma.$transaction(async (tx) => {
       const hiddenLinkId = await insertHiddenTrackingLink(tx, ctx, prepared);
 
-      const insertionResult = await tx.insert(qrcode).values({
-        userId: ownership.userId,
-        teamId: ownership.teamId,
-        title: input.title,
-        color: input.selectedColor,
-        content: input.content,
-        cornerStyle: input.cornerStyle as typeof qrcode.cornerStyle.enumValues[number],
-        patternStyle: input.patternStyle as typeof qrcode.patternStyle.enumValues[number],
-        linkId: hiddenLinkId,
-        contentType: "link",
+      const insertionResult = await tx.qrCode.create({
+        data: {
+          userId: ownership.userId,
+          teamId: ownership.teamId,
+          title: input.title,
+          color: input.selectedColor,
+          content: input.content,
+          cornerStyle: input.cornerStyle as any,
+          patternStyle: input.patternStyle as any,
+          linkId: hiddenLinkId,
+          contentType: "link",
+        },
       });
 
-      return { insertedQrCodeId: insertionResult[0].insertId };
+      return { insertedQrCodeId: insertionResult.id };
     });
 
     return { trackingUrl: prepared.trackingUrl, id: insertedQrCodeId };
@@ -136,11 +125,11 @@ export const saveQrCodeImage = userFacing(
     ctx: WorkspaceTRPCContext,
     input: z.infer<typeof qrcodeSaveImageInput>,
   ) => {
-    const record = await ctx.db.query.qrcode.findFirst({
-      where: and(
-        eq(qrcode.id, input.id),
-        workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId),
-      ),
+    const record = await ctx.prisma.qrCode.findFirst({
+      where: {
+        id: input.id,
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      }
     });
 
     if (!record) {
@@ -151,10 +140,10 @@ export const saveQrCodeImage = userFacing(
     }
 
     // Persist base64 immediately so we have a fallback
-    await ctx.db
-      .update(qrcode)
-      .set({ qrCode: input.qrCodeBase64 })
-      .where(eq(qrcode.id, input.id));
+    await ctx.prisma.qrCode.update({
+      where: { id: input.id },
+      data: { qrCode: input.qrCodeBase64 },
+    });
 
     // Upload to R2
     try {
@@ -165,10 +154,10 @@ export const saveQrCodeImage = userFacing(
       });
 
       if (imageUrl && imageUrl !== input.qrCodeBase64) {
-        await ctx.db
-          .update(qrcode)
-          .set({ qrCode: imageUrl })
-          .where(eq(qrcode.id, input.id));
+        await ctx.prisma.qrCode.update({
+          where: { id: input.id },
+          data: { qrCode: imageUrl },
+        });
 
         return imageUrl;
       }
@@ -184,12 +173,12 @@ export const getQrCode = userFacing(
   "getQrCode",
   "Something went wrong while loading this QR code. Please try again.",
   async (ctx: WorkspaceTRPCContext, id: number) => {
-    const qrCode = await ctx.db.query.qrcode.findFirst({
-      where: and(
-        eq(qrcode.id, id),
-        workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId),
-      ),
-      with: {
+    const qrCode = await ctx.prisma.qrCode.findFirst({
+      where: {
+        id: id,
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      },
+      include: {
         link: true,
       },
     });
@@ -209,9 +198,9 @@ export const retrieveUserQrCodes = userFacing(
   "retrieveUserQrCodes",
   "Something went wrong while loading your QR codes. Please try again.",
   async (ctx: WorkspaceTRPCContext) => {
-    const qrCodes = await ctx.db.query.qrcode.findMany({
-      where: workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId),
-      with: {
+    const qrCodes = await ctx.prisma.qrCode.findMany({
+      where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null },
+      include: {
         link: true,
       },
     });
@@ -222,25 +211,22 @@ export const retrieveUserQrCodes = userFacing(
     const [visitCounts, archivedCounts] =
       linkIds.length > 0
         ? await Promise.all([
-            ctx.db
-              .select({ linkId: linkVisit.linkId, count: count() })
-              .from(linkVisit)
-              .where(inArray(linkVisit.linkId, linkIds))
-              .groupBy(linkVisit.linkId),
-            ctx.db
-              .select({
-                linkId: linkVisitDailySummary.linkId,
-                total: sum(linkVisitDailySummary.clicks),
-              })
-              .from(linkVisitDailySummary)
-              .where(inArray(linkVisitDailySummary.linkId, linkIds))
-              .groupBy(linkVisitDailySummary.linkId),
+            ctx.prisma.linkVisit.groupBy({
+              by: ['linkId'],
+              _count: true,
+              where: { linkId: { in: linkIds } },
+            }),
+            ctx.prisma.linkVisitDailySummary.groupBy({
+              by: ['linkId'],
+              _sum: { clicks: true },
+              where: { linkId: { in: linkIds } },
+            }),
           ])
         : [[], []];
 
-    const countMap = new Map(visitCounts.map((v) => [v.linkId, v.count]));
+    const countMap = new Map(visitCounts.map((v) => [v.linkId, v._count]));
     for (const row of archivedCounts) {
-      countMap.set(row.linkId, (countMap.get(row.linkId) ?? 0) + (Number(row.total) || 0));
+      countMap.set(row.linkId, (countMap.get(row.linkId) ?? 0) + (Number(row._sum.clicks) || 0));
     }
 
     return qrCodes.map((qr) => ({
@@ -254,12 +240,12 @@ export const deleteQrCode = userFacing(
   "deleteQrCode",
   "Something went wrong while deleting your QR code. Please try again.",
   async (ctx: WorkspaceTRPCContext, id: number) => {
-    const qrCode = await ctx.db.query.qrcode.findFirst({
-      where: and(
-        eq(qrcode.id, id),
-        workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId),
-      ),
-      with: { link: true },
+    const qrCode = await ctx.prisma.qrCode.findFirst({
+      where: {
+        id: id,
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      },
+      include: { link: true },
     });
 
     if (!qrCode) {
@@ -285,15 +271,15 @@ export const deleteQrCode = userFacing(
     }
 
     // Delete QR code and its associated hidden link atomically
-    await ctx.db.transaction(async (tx) => {
-      await tx.delete(qrcode).where(eq(qrcode.id, id));
+    await ctx.prisma.$transaction(async (tx) => {
+      await tx.qrCode.delete({ where: { id } });
 
       if (qrCode.linkId && qrCode.linkId > 0) {
         await Promise.all([
-          tx.delete(uniqueLinkVisit).where(eq(uniqueLinkVisit.linkId, qrCode.linkId)),
-          tx.delete(linkVisit).where(eq(linkVisit.linkId, qrCode.linkId)),
+          tx.uniqueLinkVisit.deleteMany({ where: { linkId: qrCode.linkId } }),
+          tx.linkVisit.deleteMany({ where: { linkId: qrCode.linkId } }),
         ]);
-        await tx.delete(link).where(eq(link.id, qrCode.linkId));
+        await tx.link.delete({ where: { id: qrCode.linkId } });
       }
     });
 
@@ -312,12 +298,12 @@ export const deleteQrCode = userFacing(
 
 /** Fetch a QR code by ID with workspace ownership check, joining the associated link. */
 async function fetchQrCodeWithLink(ctx: WorkspaceTRPCContext, id: number) {
-  const qrCode = await ctx.db.query.qrcode.findFirst({
-    where: and(
-      eq(qrcode.id, id),
-      workspaceFilter(ctx.workspace, qrcode.userId, qrcode.teamId),
-    ),
-    with: { link: true },
+  const qrCode = await ctx.prisma.qrCode.findFirst({
+    where: {
+      id: id,
+      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+    },
+    include: { link: true },
   });
 
   if (!qrCode) {
@@ -344,7 +330,7 @@ export const updateQrCode = userFacing(
       await assertUrlSafe(input.url);
     }
 
-    const qrUpdates: Partial<Pick<typeof qrcode.$inferInsert, "title" | "content">> = {};
+    const qrUpdates: { title?: string; content?: string } = {};
     if (input.title !== undefined) qrUpdates.title = input.title;
     if (input.url !== undefined) qrUpdates.content = input.url;
 
@@ -360,10 +346,10 @@ export const updateQrCode = userFacing(
     });
 
     if (Object.keys(qrUpdates).length > 0) {
-      await ctx.db
-        .update(qrcode)
-        .set(qrUpdates)
-        .where(eq(qrcode.id, input.id));
+      await ctx.prisma.qrCode.update({
+        where: { id: input.id },
+        data: qrUpdates,
+      });
     }
 
     return true;
@@ -378,8 +364,8 @@ export const resetQrCodeStatistics = userFacing(
 
     // Delete both visit tables to fully reset stats (matches deleteQrCode cleanup)
     await Promise.all([
-      ctx.db.delete(linkVisit).where(eq(linkVisit.linkId, qrCode.linkId)),
-      ctx.db.delete(uniqueLinkVisit).where(eq(uniqueLinkVisit.linkId, qrCode.linkId)),
+      ctx.prisma.linkVisit.deleteMany({ where: { linkId: qrCode.linkId } }),
+      ctx.prisma.uniqueLinkVisit.deleteMany({ where: { linkId: qrCode.linkId } }),
     ]);
 
     return true;
@@ -393,10 +379,10 @@ export const toggleQrCodeStatus = userFacing(
     const qrCode = await fetchQrCodeWithLink(ctx, id);
 
     // Inline instead of delegating to toggleLinkStatusService to avoid a redundant link re-fetch
-    await ctx.db
-      .update(link)
-      .set({ disabled: !qrCode.link.disabled })
-      .where(eq(link.id, qrCode.linkId));
+    await ctx.prisma.link.update({
+      where: { id: qrCode.linkId },
+      data: { disabled: !qrCode.link.disabled },
+    });
 
     // Invalidate cache so the status change takes effect immediately
     if (qrCode.link.alias) {
@@ -414,27 +400,29 @@ export const createQrPreset = userFacing(
   async (ctx: WorkspaceTRPCContext, input: QRPresetCreateInput) => {
     const ownership = workspaceOwnership(ctx.workspace);
 
-    const insertResult = await ctx.db.insert(qrPreset).values({
-      name: input.name,
-      userId: ownership.userId ?? "",
-      teamId: ownership.teamId,
-      pixelStyle: input.pixelStyle,
-      markerShape: input.markerShape,
-      markerInnerShape: input.markerInnerShape,
-      darkColor: input.darkColor,
-      lightColor: input.lightColor,
-      effect: input.effect,
-      effectRadius: input.effectRadius,
-      marginNoise: input.marginNoise,
-      marginNoiseRate: input.marginNoiseRate,
-      // Logo settings
-      logoImage: input.logoImage,
-      logoSize: input.logoSize,
-      logoMargin: input.logoMargin,
-      logoBorderRadius: input.logoBorderRadius,
+    const insertResult = await ctx.prisma.qrPreset.create({
+      data: {
+        name: input.name,
+        userId: ownership.userId ?? "",
+        teamId: ownership.teamId,
+        pixelStyle: input.pixelStyle,
+        markerShape: input.markerShape,
+        markerInnerShape: input.markerInnerShape,
+        darkColor: input.darkColor,
+        lightColor: input.lightColor,
+        effect: input.effect,
+        effectRadius: input.effectRadius,
+        marginNoise: input.marginNoise,
+        marginNoiseRate: input.marginNoiseRate,
+        // Logo settings
+        logoImage: input.logoImage,
+        logoSize: input.logoSize,
+        logoMargin: input.logoMargin,
+        logoBorderRadius: input.logoBorderRadius,
+      }
     });
 
-    const insertedId = insertResult[0].insertId;
+    const insertedId = insertResult.id;
 
     // Upload logo image to R2 if it's base64
     if (input.logoImage) {
@@ -447,10 +435,10 @@ export const createQrPreset = userFacing(
 
         // Update preset with the R2 URL if upload was successful and URL changed
         if (imageUrl && imageUrl !== input.logoImage) {
-          await ctx.db
-            .update(qrPreset)
-            .set({ logoImage: imageUrl })
-            .where(eq(qrPreset.id, insertedId));
+          await ctx.prisma.qrPreset.update({
+            where: { id: insertedId },
+            data: { logoImage: imageUrl },
+          });
         }
       } catch (error) {
         log.error(
@@ -461,8 +449,8 @@ export const createQrPreset = userFacing(
       }
     }
 
-    return ctx.db.query.qrPreset.findFirst({
-      where: eq(qrPreset.id, insertedId),
+    return ctx.prisma.qrPreset.findUnique({
+      where: { id: insertedId },
     });
   },
 );
@@ -471,9 +459,9 @@ export const listQrPresets = userFacing(
   "listQrPresets",
   "Something went wrong while loading your presets. Please try again.",
   async (ctx: WorkspaceTRPCContext) => {
-    return ctx.db.query.qrPreset.findMany({
-      where: workspaceFilter(ctx.workspace, qrPreset.userId, qrPreset.teamId),
-      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    return ctx.prisma.qrPreset.findMany({
+      where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null },
+      orderBy: { createdAt: "desc" },
     });
   },
 );
@@ -482,11 +470,11 @@ export const deleteQrPreset = userFacing(
   "deleteQrPreset",
   "Something went wrong while deleting your preset. Please try again.",
   async (ctx: WorkspaceTRPCContext, id: number) => {
-    const preset = await ctx.db.query.qrPreset.findFirst({
-      where: and(
-        eq(qrPreset.id, id),
-        workspaceFilter(ctx.workspace, qrPreset.userId, qrPreset.teamId),
-      ),
+    const preset = await ctx.prisma.qrPreset.findFirst({
+      where: {
+        id: id,
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      }
     });
 
     if (!preset) {
@@ -508,7 +496,7 @@ export const deleteQrPreset = userFacing(
       }
     }
 
-    await ctx.db.delete(qrPreset).where(eq(qrPreset.id, id));
+    await ctx.prisma.qrPreset.delete({ where: { id: id } });
 
     return true;
   },
@@ -518,11 +506,11 @@ export const updateQrPreset = userFacing(
   "updateQrPreset",
   "Something went wrong while updating your preset. Please try again.",
   async (ctx: WorkspaceTRPCContext, input: QRPresetUpdateInput) => {
-    const preset = await ctx.db.query.qrPreset.findFirst({
-      where: and(
-        eq(qrPreset.id, input.id),
-        workspaceFilter(ctx.workspace, qrPreset.userId, qrPreset.teamId),
-      ),
+    const preset = await ctx.prisma.qrPreset.findFirst({
+      where: {
+        id: input.id,
+        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      }
     });
 
     if (!preset) {
@@ -586,9 +574,9 @@ export const updateQrPreset = userFacing(
       }
     }
 
-    await ctx.db
-      .update(qrPreset)
-      .set({
+    await ctx.prisma.qrPreset.update({
+      where: { id: input.id },
+      data: {
         pixelStyle: input.pixelStyle,
         markerShape: input.markerShape,
         markerInnerShape: input.markerInnerShape,
@@ -603,11 +591,11 @@ export const updateQrPreset = userFacing(
         logoSize: input.logoSize,
         logoMargin: input.logoMargin,
         logoBorderRadius: input.logoBorderRadius,
-      })
-      .where(eq(qrPreset.id, input.id));
+      },
+    });
 
-    return ctx.db.query.qrPreset.findFirst({
-      where: eq(qrPreset.id, input.id),
+    return ctx.prisma.qrPreset.findUnique({
+      where: { id: input.id },
     });
   },
 );

@@ -1,7 +1,4 @@
-import { inArray } from "drizzle-orm";
-
-import { db } from "@/server/db";
-import { blockedDomain } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 type BlocklistResult = { blocked: boolean; reason: string };
 
@@ -27,8 +24,8 @@ export async function checkBlocklist(url: string): Promise<BlocklistResult> {
   }
 
   // Single query for all candidate domains
-  const results = await db.query.blockedDomain.findMany({
-    where: inArray(blockedDomain.domain, domainsToCheck),
+  const results = await prisma.blockedDomain.findMany({
+    where: { domain: { in: domainsToCheck } },
   });
 
   if (results.length > 0) {

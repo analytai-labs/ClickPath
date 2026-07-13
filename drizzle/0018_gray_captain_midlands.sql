@@ -1,1 +1,0 @@
-ALTER TABLE `Link` ADD `name` varchar(255);

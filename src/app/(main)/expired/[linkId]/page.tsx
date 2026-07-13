@@ -1,11 +1,9 @@
 import { IconClockOff } from "@tabler/icons-react";
-import { eq } from "drizzle-orm";
 import { Funnel_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { db } from "@/server/db";
-import { link } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { getTotalClicks } from "@/server/lib/total-clicks";
 
 const funnelSans = Funnel_Sans({
@@ -20,9 +18,9 @@ interface ExpiredPageProps {
 export default async function ExpiredPage({ params }: ExpiredPageProps) {
   const { linkId } = await params;
 
-  const linkRecord = await db.query.link.findFirst({
-    where: eq(link.id, Number(linkId)),
-    columns: {
+  const linkRecord = await prisma.link.findUnique({
+    where: { id: Number(linkId) },
+    select: {
       id: true,
       disabled: true,
       disableLinkAfterDate: true,

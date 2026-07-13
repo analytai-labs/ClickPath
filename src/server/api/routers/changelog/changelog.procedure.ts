@@ -5,8 +5,6 @@ import {
   getChangelogEntriesSince,
   getLatestChangelog,
 } from "@/lib/changelog";
-import { user } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
 
 export const changelogRouter = createTRPCRouter({
   list: publicProcedure.query(async () => {
@@ -18,9 +16,9 @@ export const changelogRouter = createTRPCRouter({
   }),
 
   getNewEntries: protectedProcedure.query(async ({ ctx }) => {
-    const userData = await ctx.db.query.user.findFirst({
-      where: eq(user.id, ctx.auth.userId),
-      columns: {
+    const userData = await ctx.prisma.user.findFirst({
+      where: { id: ctx.auth.userId },
+      select: {
         lastViewedChangelogSlug: true,
       },
     });
@@ -29,9 +27,9 @@ export const changelogRouter = createTRPCRouter({
   }),
 
   getUnseenCount: protectedProcedure.query(async ({ ctx }) => {
-    const userData = await ctx.db.query.user.findFirst({
-      where: eq(user.id, ctx.auth.userId),
-      columns: {
+    const userData = await ctx.prisma.user.findFirst({
+      where: { id: ctx.auth.userId },
+      select: {
         lastViewedChangelogSlug: true,
       },
     });
@@ -46,10 +44,10 @@ export const changelogRouter = createTRPCRouter({
   markAsViewed: protectedProcedure
     .input(z.object({ slug: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db
-        .update(user)
-        .set({ lastViewedChangelogSlug: input.slug })
-        .where(eq(user.id, ctx.auth.userId));
+      await ctx.prisma.user.update({
+        where: { id: ctx.auth.userId },
+        data: { lastViewedChangelogSlug: input.slug },
+      });
 
       return { success: true };
     }),

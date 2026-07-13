@@ -1,2 +1,0 @@
-ALTER TABLE `Campaign` ADD `teamIdForUnique` int GENERATED ALWAYS AS (COALESCE(`teamId`, 0)) STORED;--> statement-breakpoint
-ALTER TABLE `Campaign` ADD CONSTRAINT `campaign_slug_workspace_unique` UNIQUE(`slug`,`userId`,`teamIdForUnique`);

@@ -1,12 +1,11 @@
-import { eq } from "drizzle-orm";
+import { PrismaClient } from "@prisma/client";
 
 import { Plan, PLAN_CAPS } from "@/lib/billing/plans";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 import { getUserPlanContext, normalizeMonthlyEventCount } from "./user-plan";
 
-type DbClient = typeof db;
+type DbClient = PrismaClient;
 
 type EventUsageResult = {
   allowed: boolean;
@@ -40,7 +39,7 @@ function shouldTrackCount(plan: Plan): boolean {
 
 export async function registerEventUsage(
   userId: string,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<EventUsageResult> {
   const ctx = await getUserPlanContext(userId, dbClient);
 
@@ -65,10 +64,10 @@ export async function registerEventUsage(
     if (previousLevel < 100) {
       alertLevel = 100;
       // Update the alert level so we don't send again
-      await dbClient
-        .update(user)
-        .set({ eventUsageAlertLevel: 100 })
-        .where(eq(user.id, userId));
+      await dbClient.user.update({
+        where: { id: userId },
+        data: { eventUsageAlertLevel: 100 },
+      });
     }
 
     return {
@@ -88,7 +87,7 @@ export async function registerEventUsage(
   let alertLevel: number | null = null;
 
   if (trackUsage && limit !== undefined) {
-    const updates: Record<string, unknown> = {
+    const updates: any = {
       monthlyEventCount: newCount,
     };
 
@@ -99,7 +98,10 @@ export async function registerEventUsage(
       updates.eventUsageAlertLevel = alertLevel;
     }
 
-    await dbClient.update(user).set(updates).where(eq(user.id, userId));
+    await dbClient.user.update({
+      where: { id: userId },
+      data: updates,
+    });
   }
 
   return {

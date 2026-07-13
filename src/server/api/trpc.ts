@@ -4,14 +4,12 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import {
   resolveWorkspaceContext,
   userHasUltraPlan,
   WorkspaceContext
 } from "@/server/lib/workspace";
-import { eq } from "drizzle-orm";
 
 import type { inferAsyncReturnType } from "@trpc/server";
 
@@ -20,7 +18,7 @@ export const createTRPCContext = async (opts: {
   headers: Headers;
 }) => {
   return {
-    db,
+    prisma,
     ...opts,
     headers: opts.headers,
   };
@@ -45,6 +43,7 @@ export const publicProcedure = t.procedure;
 export const middleware = t.middleware;
 
 // Base context type
+export const createTRPCContextInner = createTRPCContext;
 export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
 
 // Protected context type with enforced userId
@@ -60,7 +59,7 @@ export type ProtectedTRPCContext = Omit<TRPCContext, "auth"> & {
 // Keyed on the ctx object — same request = same ctx = same cached promise.
 const currentUserCache = new WeakMap<
   object,
-  Promise<{ banned: boolean | null; isAdmin: boolean | null } | undefined>
+  Promise<{ banned: boolean | null; isAdmin: boolean | null } | null>
 >();
 
 // Protected procedure middleware
@@ -71,9 +70,9 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 
   let cached = currentUserCache.get(ctx);
   if (!cached) {
-    cached = ctx.db.query.user.findFirst({
-      where: eq(user.id, ctx.auth.userId),
-      columns: { banned: true, isAdmin: true },
+    cached = ctx.prisma.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { banned: true, isAdmin: true },
     });
     currentUserCache.set(ctx, cached);
   }
@@ -120,7 +119,7 @@ export const workspaceProcedure = protectedProcedure.use(
     const workspace = await resolveWorkspaceContext(
       ctx.auth.userId,
       hostname,
-      ctx.db
+      ctx.prisma
     );
 
     return next({
@@ -161,7 +160,7 @@ export const teamProcedure = workspaceProcedure.use(({ ctx, next }) => {
  * Used for team creation and other Ultra-only features.
  */
 export const ultraProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const hasUltra = await userHasUltraPlan(ctx.auth.userId, ctx.db);
+  const hasUltra = await userHasUltraPlan(ctx.auth.userId, ctx.prisma);
 
   if (!hasUltra) {
     throw new TRPCError({
@@ -189,6 +188,6 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 export type PublicTRPCContext = {
-  db: TRPCContext["db"];
+  prisma: TRPCContext["prisma"];
   headers: TRPCContext["headers"];
 };

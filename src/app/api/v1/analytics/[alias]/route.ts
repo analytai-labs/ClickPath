@@ -1,5 +1,5 @@
 import { aggregateVisits } from "@/lib/core/analytics";
-import { db } from "@/server/db";
+import { prisma } from "@/server/db";
 
 import {
   getApiDomainParamsFromSearchParams,
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ alias
     getApiDomainParamsFromSearchParams(request.nextUrl.searchParams),
   );
 
-  const link = await db.query.link.findFirst({
-    where: (table, { eq, and }) => and(eq(table.alias, alias), eq(table.domain, domain)),
-    with: {
+  const link = await prisma.link.findFirst({
+    where: { alias, domain },
+    include: {
       linkVisits: true,
       uniqueLinkVisits: true,
     },

@@ -1,1 +1,0 @@
-ALTER TABLE `User` ADD `lastViewedChangelogDate` varchar(10);

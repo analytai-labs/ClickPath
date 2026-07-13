@@ -1,20 +1,4 @@
-import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
-
-import { db } from "@/server/db";
-import {
-  campaign,
-  customDomain,
-  folder,
-  link,
-  linkTag,
-  linkVisit,
-  qrcode,
-  siteSettings,
-  tag,
-  team,
-  uniqueLinkVisit,
-  utmTemplate,
-} from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 // Grace period in days before permanently deleting soft-deleted teams
 const GRACE_PERIOD_DAYS = 30;
@@ -61,9 +45,14 @@ export async function cleanupDeletedTeams(): Promise<CleanupResult> {
   cutoffDate.setDate(cutoffDate.getDate() - GRACE_PERIOD_DAYS);
 
   // Find all teams that are soft-deleted and past the grace period
-  const teamsToDelete = await db.query.team.findMany({
-    where: and(isNotNull(team.deletedAt), lt(team.deletedAt, cutoffDate)),
-    columns: {
+  const teamsToDelete = await prisma.team.findMany({
+    where: {
+      deletedAt: {
+        not: null,
+        lt: cutoffDate,
+      },
+    },
+    select: {
       id: true,
       name: true,
       slug: true,
@@ -80,81 +69,87 @@ export async function cleanupDeletedTeams(): Promise<CleanupResult> {
     const teamId = teamRecord.id;
 
     // Use a transaction to ensure atomic deletion of all resources
-    await db.transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // 1. Get all links for this team to delete their related records
-      const teamLinks = await tx
-        .select({ id: link.id })
-        .from(link)
-        .where(eq(link.teamId, teamId));
+      const teamLinks = await tx.link.findMany({
+        where: { teamId },
+        select: { id: true },
+      });
 
       const linkIds = teamLinks.map((l) => l.id);
 
       if (linkIds.length > 0) {
         // Delete link visits
-        const linkVisitResult = await tx
-          .delete(linkVisit)
-          .where(sql`${linkVisit.linkId} IN (${sql.join(linkIds.map(id => sql`${id}`), sql`, `)})`);
-        result.linkVisitsDeleted += linkVisitResult[0].affectedRows;
+        const linkVisitResult = await tx.linkVisit.deleteMany({
+          where: { linkId: { in: linkIds } },
+        });
+        result.linkVisitsDeleted += linkVisitResult.count;
 
         // Delete unique link visits
-        const uniqueVisitResult = await tx
-          .delete(uniqueLinkVisit)
-          .where(sql`${uniqueLinkVisit.linkId} IN (${sql.join(linkIds.map(id => sql`${id}`), sql`, `)})`);
-        result.uniqueLinkVisitsDeleted += uniqueVisitResult[0].affectedRows;
+        const uniqueVisitResult = await tx.uniqueLinkVisit.deleteMany({
+          where: { linkId: { in: linkIds } },
+        });
+        result.uniqueLinkVisitsDeleted += uniqueVisitResult.count;
 
         // Delete link-tag associations
-        const linkTagResult = await tx
-          .delete(linkTag)
-          .where(sql`${linkTag.linkId} IN (${sql.join(linkIds.map(id => sql`${id}`), sql`, `)})`);
-        result.linkTagsDeleted += linkTagResult[0].affectedRows;
+        const linkTagResult = await tx.linkTag.deleteMany({
+          where: { linkId: { in: linkIds } },
+        });
+        result.linkTagsDeleted += linkTagResult.count;
       }
 
       // 2. Delete all links
-      const linksResult = await tx.delete(link).where(eq(link.teamId, teamId));
-      result.linksDeleted += linksResult[0].affectedRows;
+      const linksResult = await tx.link.deleteMany({
+        where: { teamId },
+      });
+      result.linksDeleted += linksResult.count;
 
       // 3. Delete all folders
-      const foldersResult = await tx
-        .delete(folder)
-        .where(eq(folder.teamId, teamId));
-      result.foldersDeleted += foldersResult[0].affectedRows;
+      const foldersResult = await tx.folder.deleteMany({
+        where: { teamId },
+      });
+      result.foldersDeleted += foldersResult.count;
 
       // 4. Delete all QR codes
-      const qrCodesResult = await tx
-        .delete(qrcode)
-        .where(eq(qrcode.teamId, teamId));
-      result.qrCodesDeleted += qrCodesResult[0].affectedRows;
+      const qrCodesResult = await tx.qrCode.deleteMany({
+        where: { teamId },
+      });
+      result.qrCodesDeleted += qrCodesResult.count;
 
       // 5. Delete all tags
-      const tagsResult = await tx.delete(tag).where(eq(tag.teamId, teamId));
-      result.tagsDeleted += tagsResult[0].affectedRows;
+      const tagsResult = await tx.tag.deleteMany({
+        where: { teamId },
+      });
+      result.tagsDeleted += tagsResult.count;
 
       // 6. Delete all custom domains
-      const domainsResult = await tx
-        .delete(customDomain)
-        .where(eq(customDomain.teamId, teamId));
-      result.customDomainsDeleted += domainsResult[0].affectedRows;
+      const domainsResult = await tx.customDomain.deleteMany({
+        where: { teamId },
+      });
+      result.customDomainsDeleted += domainsResult.count;
 
       // 7. Delete all UTM templates
-      const utmResult = await tx
-        .delete(utmTemplate)
-        .where(eq(utmTemplate.teamId, teamId));
-      result.utmTemplatesDeleted += utmResult[0].affectedRows;
+      const utmResult = await tx.utmTemplate.deleteMany({
+        where: { teamId },
+      });
+      result.utmTemplatesDeleted += utmResult.count;
 
       // 8. Delete all campaigns (member links were already deleted above)
-      const campaignsResult = await tx
-        .delete(campaign)
-        .where(eq(campaign.teamId, teamId));
-      result.campaignsDeleted += campaignsResult[0].affectedRows;
+      const campaignsResult = await tx.campaign.deleteMany({
+        where: { teamId },
+      });
+      result.campaignsDeleted += campaignsResult.count;
 
       // 9. Delete site settings
-      const settingsResult = await tx
-        .delete(siteSettings)
-        .where(eq(siteSettings.teamId, teamId));
-      result.siteSettingsDeleted += settingsResult[0].affectedRows;
+      const settingsResult = await tx.siteSettings.deleteMany({
+        where: { teamId },
+      });
+      result.siteSettingsDeleted += settingsResult.count;
 
       // 10. Finally, delete the team itself
-      await tx.delete(team).where(eq(team.id, teamId));
+      await tx.team.delete({
+        where: { id: teamId },
+      });
       result.teamsDeleted += 1;
     });
   }
@@ -170,32 +165,36 @@ export async function getCleanupStats() {
   cutoffDate.setDate(cutoffDate.getDate() - GRACE_PERIOD_DAYS);
 
   // Teams ready for cleanup (past grace period)
-  const readyForCleanup = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(team)
-    .where(and(isNotNull(team.deletedAt), lt(team.deletedAt, cutoffDate)));
+  const readyForCleanup = await prisma.team.count({
+    where: {
+      deletedAt: {
+        not: null,
+        lt: cutoffDate,
+      },
+    },
+  });
 
   // Teams in grace period (deleted but not yet ready for cleanup)
-  const inGracePeriod = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(team)
-    .where(
-      and(
-        isNotNull(team.deletedAt),
-        sql`${team.deletedAt} >= ${cutoffDate}`
-      )
-    );
+  const inGracePeriod = await prisma.team.count({
+    where: {
+      deletedAt: {
+        not: null,
+        gte: cutoffDate,
+      },
+    },
+  });
 
   // Active teams
-  const activeTeams = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(team)
-    .where(sql`${team.deletedAt} IS NULL`);
+  const activeTeams = await prisma.team.count({
+    where: {
+      deletedAt: null,
+    },
+  });
 
   return {
-    readyForCleanup: Number(readyForCleanup[0]?.count ?? 0),
-    inGracePeriod: Number(inGracePeriod[0]?.count ?? 0),
-    activeTeams: Number(activeTeams[0]?.count ?? 0),
+    readyForCleanup,
+    inGracePeriod,
+    activeTeams,
     gracePeriodDays: GRACE_PERIOD_DAYS,
   };
 }

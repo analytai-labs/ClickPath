@@ -1,13 +1,10 @@
-import { and, count, eq, isNull } from "drizzle-orm";
-
 import { getPlanCaps, resolvePlan } from "@/lib/billing/plans";
-import { folder } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import {
   getUserPlanContext,
   normalizeMonthlyEventCount,
   normalizeMonthlyLinkCount,
 } from "@/server/lib/user-plan";
-import { workspaceFilter } from "@/server/lib/workspace";
 
 import { createTRPCRouter, workspaceProcedure } from "../../trpc";
 
@@ -17,10 +14,10 @@ export const subscriptionsRouter = createTRPCRouter({
   get: workspaceProcedure.query(async ({ ctx }) => {
     const userId = ctx.auth.userId;
 
-    const userRecord = await ctx.db.query.user.findFirst({
-      where: (table, { eq }) => eq(table.id, userId),
-      with: {
-        subscriptions: true,
+    const userRecord = await prisma.user.findFirst({
+      where: { id: userId },
+      include: {
+        subscription: true,
       },
     });
 
@@ -31,10 +28,10 @@ export const subscriptionsRouter = createTRPCRouter({
     // If in a team workspace, always use Ultra plan
     // Team workspaces inherit Ultra features from the team owner
     const isTeamWorkspace = ctx.workspace.type === "team";
-    const planCtx = await getUserPlanContext(userId, ctx.db);
+    const planCtx = await getUserPlanContext(userId, prisma);
 
     // Personal plan is needed for features like team creation
-    const personalPlan = planCtx?.plan ?? resolvePlan(userRecord.subscriptions ?? null);
+    const personalPlan = planCtx?.plan ?? resolvePlan(userRecord.subscription ?? null);
 
     // Effective plan considers workspace context
     const plan = isTeamWorkspace ? "ultra" : personalPlan;
@@ -50,25 +47,28 @@ export const subscriptionsRouter = createTRPCRouter({
       // Personal workspace: get user's personal usage
       // Filter out team folders from personal counts
       const [linkCount, eventCount, folderCountResult] = await Promise.all([
-        normalizeMonthlyLinkCount(planCtx, ctx.db),
-        normalizeMonthlyEventCount(planCtx, ctx.db),
-        ctx.db
-          .select({ count: count() })
-          .from(folder)
-          .where(and(eq(folder.userId, userId), isNull(folder.teamId))),
+        normalizeMonthlyLinkCount(planCtx, prisma),
+        normalizeMonthlyEventCount(planCtx, prisma),
+        prisma.folder.count({
+          where: {
+            userId: userId,
+            teamId: null,
+          }
+        }),
       ]);
 
       monthlyLinkCount = linkCount;
       monthlyEventCount = eventCount;
-      folderCount = Number(folderCountResult?.[0]?.count ?? 0);
+      folderCount = folderCountResult;
     } else if (isTeamWorkspace) {
       // Team workspace: get workspace folder count (for display purposes)
-      const folderCountResult = await ctx.db
-        .select({ count: count() })
-        .from(folder)
-        .where(workspaceFilter(ctx.workspace, folder.userId, folder.teamId));
+      const folderCountResult = await prisma.folder.count({
+        where: {
+          teamId: ctx.workspace.teamId,
+        }
+      });
 
-      folderCount = Number(folderCountResult?.[0]?.count ?? 0);
+      folderCount = folderCountResult;
     }
 
     // For team workspaces, create an effective subscription that reflects Ultra status
@@ -76,11 +76,11 @@ export const subscriptionsRouter = createTRPCRouter({
     // Guard against null subscriptions when spreading
     const effectiveSubscriptions = isTeamWorkspace
       ? {
-          ...(userRecord.subscriptions ?? {}),
+          ...(userRecord.subscription ?? {}),
           status: "active",
           plan: "ultra" as const,
         }
-      : userRecord.subscriptions;
+      : userRecord.subscription;
 
     return {
       subscriptions: effectiveSubscriptions,

@@ -1,4 +1,4 @@
-import type { Team, TeamMember, TeamRole } from "@/server/db/schema";
+import type { Team, TeamMember, TeamRole } from "@prisma/client";
 import type { Plan } from "@/lib/billing/plans";
 
 /**

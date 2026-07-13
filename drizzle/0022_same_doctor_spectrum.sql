@@ -1,1 +1,0 @@
-ALTER TABLE `Link` ADD `tags` json DEFAULT ('[]');

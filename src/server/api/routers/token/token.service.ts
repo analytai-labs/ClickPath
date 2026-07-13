@@ -1,8 +1,5 @@
-import { and, eq } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
 import crypto from "node:crypto";
-
-import { token } from "@/server/db/schema";
 
 import type { ProtectedTRPCContext } from "../../trpc";
 
@@ -20,29 +17,30 @@ function hashToken(token: string) {
 }
 
 export const getTokens = async (ctx: ProtectedTRPCContext) => {
-  return await ctx.db.select().from(token).where(eq(token.userId, ctx.auth.userId));
+  return await ctx.prisma.token.findMany({
+    where: { userId: ctx.auth.userId }
+  });
 };
 
 export const createToken = async (ctx: ProtectedTRPCContext, input: CreateTokenInput) => {
   const generatedToken = generateToken();
 
-  const newToken = await ctx.db.insert(token).values({
-    ...input,
-    token: hashToken(generatedToken),
-    userId: ctx.auth.userId,
+  const newToken = await ctx.prisma.token.create({
+    data: {
+      ...input,
+      token: hashToken(generatedToken),
+      userId: ctx.auth.userId,
+    }
   });
 
-  const newTokenId = newToken[0].insertId;
-
-  const retrievedToken = await ctx.db.select().from(token).where(eq(token.id, newTokenId));
-
-  retrievedToken[0]!.token = generatedToken;
-
-  return retrievedToken;
+  return [{ ...newToken, token: generatedToken }];
 };
 
 export const deleteToken = async (ctx: ProtectedTRPCContext, input: DeleteTokenInput) => {
-  return await ctx.db
-    .delete(token)
-    .where(and(eq(token.id, input.id), eq(token.userId, ctx.auth.userId)));
+  return await ctx.prisma.token.deleteMany({
+    where: {
+      id: input.id,
+      userId: ctx.auth.userId,
+    }
+  });
 };

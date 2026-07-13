@@ -1,13 +1,11 @@
-import { eq } from "drizzle-orm";
+import { PrismaClient, Subscription, User } from "@prisma/client";
 
 import { getPlanCaps, Plan, resolvePlan } from "@/lib/billing/plans";
-import { db } from "@/server/db";
-import { subscription, user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 import type { PLAN_CAPS } from "@/lib/billing/plans";
-import type { Subscription, User } from "@/server/db/schema";
 
-type DbClient = typeof db;
+type DbClient = PrismaClient;
 
 /**
  * Hot-path paid-plan check used by the redirect pipeline. Avoids the full
@@ -17,12 +15,12 @@ type DbClient = typeof db;
 export async function isOwnerOnPaidPlan(
   userId: string,
   teamId: number | null,
-  dbClient: DbClient = db,
+  dbClient: DbClient = prisma,
 ): Promise<boolean> {
   if (teamId !== null) return true;
 
-  const sub = await dbClient.query.subscription.findFirst({
-    where: eq(subscription.userId, userId),
+  const sub = await dbClient.subscription.findFirst({
+    where: { userId },
   });
 
   return resolvePlan(sub ?? null) !== "free";
@@ -42,18 +40,18 @@ const getMonthStart = () => {
 
 export async function getUserPlanContext(
   userId: string,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<UserPlanContext | null> {
-  const userRecord = await dbClient.query.user.findFirst({
-    where: (table, { eq }) => eq(table.id, userId),
-    with: {
-      subscriptions: true,
+  const userRecord = await dbClient.user.findFirst({
+    where: { id: userId },
+    include: {
+      subscription: true,
     },
   });
 
   if (!userRecord) return null;
 
-  const subscription = userRecord.subscriptions ?? null;
+  const subscription = userRecord.subscription ?? null;
   const plan = resolvePlan(subscription);
 
   return {
@@ -66,7 +64,7 @@ export async function getUserPlanContext(
 
 export async function normalizeMonthlyEventCount(
   ctx: UserPlanContext,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<number> {
   const monthStart = getMonthStart();
   const lastReset =
@@ -75,14 +73,14 @@ export async function normalizeMonthlyEventCount(
     new Date();
 
   if (lastReset < monthStart) {
-    await dbClient
-      .update(user)
-      .set({
+    await dbClient.user.update({
+      where: { id: ctx.userRecord.id },
+      data: {
         monthlyEventCount: 0,
         lastEventCountReset: new Date(),
         eventUsageAlertLevel: 0,
-      })
-      .where(eq(user.id, ctx.userRecord.id));
+      },
+    });
 
     return 0;
   }
@@ -92,20 +90,20 @@ export async function normalizeMonthlyEventCount(
 
 export async function normalizeMonthlyLinkCount(
   ctx: UserPlanContext,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<number> {
   const monthStart = getMonthStart();
   const lastReset =
     ctx.userRecord.lastLinkCountReset ?? ctx.userRecord.createdAt ?? new Date();
 
   if (lastReset < monthStart) {
-    await dbClient
-      .update(user)
-      .set({
+    await dbClient.user.update({
+      where: { id: ctx.userRecord.id },
+      data: {
         monthlyLinkCount: 0,
         lastLinkCountReset: new Date(),
-      })
-      .where(eq(user.id, ctx.userRecord.id));
+      },
+    });
 
     return 0;
   }

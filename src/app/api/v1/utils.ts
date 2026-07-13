@@ -1,33 +1,31 @@
-import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
-import { db } from "@/server/db";
-import { siteSettings, subscription, token, user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 export async function validateAndGetToken(apiKey: string | null) {
   if (!apiKey) return null;
   const hash = crypto.createHash("sha256").update(apiKey).digest("hex");
-  const existingToken = await db.select().from(token).where(eq(token.token, hash));
+  const existingToken = await prisma.token.findFirst({ where: { token: hash } });
 
-  if (!existingToken.length) return null;
+  if (!existingToken) return null;
 
-  const userId = existingToken[0]!.userId;
+  const userId = existingToken.userId;
 
   // Run ban check and subscription lookup in parallel
   const [userRecord, userSubscription] = await Promise.all([
-    db.query.user.findFirst({
-      where: eq(user.id, userId),
-      columns: { banned: true },
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { banned: true },
     }),
-    db.select().from(subscription).where(eq(subscription.userId, userId)),
+    prisma.subscription.findFirst({ where: { userId } }),
   ]);
 
   if (userRecord?.banned) {
     return null;
   }
 
-  return { ...existingToken[0]!, subscription: userSubscription[0] };
+  return { ...existingToken, subscription: userSubscription };
 }
 
 function normalizeApiDomain(domain: string | null | undefined) {
@@ -36,9 +34,9 @@ function normalizeApiDomain(domain: string | null | undefined) {
 }
 
 async function getUserDefaultDomain(userId: string) {
-  const settings = await db.query.siteSettings.findFirst({
-    where: eq(siteSettings.userId, userId),
-    columns: {
+  const settings = await prisma.siteSettings.findUnique({
+    where: { userId },
+    select: {
       defaultDomain: true,
     },
   });

@@ -1,10 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { resolvePlan } from "@/lib/billing/plans";
 import { runBackgroundTask } from "@/lib/utils/background";
-import { audienceFeedback } from "@/server/db/schema";
 import { sendAudienceFeedbackNotification } from "@/server/lib/notifications/discord";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../../trpc";
@@ -33,9 +31,9 @@ function shouldAutoPromptAudienceFeedback(params: {
 
 export const audienceFeedbackRouter = createTRPCRouter({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
-    const row = await ctx.db.query.audienceFeedback.findFirst({
-      where: eq(audienceFeedback.userId, ctx.auth.userId),
-      columns: {
+    const row = await ctx.prisma.audienceFeedback.findFirst({
+      where: { userId: ctx.auth.userId },
+      select: {
         submittedAt: true,
         dismissedAt: true,
         dismissCount: true,
@@ -69,9 +67,9 @@ export const audienceFeedbackRouter = createTRPCRouter({
   }),
 
   dismiss: protectedProcedure.mutation(async ({ ctx }) => {
-    const existingFeedback = await ctx.db.query.audienceFeedback.findFirst({
-      where: eq(audienceFeedback.userId, ctx.auth.userId),
-      columns: { submittedAt: true, dismissedAt: true },
+    const existingFeedback = await ctx.prisma.audienceFeedback.findFirst({
+      where: { userId: ctx.auth.userId },
+      select: { submittedAt: true, dismissedAt: true, id: true },
     });
 
     if (existingFeedback?.submittedAt) {
@@ -81,21 +79,25 @@ export const audienceFeedbackRouter = createTRPCRouter({
     const dismissedAt = new Date();
 
     if (!existingFeedback) {
-      await ctx.db.insert(audienceFeedback).values({
-        userId: ctx.auth.userId,
-        dismissedAt,
-        dismissCount: 1,
+      await ctx.prisma.audienceFeedback.create({
+        data: {
+          userId: ctx.auth.userId,
+          dismissedAt,
+          dismissCount: 1,
+        }
       });
       return { success: true, dismissedAt };
     }
 
-    await ctx.db
-      .update(audienceFeedback)
-      .set({
+    await ctx.prisma.audienceFeedback.update({
+      where: { id: existingFeedback.id },
+      data: {
         dismissedAt,
-        dismissCount: sql`${audienceFeedback.dismissCount} + 1`,
-      })
-      .where(eq(audienceFeedback.userId, ctx.auth.userId));
+        dismissCount: {
+          increment: 1,
+        }
+      }
+    });
 
     return { success: true, dismissedAt };
   }),
@@ -103,12 +105,11 @@ export const audienceFeedbackRouter = createTRPCRouter({
   submit: protectedProcedure
     .input(submitAudienceFeedbackSchema)
     .mutation(async ({ ctx, input }) => {
-      const userRecord = await ctx.db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, ctx.auth.userId),
-        columns: { email: true, name: true },
-        with: { subscriptions: true },
+      const userRecord = await ctx.prisma.user.findFirst({
+        where: { id: ctx.auth.userId },
+        select: { email: true, name: true, subscription: true },
       });
-      const planSnapshot = resolvePlan(userRecord?.subscriptions ?? null);
+      const planSnapshot = resolvePlan(userRecord?.subscription ?? null);
       const submittedAt = new Date();
       const isPaidPlan = planSnapshot !== "free";
       const upgradeBlocker = isPaidPlan ? null : input.upgradeBlocker || null;
@@ -148,9 +149,20 @@ export const audienceFeedbackRouter = createTRPCRouter({
         dismissCount: 0,
       };
 
-      await ctx.db.insert(audienceFeedback).values(values).onDuplicateKeyUpdate({
-        set: values,
+      const existingFeedback = await ctx.prisma.audienceFeedback.findFirst({
+        where: { userId: ctx.auth.userId }
       });
+
+      if (existingFeedback) {
+        await ctx.prisma.audienceFeedback.update({
+          where: { id: existingFeedback.id },
+          data: values
+        });
+      } else {
+        await ctx.prisma.audienceFeedback.create({
+          data: values
+        });
+      }
 
       void runBackgroundTask(
         sendAudienceFeedbackNotification({
@@ -186,22 +198,25 @@ export const audienceFeedbackRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const conditions = [isNotNull(audienceFeedback.submittedAt)];
-      if (input.plan) conditions.push(eq(audienceFeedback.planSnapshot, input.plan));
-      if (input.acquisitionChannel) {
-        conditions.push(eq(audienceFeedback.acquisitionChannel, input.acquisitionChannel));
-      }
-      if (input.priorTool) conditions.push(eq(audienceFeedback.priorTool, input.priorTool));
-      if (input.role) conditions.push(eq(audienceFeedback.role, input.role));
-      if (input.cursor) conditions.push(lt(audienceFeedback.id, input.cursor));
+      const where: any = {
+        submittedAt: { not: null }
+      };
 
-      const items = await ctx.db.query.audienceFeedback.findMany({
-        where: and(...conditions),
-        with: {
-          user: { columns: { name: true, email: true, imageUrl: true } },
+      if (input.plan) where.planSnapshot = input.plan;
+      if (input.acquisitionChannel) {
+        where.acquisitionChannel = input.acquisitionChannel;
+      }
+      if (input.priorTool) where.priorTool = input.priorTool;
+      if (input.role) where.role = input.role;
+
+      const items = await ctx.prisma.audienceFeedback.findMany({
+        where,
+        include: {
+          user: { select: { name: true, email: true, imageUrl: true } },
         },
-        orderBy: (table, { desc: descOrder }) => descOrder(table.submittedAt),
-        limit: input.limit + 1,
+        orderBy: { submittedAt: 'desc' },
+        take: input.limit + 1,
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {})
       });
 
       let nextCursor: number | undefined;
@@ -214,22 +229,25 @@ export const audienceFeedbackRouter = createTRPCRouter({
     }),
 
   stats: adminProcedure.query(async ({ ctx }) => {
-    const rows = await ctx.db
-      .select({
-        planSnapshot: audienceFeedback.planSnapshot,
-        acquisitionChannel: audienceFeedback.acquisitionChannel,
-        priorTool: audienceFeedback.priorTool,
-        role: audienceFeedback.role,
-        useCase: audienceFeedback.useCase,
-        magicFeature: audienceFeedback.magicFeature,
-      })
-      .from(audienceFeedback)
-      .where(isNotNull(audienceFeedback.submittedAt));
+    const rows = await ctx.prisma.audienceFeedback.findMany({
+      where: {
+        submittedAt: { not: null }
+      },
+      select: {
+        planSnapshot: true,
+        acquisitionChannel: true,
+        priorTool: true,
+        role: true,
+        useCase: true,
+        magicFeature: true,
+      }
+    });
 
     const tally = (key: keyof (typeof rows)[number]) => {
       const counts = new Map<string | null, number>();
       for (const row of rows) {
-        counts.set(row[key], (counts.get(row[key]) ?? 0) + 1);
+        const value = row[key] as string | null;
+        counts.set(value, (counts.get(value) ?? 0) + 1);
       }
       return Array.from(counts, ([value, count]) => ({ value, count })).sort(
         (a, b) => b.count - a.count,

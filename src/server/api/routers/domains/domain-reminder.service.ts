@@ -1,8 +1,5 @@
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
-
 import { logger } from "@/lib/logger";
-import { db } from "@/server/db";
-import { customDomain, team, user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { sendDomainReminderEmail } from "@/server/lib/notifications/domain-reminder";
 
 const log = logger.child({ component: "domain-reminder" });
@@ -147,29 +144,20 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
   // Conditions:
   // 1. status = 'invalid'
   // 2. lastReminderSentAt is NULL (never reminded) OR older than 7 days ago
-  const invalidDomains = await db
-    .select({
-      id: customDomain.id,
-      domain: customDomain.domain,
-      userId: customDomain.userId,
-      teamId: customDomain.teamId,
-      createdAt: customDomain.createdAt,
-      verificationDetails: customDomain.verificationDetails,
-      // User info (for personal workspaces)
-      userEmail: user.email,
-      userName: user.name,
-    })
-    .from(customDomain)
-    .leftJoin(user, eq(customDomain.userId, user.id))
-    .where(
-      and(
-        eq(customDomain.status, "invalid"),
-        or(
-          isNull(customDomain.lastReminderSentAt),
-          lt(customDomain.lastReminderSentAt, reminderCutoffDate),
-        ),
-      ),
-    );
+  const invalidDomains = await prisma.customDomain.findMany({
+    where: {
+      status: "invalid",
+      OR: [
+        { lastReminderSentAt: null },
+        { lastReminderSentAt: { lt: reminderCutoffDate } }
+      ]
+    },
+    include: {
+      user: {
+        select: { email: true, name: true }
+      }
+    }
+  });
 
   result.domainsChecked = invalidDomains.length;
 
@@ -189,10 +177,10 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
 
       if (isActuallyValid) {
         // Domain is now valid according to Vercel, update our database and skip sending email
-        await db
-          .update(customDomain)
-          .set({ status: "active" })
-          .where(eq(customDomain.id, domainRecord.id));
+        await prisma.customDomain.update({
+          where: { id: domainRecord.id },
+          data: { status: "active" }
+        });
 
         result.domainsUpdatedToActive++;
         log.info(
@@ -208,15 +196,15 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
 
       if (domainRecord.teamId) {
         // Team workspace: get team owner's email
-        const teamRecord = await db.query.team.findFirst({
-          where: eq(team.id, domainRecord.teamId),
-          columns: { ownerId: true },
+        const teamRecord = await prisma.team.findFirst({
+          where: { id: domainRecord.teamId },
+          select: { ownerId: true },
         });
 
         if (teamRecord) {
-          const ownerRecord = await db.query.user.findFirst({
-            where: eq(user.id, teamRecord.ownerId),
-            columns: { email: true, name: true },
+          const ownerRecord = await prisma.user.findFirst({
+            where: { id: teamRecord.ownerId },
+            select: { email: true, name: true },
           });
 
           if (ownerRecord) {
@@ -226,8 +214,8 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
         }
       } else {
         // Personal workspace: use the user's email
-        recipientEmail = domainRecord.userEmail;
-        recipientName = domainRecord.userName;
+        recipientEmail = domainRecord.user?.email ?? null;
+        recipientName = domainRecord.user?.name ?? null;
       }
 
       if (!recipientEmail) {
@@ -269,10 +257,10 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
       });
 
       // Update lastReminderSentAt after successful send
-      await db
-        .update(customDomain)
-        .set({ lastReminderSentAt: new Date() })
-        .where(eq(customDomain.id, domainRecord.id));
+      await prisma.customDomain.update({
+        where: { id: domainRecord.id },
+        data: { lastReminderSentAt: new Date() }
+      });
 
       result.remindersSent++;
       log.info(
@@ -302,40 +290,33 @@ export async function getDomainReminderStats() {
   reminderCutoffDate.setDate(reminderCutoffDate.getDate() - REMINDER_INTERVAL_DAYS);
 
   // Domains needing reminders
-  const needingReminders = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(customDomain)
-    .where(
-      and(
-        eq(customDomain.status, "invalid"),
-        or(
-          isNull(customDomain.lastReminderSentAt),
-          lt(customDomain.lastReminderSentAt, reminderCutoffDate),
-        ),
-      ),
-    );
+  const needingReminders = await prisma.customDomain.count({
+    where: {
+      status: "invalid",
+      OR: [
+        { lastReminderSentAt: null },
+        { lastReminderSentAt: { lt: reminderCutoffDate } }
+      ]
+    }
+  });
 
   // Total invalid domains
-  const totalInvalid = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(customDomain)
-    .where(eq(customDomain.status, "invalid"));
+  const totalInvalid = await prisma.customDomain.count({
+    where: { status: "invalid" }
+  });
 
   // Recently reminded (within last 7 days)
-  const recentlyReminded = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(customDomain)
-    .where(
-      and(
-        eq(customDomain.status, "invalid"),
-        sql`${customDomain.lastReminderSentAt} >= ${reminderCutoffDate}`,
-      ),
-    );
+  const recentlyReminded = await prisma.customDomain.count({
+    where: {
+      status: "invalid",
+      lastReminderSentAt: { gte: reminderCutoffDate }
+    }
+  });
 
   return {
-    needingReminders: Number(needingReminders[0]?.count ?? 0),
-    totalInvalid: Number(totalInvalid[0]?.count ?? 0),
-    recentlyReminded: Number(recentlyReminded[0]?.count ?? 0),
+    needingReminders,
+    totalInvalid,
+    recentlyReminded,
     reminderIntervalDays: REMINDER_INTERVAL_DAYS,
   };
 }

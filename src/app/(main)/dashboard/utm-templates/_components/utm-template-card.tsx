@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api } from "@/trpc/react";
 
-import type { UtmTemplate } from "@/server/db/schema";
+import type { UtmTemplate } from "@prisma/client";
 
 type UtmTemplateCardProps = {
   template: UtmTemplate;

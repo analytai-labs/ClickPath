@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isSubscriptionEntitled } from "@/lib/billing/plans";
 
+import { prisma } from "@/server/db";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
 import { generateAliasFromMetadata } from "./ai.service";
 
@@ -13,8 +14,8 @@ const metadataSchema = z.object({
 
 export const aiRouter = createTRPCRouter({
   generateAlias: protectedProcedure.input(metadataSchema).mutation(async ({ ctx, input }) => {
-    const userSubscription = await ctx.db.query.subscription.findFirst({
-      where: (table, { eq }) => eq(table.userId, ctx.auth.userId),
+    const userSubscription = await prisma.subscription.findFirst({
+      where: { userId: ctx.auth.userId },
     });
 
     if (!isSubscriptionEntitled(userSubscription)) {

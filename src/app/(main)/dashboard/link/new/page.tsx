@@ -62,7 +62,7 @@ import { LinkPreviewComponent } from "./_components/link-preview";
 import { OgImageUploader } from "./_components/og-image-uploader";
 import UpgradeToProAIButtonTooltip from "./_components/upgrade-to-pro-ai-tooltip";
 
-import type { CustomDomain } from "@/server/db/schema";
+import type { CustomDomain } from "@prisma/client";
 import type { z } from "zod";
 
 type MetaData = {

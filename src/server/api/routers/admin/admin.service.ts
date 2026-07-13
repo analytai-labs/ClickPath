@@ -1,23 +1,11 @@
-import { and, between, count, desc, eq, inArray, like, or, sql } from "drizzle-orm";
-
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { PAID_PLANS, PLAN_PRICES_USD, type PaidPlan } from "@/lib/constants/plan-pricing";
-import {
-  bioPage,
-  blockedDomain,
-  campaign,
-  feedback,
-  flaggedLink,
-  link,
-  linkVisit,
-  subscription,
-  user,
-} from "@/server/db/schema";
-
 import type { ProtectedTRPCContext } from "../../trpc";
+import { type SubscriptionPlan } from "@prisma/client";
 
 /** Discriminator used to identify links auto-blocked by a user ban */
 const BAN_CASCADE_REASON = "Owner account banned" as const;
+
 import type {
   AddBlockedDomainInput,
   BanUserInput,
@@ -45,43 +33,34 @@ export async function getStats(ctx: ProtectedTRPCContext) {
   today.setHours(0, 0, 0, 0);
 
   const [
-    linkStatsResult,
-    userStatsResult,
-    pendingFlaggedResult,
-    blockedDomainsResult,
+    totalLinks,
+    blockedLinks,
+    linksToday,
+    totalUsers,
+    bannedUsers,
+    usersToday,
+    pendingFlagged,
+    blockedDomains,
   ] = await Promise.all([
-    // Single scan: total links + blocked links + today's links
-    ctx.db
-      .select({
-        total: count(),
-        blocked: sql<number>`SUM(${link.blocked} = true)`,
-        today: sql<number>`SUM(${link.createdAt} >= ${today})`,
-      })
-      .from(link),
-    // Single scan: total users + banned users + today's users
-    ctx.db
-      .select({
-        total: count(),
-        banned: sql<number>`SUM(${user.banned} = true)`,
-        today: sql<number>`SUM(${user.createdAt} >= ${today})`,
-      })
-      .from(user),
-    ctx.db
-      .select({ count: count() })
-      .from(flaggedLink)
-      .where(eq(flaggedLink.status, "pending")),
-    ctx.db.select({ count: count() }).from(blockedDomain),
+    ctx.prisma.link.count(),
+    ctx.prisma.link.count({ where: { blocked: true } }),
+    ctx.prisma.link.count({ where: { createdAt: { gte: today } } }),
+    ctx.prisma.user.count(),
+    ctx.prisma.user.count({ where: { banned: true } }),
+    ctx.prisma.user.count({ where: { createdAt: { gte: today } } }),
+    ctx.prisma.flaggedLink.count({ where: { status: "pending" } }),
+    ctx.prisma.blockedDomain.count(),
   ]);
 
   return {
-    totalLinks: linkStatsResult[0]?.total ?? 0,
-    totalUsers: userStatsResult[0]?.total ?? 0,
-    blockedLinks: linkStatsResult[0]?.blocked ?? 0,
-    pendingFlagged: pendingFlaggedResult[0]?.count ?? 0,
-    bannedUsers: userStatsResult[0]?.banned ?? 0,
-    blockedDomains: blockedDomainsResult[0]?.count ?? 0,
-    linksToday: linkStatsResult[0]?.today ?? 0,
-    usersToday: userStatsResult[0]?.today ?? 0,
+    totalLinks,
+    totalUsers,
+    blockedLinks,
+    pendingFlagged,
+    bannedUsers,
+    blockedDomains,
+    linksToday,
+    usersToday,
   };
 }
 
@@ -90,36 +69,22 @@ export async function getDailyStats(ctx: ProtectedTRPCContext) {
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
   fourteenDaysAgo.setHours(0, 0, 0, 0);
 
+  const query = `
+    SELECT TO_CHAR("createdAt", 'YYYY-MM-DD') as date, COUNT(*) as count
+    FROM "__TABLE__"
+    WHERE "createdAt" >= $1
+    GROUP BY 1
+    ORDER BY 1
+  `;
+
   const [dailyLinks, dailyUsers] = await Promise.all([
-    ctx.db
-      .select({
-        date: sql<string>`DATE(${link.createdAt})`,
-        count: count(),
-      })
-      .from(link)
-      .where(sql`${link.createdAt} >= ${fourteenDaysAgo}`)
-      .groupBy(sql`DATE(${link.createdAt})`)
-      .orderBy(sql`DATE(${link.createdAt})`),
-    ctx.db
-      .select({
-        date: sql<string>`DATE(${user.createdAt})`,
-        count: count(),
-      })
-      .from(user)
-      .where(sql`${user.createdAt} >= ${fourteenDaysAgo}`)
-      .groupBy(sql`DATE(${user.createdAt})`)
-      .orderBy(sql`DATE(${user.createdAt})`),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), fourteenDaysAgo),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "User"), fourteenDaysAgo),
   ]);
 
-  // Index by date string for O(1) lookups (normalize in case driver returns Date)
-  const linksByDate = new Map(
-    dailyLinks.map((l) => [String(l.date).split("T")[0], l.count]),
-  );
-  const usersByDate = new Map(
-    dailyUsers.map((u) => [String(u.date).split("T")[0], u.count]),
-  );
+  const linksByDate = new Map(dailyLinks.map((l) => [l.date, Number(l.count)]));
+  const usersByDate = new Map(dailyUsers.map((u) => [u.date, Number(u.count)]));
 
-  // Fill in all 14 days (including days with 0 activity)
   const result: { date: string; links: number; users: number }[] = [];
   for (let i = 0; i < 14; i++) {
     const d = new Date(fourteenDaysAgo);
@@ -136,423 +101,361 @@ export async function getDailyStats(ctx: ProtectedTRPCContext) {
 }
 
 export async function getRecentUsers(ctx: ProtectedTRPCContext) {
-  const recent = await ctx.db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      imageUrl: user.imageUrl,
-      createdAt: user.createdAt,
-      banned: user.banned,
-    })
-    .from(user)
-    .orderBy(desc(user.createdAt))
-    .limit(8);
+  const recent = await ctx.prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      imageUrl: true,
+      createdAt: true,
+      banned: true,
+      _count: { select: { links: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+  });
 
-  if (recent.length === 0) return [];
-
-  const counts = await ctx.db
-    .select({ userId: link.userId, linkCount: count() })
-    .from(link)
-    .where(inArray(link.userId, recent.map((u) => u.id)))
-    .groupBy(link.userId);
-
-  const countsByUser = new Map(counts.map((c) => [c.userId, c.linkCount]));
-  return recent.map((u) => ({ ...u, linkCount: countsByUser.get(u.id) ?? 0 }));
+  return recent.map((u) => {
+    const { _count, ...rest } = u;
+    return { ...rest, linkCount: _count.links };
+  });
 }
 
 export async function getRecentActivity(ctx: ProtectedTRPCContext) {
-  const [recentLinks, recentBlocked] = await Promise.all([
-    ctx.db
-      .select({
-        id: link.id,
-        url: link.url,
-        alias: link.alias,
-        domain: link.domain,
-        createdAt: link.createdAt,
-        userEmail: user.email,
-      })
-      .from(link)
-      .leftJoin(user, eq(link.userId, user.id))
-      .orderBy(desc(link.createdAt))
-      .limit(8),
-    ctx.db
-      .select({
-        id: link.id,
-        url: link.url,
-        alias: link.alias,
-        domain: link.domain,
-        blockedAt: link.blockedAt,
-        blockedReason: link.blockedReason,
-        userEmail: user.email,
-      })
-      .from(link)
-      .leftJoin(user, eq(link.userId, user.id))
-      .where(eq(link.blocked, true))
-      .orderBy(desc(link.blockedAt))
-      .limit(5),
-  ]);
-
-  return { recentLinks, recentBlocked };
-}
-
-export async function searchLinks(
-  ctx: ProtectedTRPCContext,
-  input: SearchLinksInput,
-) {
-  const offset = (input.page - 1) * input.pageSize;
-  const searchPattern = `%${input.query}%`;
-
-  const [results, totalResult] = await Promise.all([
-    ctx.db
-      .select({
-        id: link.id,
-        url: link.url,
-        alias: link.alias,
-        domain: link.domain,
-        blocked: link.blocked,
-        blockedReason: link.blockedReason,
-        createdAt: link.createdAt,
-        userId: link.userId,
-        userName: user.name,
-        userEmail: user.email,
-      })
-      .from(link)
-      .leftJoin(user, eq(link.userId, user.id))
-      .where(
-        or(
-          like(link.url, searchPattern),
-          like(link.alias, searchPattern),
-          like(link.domain, searchPattern),
-          like(user.email, searchPattern),
-        ),
-      )
-      .orderBy(desc(link.createdAt))
-      .limit(input.pageSize)
-      .offset(offset),
-    ctx.db
-      .select({ count: count() })
-      .from(link)
-      .leftJoin(user, eq(link.userId, user.id))
-      .where(
-        or(
-          like(link.url, searchPattern),
-          like(link.alias, searchPattern),
-          like(link.domain, searchPattern),
-          like(user.email, searchPattern),
-        ),
-      ),
+  const [recentLinksRaw, recentBlockedRaw] = await Promise.all([
+    ctx.prisma.link.findMany({
+      select: {
+        id: true,
+        url: true,
+        alias: true,
+        domain: true,
+        createdAt: true,
+        user: { select: { email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+    ctx.prisma.link.findMany({
+      where: { blocked: true },
+      select: {
+        id: true,
+        url: true,
+        alias: true,
+        domain: true,
+        blockedAt: true,
+        blockedReason: true,
+        user: { select: { email: true } },
+      },
+      orderBy: { blockedAt: "desc" },
+      take: 5,
+    }),
   ]);
 
   return {
-    links: results,
-    total: totalResult[0]?.count ?? 0,
+    recentLinks: recentLinksRaw.map((l) => {
+      const { user, ...rest } = l;
+      return { ...rest, userEmail: user?.email ?? null };
+    }),
+    recentBlocked: recentBlockedRaw.map((l) => {
+      const { user, ...rest } = l;
+      return { ...rest, userEmail: user?.email ?? null };
+    }),
+  };
+}
+
+export async function searchLinks(ctx: ProtectedTRPCContext, input: SearchLinksInput) {
+  const offset = (input.page - 1) * input.pageSize;
+  
+  const searchCondition = {
+    OR: [
+      { url: { contains: input.query } },
+      { alias: { contains: input.query } },
+      { domain: { contains: input.query } },
+      { user: { email: { contains: input.query } } },
+    ],
+  };
+
+  const [results, total] = await Promise.all([
+    ctx.prisma.link.findMany({
+      where: searchCondition,
+      select: {
+        id: true,
+        url: true,
+        alias: true,
+        domain: true,
+        blocked: true,
+        blockedReason: true,
+        createdAt: true,
+        userId: true,
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: input.pageSize,
+      skip: offset,
+    }),
+    ctx.prisma.link.count({ where: searchCondition }),
+  ]);
+
+  return {
+    links: results.map((l) => {
+      const { user, ...rest } = l;
+      return { ...rest, userName: user?.name ?? null, userEmail: user?.email ?? null };
+    }),
+    total,
     page: input.page,
     pageSize: input.pageSize,
   };
 }
 
-export async function blockLink(
-  ctx: ProtectedTRPCContext,
-  input: BlockLinkInput,
-) {
-  const linkRecord = await ctx.db.query.link.findFirst({
-    where: eq(link.id, input.linkId),
-    columns: { id: true, alias: true, domain: true },
+export async function blockLink(ctx: ProtectedTRPCContext, input: BlockLinkInput) {
+  const linkRecord = await ctx.prisma.link.findFirst({
+    where: { id: input.linkId },
+    select: { id: true, alias: true, domain: true },
   });
 
   if (!linkRecord) {
     throw new Error("Link not found");
   }
 
-  await ctx.db
-    .update(link)
-    .set({
+  await ctx.prisma.link.update({
+    where: { id: input.linkId },
+    data: {
       blocked: true,
       blockedAt: new Date(),
       blockedReason: input.reason,
-    })
-    .where(eq(link.id, input.linkId));
+    },
+  });
 
-  // Invalidate cache so the blocked status takes effect immediately
-  await deleteFromCache(buildCacheKey(linkRecord.domain, linkRecord.alias!));
+  if (linkRecord.alias) {
+    await deleteFromCache(buildCacheKey(linkRecord.domain, linkRecord.alias));
+  }
 }
 
-export async function unblockLink(
-  ctx: ProtectedTRPCContext,
-  input: UnblockLinkInput,
-) {
-  const linkRecord = await ctx.db.query.link.findFirst({
-    where: eq(link.id, input.linkId),
-    columns: { id: true, alias: true, domain: true },
+export async function unblockLink(ctx: ProtectedTRPCContext, input: UnblockLinkInput) {
+  const linkRecord = await ctx.prisma.link.findFirst({
+    where: { id: input.linkId },
+    select: { id: true, alias: true, domain: true },
   });
 
   if (!linkRecord) {
     throw new Error("Link not found");
   }
 
-  await ctx.db
-    .update(link)
-    .set({
+  await ctx.prisma.link.update({
+    where: { id: input.linkId },
+    data: {
       blocked: false,
       blockedAt: null,
       blockedReason: null,
-    })
-    .where(eq(link.id, input.linkId));
+    },
+  });
 
-  await deleteFromCache(buildCacheKey(linkRecord.domain, linkRecord.alias!));
+  if (linkRecord.alias) {
+    await deleteFromCache(buildCacheKey(linkRecord.domain, linkRecord.alias));
+  }
 }
 
-export async function searchUsers(
-  ctx: ProtectedTRPCContext,
-  input: SearchUsersInput,
-) {
+export async function searchUsers(ctx: ProtectedTRPCContext, input: SearchUsersInput) {
   const offset = (input.page - 1) * input.pageSize;
-  const searchPattern = `%${input.query}%`;
 
-  const [results, totalResult] = await Promise.all([
-    ctx.db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
-        banned: user.banned,
-        bannedReason: user.bannedReason,
-        bannedAt: user.bannedAt,
-        linkCount: sql<number>`(SELECT COUNT(*) FROM Link WHERE Link.userId = ${user.id})`,
-      })
-      .from(user)
-      .where(
-        or(
-          like(user.email, searchPattern),
-          like(user.name, searchPattern),
-        ),
-      )
-      .orderBy(desc(user.createdAt))
-      .limit(input.pageSize)
-      .offset(offset),
-    ctx.db
-      .select({ count: count() })
-      .from(user)
-      .where(
-        or(
-          like(user.email, searchPattern),
-          like(user.name, searchPattern),
-        ),
-      ),
+  const searchCondition = {
+    OR: [
+      { email: { contains: input.query } },
+      { name: { contains: input.query } },
+    ],
+  };
+
+  const [results, total] = await Promise.all([
+    ctx.prisma.user.findMany({
+      where: searchCondition,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        banned: true,
+        bannedReason: true,
+        bannedAt: true,
+        _count: { select: { links: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: input.pageSize,
+      skip: offset,
+    }),
+    ctx.prisma.user.count({ where: searchCondition }),
   ]);
 
   return {
-    users: results,
-    total: totalResult[0]?.count ?? 0,
+    users: results.map((u) => {
+      const { _count, ...rest } = u;
+      return { ...rest, linkCount: _count.links };
+    }),
+    total,
     page: input.page,
     pageSize: input.pageSize,
   };
 }
 
-export async function banUser(
-  ctx: ProtectedTRPCContext,
-  input: BanUserInput,
-) {
-  // Don't allow banning yourself
+export async function banUser(ctx: ProtectedTRPCContext, input: BanUserInput) {
   if (input.userId === ctx.auth.userId) {
     throw new Error("Cannot ban yourself");
   }
 
-  // Fetch links before transaction for cache invalidation
-  const userLinks = await ctx.db
-    .select({ id: link.id, alias: link.alias, domain: link.domain })
-    .from(link)
-    .where(eq(link.userId, input.userId));
+  const userLinks = await ctx.prisma.link.findMany({
+    where: { userId: input.userId },
+    select: { id: true, alias: true, domain: true },
+  });
 
-  // Ban user + block all their links atomically
-  await ctx.db.transaction(async (tx) => {
-    await tx
-      .update(user)
-      .set({
+  await ctx.prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: {
         banned: true,
         bannedAt: new Date(),
         bannedReason: input.reason,
-      })
-      .where(eq(user.id, input.userId));
+      },
+    });
 
     if (userLinks.length > 0) {
-      await tx
-        .update(link)
-        .set({
+      await tx.link.updateMany({
+        where: { userId: input.userId },
+        data: {
           blocked: true,
           blockedAt: new Date(),
           blockedReason: BAN_CASCADE_REASON,
-        })
-        .where(eq(link.userId, input.userId));
+        },
+      });
     }
   });
 
-  // Invalidate cache after commit
   if (userLinks.length > 0) {
     await Promise.all(
-      userLinks.map((l) => deleteFromCache(buildCacheKey(l.domain, l.alias!))),
+      userLinks.map((l) => (l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve())),
     );
   }
 }
 
-export async function unbanUser(
-  ctx: ProtectedTRPCContext,
-  input: UnbanUserInput,
-) {
-  // Fetch ban-cascaded links before transaction for cache invalidation
-  const bannedLinks = await ctx.db
-    .select({ id: link.id, alias: link.alias, domain: link.domain })
-    .from(link)
-    .where(
-      and(
-        eq(link.userId, input.userId),
-        eq(link.blockedReason, BAN_CASCADE_REASON),
-      ),
-    );
+export async function unbanUser(ctx: ProtectedTRPCContext, input: UnbanUserInput) {
+  const bannedLinks = await ctx.prisma.link.findMany({
+    where: {
+      userId: input.userId,
+      blockedReason: BAN_CASCADE_REASON,
+    },
+    select: { id: true, alias: true, domain: true },
+  });
 
-  // Unban user + restore ban-cascaded links atomically
-  await ctx.db.transaction(async (tx) => {
-    await tx
-      .update(user)
-      .set({
+  await ctx.prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: {
         banned: false,
         bannedAt: null,
         bannedReason: null,
-      })
-      .where(eq(user.id, input.userId));
+      },
+    });
 
     if (bannedLinks.length > 0) {
-      await tx
-        .update(link)
-        .set({
+      await tx.link.updateMany({
+        where: {
+          userId: input.userId,
+          blockedReason: BAN_CASCADE_REASON,
+        },
+        data: {
           blocked: false,
           blockedAt: null,
           blockedReason: null,
-        })
-        .where(
-          and(
-            eq(link.userId, input.userId),
-            eq(link.blockedReason, BAN_CASCADE_REASON),
-          ),
-        );
+        },
+      });
     }
   });
 
-  // Invalidate cache after commit
   if (bannedLinks.length > 0) {
     await Promise.all(
-      bannedLinks.map((l) => deleteFromCache(buildCacheKey(l.domain, l.alias!))),
+      bannedLinks.map((l) => (l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve())),
     );
   }
 }
 
 export async function getBlockedDomains(ctx: ProtectedTRPCContext) {
-  return ctx.db.query.blockedDomain.findMany({
-    orderBy: [desc(blockedDomain.createdAt)],
+  return ctx.prisma.blockedDomain.findMany({
+    orderBy: { createdAt: "desc" },
   });
 }
 
-export async function addBlockedDomain(
-  ctx: ProtectedTRPCContext,
-  input: AddBlockedDomainInput,
-) {
-  // Normalize: lowercase, strip protocol/path if a full URL was pasted
+export async function addBlockedDomain(ctx: ProtectedTRPCContext, input: AddBlockedDomainInput) {
   let domain = input.domain.toLowerCase().trim();
   try {
-    const parsed = new URL(
-      domain.startsWith("http") ? domain : `https://${domain}`,
-    );
+    const parsed = new URL(domain.startsWith("http") ? domain : `https://${domain}`);
     domain = parsed.hostname;
   } catch {
     // Use as-is if not a valid URL
   }
 
-  await ctx.db.insert(blockedDomain).values({
-    domain,
-    reason: input.reason ?? null,
-    createdByUserId: ctx.auth.userId,
+  await ctx.prisma.blockedDomain.create({
+    data: {
+      domain,
+      reason: input.reason ?? null,
+      createdByUserId: ctx.auth.userId,
+    },
   });
 }
 
-export async function removeBlockedDomain(
-  ctx: ProtectedTRPCContext,
-  input: RemoveBlockedDomainInput,
-) {
-  await ctx.db
-    .delete(blockedDomain)
-    .where(eq(blockedDomain.id, input.id));
+export async function removeBlockedDomain(ctx: ProtectedTRPCContext, input: RemoveBlockedDomainInput) {
+  await ctx.prisma.blockedDomain.delete({
+    where: { id: input.id },
+  });
 }
 
-export async function getFlaggedLinks(
-  ctx: ProtectedTRPCContext,
-  input: GetFlaggedLinksInput,
-) {
+export async function getFlaggedLinks(ctx: ProtectedTRPCContext, input: GetFlaggedLinksInput) {
   const offset = (input.page - 1) * input.pageSize;
+  const whereConditions = input.status ? { status: input.status } : {};
 
-  const whereConditions = input.status
-    ? eq(flaggedLink.status, input.status)
-    : undefined;
+  const [results, total] = await Promise.all([
+    ctx.prisma.flaggedLink.findMany({
+      where: whereConditions,
+      include: { link: { select: { url: true, alias: true, domain: true, blocked: true } } },
+      orderBy: { flaggedAt: "desc" },
+      take: input.pageSize,
+      skip: offset,
+    }),
+    ctx.prisma.flaggedLink.count({ where: whereConditions }),
+  ]);
 
-  const [results, totalResult] = await Promise.all([
-    ctx.db
-      .select({
-        id: flaggedLink.id,
-        linkId: flaggedLink.linkId,
-        reason: flaggedLink.reason,
-        reporterEmail: flaggedLink.reporterEmail,
-        details: flaggedLink.details,
-        status: flaggedLink.status,
-        flaggedAt: flaggedLink.flaggedAt,
-        resolvedAt: flaggedLink.resolvedAt,
+  return {
+    flaggedLinks: results.map((f) => {
+      const { link, ...rest } = f;
+      return {
+        ...rest,
         linkUrl: link.url,
         linkAlias: link.alias,
         linkDomain: link.domain,
         linkBlocked: link.blocked,
-      })
-      .from(flaggedLink)
-      .leftJoin(link, eq(flaggedLink.linkId, link.id))
-      .where(whereConditions)
-      .orderBy(desc(flaggedLink.flaggedAt))
-      .limit(input.pageSize)
-      .offset(offset),
-    ctx.db
-      .select({ count: count() })
-      .from(flaggedLink)
-      .where(whereConditions),
-  ]);
-
-  return {
-    flaggedLinks: results,
-    total: totalResult[0]?.count ?? 0,
+      };
+    }),
+    total,
     page: input.page,
     pageSize: input.pageSize,
   };
 }
 
-export async function resolveFlaggedLink(
-  ctx: ProtectedTRPCContext,
-  input: ResolveFlaggedLinkInput,
-) {
-  const flagged = await ctx.db.query.flaggedLink.findFirst({
-    where: eq(flaggedLink.id, input.id),
+export async function resolveFlaggedLink(ctx: ProtectedTRPCContext, input: ResolveFlaggedLinkInput) {
+  const flagged = await ctx.prisma.flaggedLink.findFirst({
+    where: { id: input.id },
   });
 
   if (!flagged) {
     throw new Error("Flagged link not found");
   }
 
-  await ctx.db
-    .update(flaggedLink)
-    .set({
+  await ctx.prisma.flaggedLink.update({
+    where: { id: input.id },
+    data: {
       status: input.action,
       resolvedAt: new Date(),
       resolvedByUserId: ctx.auth.userId,
-    })
-    .where(eq(flaggedLink.id, input.id));
+    },
+  });
 
-  // If the action is "blocked", also block the associated link
   if (input.action === "blocked") {
     await blockLink(ctx, {
       linkId: flagged.linkId,
@@ -565,73 +468,45 @@ export async function resolveFlaggedLink(
 // Analytics
 // ---------------------------------------------------------------------------
 
-/** Compute the previous period of the same length for comparison */
 function getPreviousPeriod(from: Date, to: Date) {
   const durationMs = to.getTime() - from.getTime();
-  const prevTo = new Date(from.getTime() - 1); // 1ms before current "from"
+  const prevTo = new Date(from.getTime() - 1);
   prevTo.setHours(23, 59, 59, 999);
   const prevFrom = new Date(prevTo.getTime() - durationMs);
   prevFrom.setHours(0, 0, 0, 0);
   return { prevFrom, prevTo };
 }
 
-/** Compute percentage change, returning null when the previous value is 0 */
 function pctChange(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : null;
   return Math.round(((current - previous) / previous) * 100);
 }
 
-async function countClicks(
-  ctx: ProtectedTRPCContext,
-  from: Date,
-  to: Date,
-): Promise<number> {
-  const result = await ctx.db
-    .select({ total: count() })
-    .from(linkVisit)
-    .where(between(linkVisit.createdAt, from, to));
-  return result[0]?.total ?? 0;
+async function countClicks(ctx: ProtectedTRPCContext, from: Date, to: Date): Promise<number> {
+  return await ctx.prisma.linkVisit.count({
+    where: { createdAt: { gte: from, lte: to } },
+  });
 }
 
-export async function getAnalytics(
-  ctx: ProtectedTRPCContext,
-  input: GetAnalyticsInput,
-) {
+export async function getAnalytics(ctx: ProtectedTRPCContext, input: GetAnalyticsInput) {
   const { from, to } = input;
   const { prevFrom, prevTo } = getPreviousPeriod(from, to);
 
   const [
-    linksInRange,
-    usersInRange,
+    currentLinks,
+    currentUsers,
     clicksInRange,
-    linksPrev,
-    usersPrev,
+    previousLinks,
+    previousUsers,
     clicksPrev,
   ] = await Promise.all([
-    ctx.db
-      .select({ total: count() })
-      .from(link)
-      .where(between(link.createdAt, from, to)),
-    ctx.db
-      .select({ total: count() })
-      .from(user)
-      .where(between(user.createdAt, from, to)),
+    ctx.prisma.link.count({ where: { createdAt: { gte: from, lte: to } } }),
+    ctx.prisma.user.count({ where: { createdAt: { gte: from, lte: to } } }),
     countClicks(ctx, from, to),
-    ctx.db
-      .select({ total: count() })
-      .from(link)
-      .where(between(link.createdAt, prevFrom, prevTo)),
-    ctx.db
-      .select({ total: count() })
-      .from(user)
-      .where(between(user.createdAt, prevFrom, prevTo)),
+    ctx.prisma.link.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
+    ctx.prisma.user.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
     countClicks(ctx, prevFrom, prevTo),
   ]);
-
-  const currentLinks = linksInRange[0]?.total ?? 0;
-  const currentUsers = usersInRange[0]?.total ?? 0;
-  const previousLinks = linksPrev[0]?.total ?? 0;
-  const previousUsers = usersPrev[0]?.total ?? 0;
 
   return {
     links: currentLinks,
@@ -640,72 +515,33 @@ export async function getAnalytics(
     linksGrowth: pctChange(currentLinks, previousLinks),
     usersGrowth: pctChange(currentUsers, previousUsers),
     clicksGrowth: pctChange(clicksInRange, clicksPrev),
-    avgLinksPerUser:
-      currentUsers > 0
-        ? Math.round((currentLinks / currentUsers) * 10) / 10
-        : 0,
+    avgLinksPerUser: currentUsers > 0 ? Math.round((currentLinks / currentUsers) * 10) / 10 : 0,
   };
 }
 
-export async function getActivityChart(
-  ctx: ProtectedTRPCContext,
-  input: GetActivityChartInput,
-) {
+export async function getActivityChart(ctx: ProtectedTRPCContext, input: GetActivityChartInput) {
   const { from, to, granularity } = input;
+  const pgFormat = granularity === "month" ? "YYYY-MM" : "YYYY-MM-DD";
 
-  const dateExpr =
-    granularity === "month"
-      ? sql<string>`DATE_FORMAT(${link.createdAt}, '%Y-%m')`
-      : sql<string>`DATE(${link.createdAt})`;
-
-  const userDateExpr =
-    granularity === "month"
-      ? sql<string>`DATE_FORMAT(${user.createdAt}, '%Y-%m')`
-      : sql<string>`DATE(${user.createdAt})`;
-
-  const clickDateExpr =
-    granularity === "month"
-      ? sql<string>`DATE_FORMAT(${linkVisit.createdAt}, '%Y-%m')`
-      : sql<string>`DATE(${linkVisit.createdAt})`;
+  const query = `
+    SELECT TO_CHAR("createdAt", $1) as date, COUNT(*) as count
+    FROM "__TABLE__"
+    WHERE "createdAt" >= $2 AND "createdAt" <= $3
+    GROUP BY 1
+    ORDER BY 1
+  `;
 
   const [dailyLinks, dailyUsers, dailyClicks] = await Promise.all([
-    ctx.db
-      .select({ date: dateExpr, count: count() })
-      .from(link)
-      .where(between(link.createdAt, from, to))
-      .groupBy(dateExpr)
-      .orderBy(dateExpr),
-    ctx.db
-      .select({ date: userDateExpr, count: count() })
-      .from(user)
-      .where(between(user.createdAt, from, to))
-      .groupBy(userDateExpr)
-      .orderBy(userDateExpr),
-    ctx.db
-      .select({ date: clickDateExpr, count: count() })
-      .from(linkVisit)
-      .where(between(linkVisit.createdAt, from, to))
-      .groupBy(clickDateExpr)
-      .orderBy(clickDateExpr),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), pgFormat, from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "User"), pgFormat, from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "LinkVisit"), pgFormat, from, to),
   ]);
 
-  const linksByDate = new Map(
-    dailyLinks.map((l) => [String(l.date).split("T")[0], l.count]),
-  );
-  const usersByDate = new Map(
-    dailyUsers.map((u) => [String(u.date).split("T")[0], u.count]),
-  );
-  const clicksByDate = new Map(
-    dailyClicks.map((c) => [String(c.date).split("T")[0], c.count]),
-  );
+  const linksByDate = new Map(dailyLinks.map((l) => [l.date, Number(l.count)]));
+  const usersByDate = new Map(dailyUsers.map((u) => [u.date, Number(u.count)]));
+  const clicksByDate = new Map(dailyClicks.map((c) => [c.date, Number(c.count)]));
 
-  // Fill in all periods
-  const result: {
-    date: string;
-    links: number;
-    users: number;
-    clicks: number;
-  }[] = [];
+  const result: { date: string; links: number; users: number; clicks: number }[] = [];
 
   if (granularity === "month") {
     const cursor = new Date(from);
@@ -739,200 +575,149 @@ export async function getActivityChart(
   return result;
 }
 
-export async function getTopUsers(
-  ctx: ProtectedTRPCContext,
-  input: GetTopUsersInput,
-) {
+export async function getTopUsers(ctx: ProtectedTRPCContext, input: GetTopUsersInput) {
   const { from, to, sortBy, limit: lim } = input;
 
   if (sortBy === "clicks") {
-    // When ranking by clicks, filter on linkVisit.createdAt so clicks
-    // are scoped to the selected window (not all-time).
-    return ctx.db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        imageUrl: user.imageUrl,
-        createdAt: user.createdAt,
-        linkCount: sql<number>`COUNT(DISTINCT ${link.id})`,
-        clickCount: sql<number>`COUNT(${linkVisit.id})`,
-      })
-      .from(user)
-      .innerJoin(link, eq(link.userId, user.id))
-      .innerJoin(linkVisit, eq(linkVisit.linkId, link.id))
-      .where(between(linkVisit.createdAt, from, to))
-      .groupBy(user.id)
-      .orderBy(sql`COUNT(${linkVisit.id}) DESC`)
-      .limit(lim);
+    const rows = await ctx.prisma.$queryRawUnsafe<{
+      id: string;
+      name: string | null;
+      email: string | null;
+      imageUrl: string | null;
+      createdAt: Date | null;
+      linkCount: bigint;
+      clickCount: bigint;
+    }[]>(
+      `SELECT u.id, u.name, u.email, u."imageUrl", u."createdAt",
+              COUNT(DISTINCT l.id) as "linkCount",
+              COUNT(v.id) as "clickCount"
+       FROM "User" u
+       INNER JOIN "Link" l ON l."userId" = u.id
+       INNER JOIN "LinkVisit" v ON v."linkId" = l.id
+       WHERE v."createdAt" >= $1 AND v."createdAt" <= $2
+       GROUP BY u.id
+       ORDER BY "clickCount" DESC
+       LIMIT $3`,
+      from,
+      to,
+      lim
+    );
+    return rows.map((r) => ({ ...r, linkCount: Number(r.linkCount), clickCount: Number(r.clickCount) }));
   }
 
-  // When ranking by links, filter on link.createdAt.
-  return ctx.db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      imageUrl: user.imageUrl,
-      createdAt: user.createdAt,
-      linkCount: sql<number>`COUNT(DISTINCT ${link.id})`,
-      clickCount: sql<number>`SUM(CASE WHEN ${linkVisit.createdAt} BETWEEN ${from} AND ${to} THEN 1 ELSE 0 END)`,
-    })
-    .from(user)
-    .innerJoin(link, eq(link.userId, user.id))
-    .leftJoin(linkVisit, eq(linkVisit.linkId, link.id))
-    .where(between(link.createdAt, from, to))
-    .groupBy(user.id)
-    .orderBy(sql`COUNT(DISTINCT ${link.id}) DESC`)
-    .limit(lim);
+  const rows = await ctx.prisma.$queryRawUnsafe<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    imageUrl: string | null;
+    createdAt: Date | null;
+    linkCount: bigint;
+    clickCount: bigint;
+  }[]>(
+    `SELECT u.id, u.name, u.email, u."imageUrl", u."createdAt",
+            COUNT(DISTINCT l.id) as "linkCount",
+            SUM(CASE WHEN v."createdAt" >= $1 AND v."createdAt" <= $2 THEN 1 ELSE 0 END) as "clickCount"
+     FROM "User" u
+     INNER JOIN "Link" l ON l."userId" = u.id
+     LEFT JOIN "LinkVisit" v ON v."linkId" = l.id
+     WHERE l."createdAt" >= $1 AND l."createdAt" <= $2
+     GROUP BY u.id
+     ORDER BY "linkCount" DESC
+     LIMIT $3`,
+    from,
+    to,
+    lim
+  );
+  return rows.map((r) => ({ ...r, linkCount: Number(r.linkCount), clickCount: Number(r.clickCount) }));
 }
 
-export async function getTopLinks(
-  ctx: ProtectedTRPCContext,
-  input: GetTopLinksInput,
-) {
+export async function getTopLinks(ctx: ProtectedTRPCContext, input: GetTopLinksInput) {
   const { from, to, limit: lim } = input;
 
-  return ctx.db
-    .select({
-      id: link.id,
-      url: link.url,
-      alias: link.alias,
-      domain: link.domain,
-      createdAt: link.createdAt,
-      userEmail: user.email,
-      clicks: count(linkVisit.id),
-    })
-    .from(linkVisit)
-    .innerJoin(link, eq(linkVisit.linkId, link.id))
-    .leftJoin(user, eq(link.userId, user.id))
-    .where(between(linkVisit.createdAt, from, to))
-    .groupBy(link.id)
-    .orderBy(sql`COUNT(${linkVisit.id}) DESC`)
-    .limit(lim);
+  const rows = await ctx.prisma.$queryRawUnsafe<{
+    id: number;
+    url: string | null;
+    alias: string | null;
+    domain: string;
+    createdAt: Date | null;
+    userEmail: string | null;
+    clicks: bigint;
+  }[]>(
+    `SELECT l.id, l.url, l.alias, l.domain, l."createdAt", u.email as "userEmail", COUNT(v.id) as clicks
+     FROM "LinkVisit" v
+     INNER JOIN "Link" l ON v."linkId" = l.id
+     LEFT JOIN "User" u ON l."userId" = u.id
+     WHERE v."createdAt" >= $1 AND v."createdAt" <= $2
+     GROUP BY l.id, u.email
+     ORDER BY clicks DESC
+     LIMIT $3`,
+    from,
+    to,
+    lim
+  );
+
+  return rows.map((r) => ({ ...r, clicks: Number(r.clicks) }));
 }
 
-export async function getPeakPeriods(
-  ctx: ProtectedTRPCContext,
-  input: GetPeakPeriodsInput,
-) {
+export async function getPeakPeriods(ctx: ProtectedTRPCContext, input: GetPeakPeriodsInput) {
   const { from, to } = input;
 
-  const [peakLinkDay, peakUserDay, peakClickDay, peakLinkMonth, peakUserMonth] =
-    await Promise.all([
-      ctx.db
-        .select({
-          date: sql<string>`DATE(${link.createdAt})`,
-          count: count(),
-        })
-        .from(link)
-        .where(between(link.createdAt, from, to))
-        .groupBy(sql`DATE(${link.createdAt})`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1),
-      ctx.db
-        .select({
-          date: sql<string>`DATE(${user.createdAt})`,
-          count: count(),
-        })
-        .from(user)
-        .where(between(user.createdAt, from, to))
-        .groupBy(sql`DATE(${user.createdAt})`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1),
-      ctx.db
-        .select({
-          date: sql<string>`DATE(${linkVisit.createdAt})`,
-          count: count(),
-        })
-        .from(linkVisit)
-        .where(between(linkVisit.createdAt, from, to))
-        .groupBy(sql`DATE(${linkVisit.createdAt})`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1),
-      ctx.db
-        .select({
-          month: sql<string>`DATE_FORMAT(${link.createdAt}, '%Y-%m')`,
-          count: count(),
-        })
-        .from(link)
-        .where(between(link.createdAt, from, to))
-        .groupBy(sql`DATE_FORMAT(${link.createdAt}, '%Y-%m')`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1),
-      ctx.db
-        .select({
-          month: sql<string>`DATE_FORMAT(${user.createdAt}, '%Y-%m')`,
-          count: count(),
-        })
-        .from(user)
-        .where(between(user.createdAt, from, to))
-        .groupBy(sql`DATE_FORMAT(${user.createdAt}, '%Y-%m')`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1),
-    ]);
+  const queryDay = `
+    SELECT TO_CHAR("createdAt", 'YYYY-MM-DD') as date, COUNT(*) as count
+    FROM "__TABLE__"
+    WHERE "createdAt" >= $1 AND "createdAt" <= $2
+    GROUP BY 1
+    ORDER BY count DESC
+    LIMIT 1
+  `;
+  const queryMonth = `
+    SELECT TO_CHAR("createdAt", 'YYYY-MM') as month, COUNT(*) as count
+    FROM "__TABLE__"
+    WHERE "createdAt" >= $1 AND "createdAt" <= $2
+    GROUP BY 1
+    ORDER BY count DESC
+    LIMIT 1
+  `;
+
+  const [peakLinkDay, peakUserDay, peakClickDay, peakLinkMonth, peakUserMonth] = await Promise.all([
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "Link"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "User"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "LinkVisit"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(queryMonth.replace("__TABLE__", "Link"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(queryMonth.replace("__TABLE__", "User"), from, to),
+  ]);
 
   return {
-    peakLinkDay: peakLinkDay[0]
-      ? { date: String(peakLinkDay[0].date).split("T")[0], count: peakLinkDay[0].count }
-      : null,
-    peakUserDay: peakUserDay[0]
-      ? { date: String(peakUserDay[0].date).split("T")[0], count: peakUserDay[0].count }
-      : null,
-    peakClickDay: peakClickDay[0]
-      ? { date: String(peakClickDay[0].date).split("T")[0], count: peakClickDay[0].count }
-      : null,
-    peakLinkMonth: peakLinkMonth[0] ?? null,
-    peakUserMonth: peakUserMonth[0] ?? null,
+    peakLinkDay: peakLinkDay[0] ? { date: peakLinkDay[0].date, count: Number(peakLinkDay[0].count) } : null,
+    peakUserDay: peakUserDay[0] ? { date: peakUserDay[0].date, count: Number(peakUserDay[0].count) } : null,
+    peakClickDay: peakClickDay[0] ? { date: peakClickDay[0].date, count: Number(peakClickDay[0].count) } : null,
+    peakLinkMonth: peakLinkMonth[0] ? { month: peakLinkMonth[0].month, count: Number(peakLinkMonth[0].count) } : null,
+    peakUserMonth: peakUserMonth[0] ? { month: peakUserMonth[0].month, count: Number(peakUserMonth[0].count) } : null,
   };
 }
 
-export async function getMonthlyBreakdown(
-  ctx: ProtectedTRPCContext,
-  input: GetMonthlyBreakdownInput,
-) {
+export async function getMonthlyBreakdown(ctx: ProtectedTRPCContext, input: GetMonthlyBreakdownInput) {
   const { from, to } = input;
 
+  const query = `
+    SELECT TO_CHAR("createdAt", 'YYYY-MM') as month, COUNT(*) as count
+    FROM "__TABLE__"
+    WHERE "createdAt" >= $1 AND "createdAt" <= $2
+    GROUP BY 1
+    ORDER BY 1
+  `;
+
   const [monthlyLinks, monthlyUsers, monthlyClicks] = await Promise.all([
-    ctx.db
-      .select({
-        month: sql<string>`DATE_FORMAT(${link.createdAt}, '%Y-%m')`,
-        count: count(),
-      })
-      .from(link)
-      .where(between(link.createdAt, from, to))
-      .groupBy(sql`DATE_FORMAT(${link.createdAt}, '%Y-%m')`)
-      .orderBy(sql`DATE_FORMAT(${link.createdAt}, '%Y-%m')`),
-    ctx.db
-      .select({
-        month: sql<string>`DATE_FORMAT(${user.createdAt}, '%Y-%m')`,
-        count: count(),
-      })
-      .from(user)
-      .where(between(user.createdAt, from, to))
-      .groupBy(sql`DATE_FORMAT(${user.createdAt}, '%Y-%m')`)
-      .orderBy(sql`DATE_FORMAT(${user.createdAt}, '%Y-%m')`),
-    ctx.db
-      .select({
-        month: sql<string>`DATE_FORMAT(${linkVisit.createdAt}, '%Y-%m')`,
-        count: count(),
-      })
-      .from(linkVisit)
-      .where(between(linkVisit.createdAt, from, to))
-      .groupBy(sql`DATE_FORMAT(${linkVisit.createdAt}, '%Y-%m')`)
-      .orderBy(sql`DATE_FORMAT(${linkVisit.createdAt}, '%Y-%m')`),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "User"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "LinkVisit"), from, to),
   ]);
 
-  const linksByMonth = new Map(monthlyLinks.map((l) => [l.month, l.count]));
-  const usersByMonth = new Map(monthlyUsers.map((u) => [u.month, u.count]));
-  const clicksByMonth = new Map(monthlyClicks.map((c) => [c.month, c.count]));
+  const linksByMonth = new Map(monthlyLinks.map((l) => [l.month, Number(l.count)]));
+  const usersByMonth = new Map(monthlyUsers.map((u) => [u.month, Number(u.count)]));
+  const clicksByMonth = new Map(monthlyClicks.map((c) => [c.month, Number(c.count)]));
 
-  const result: {
-    month: string;
-    links: number;
-    users: number;
-    clicks: number;
-  }[] = [];
+  const result: { month: string; links: number; users: number; clicks: number }[] = [];
   const cursor = new Date(from);
   cursor.setDate(1);
   const endMonth = to.getFullYear() * 12 + to.getMonth();
@@ -955,156 +740,101 @@ export async function getSystemHealth(ctx: ProtectedTRPCContext) {
   today.setHours(0, 0, 0, 0);
 
   const [
-    linkStatsResult,
-    userStatsResult,
-    pendingFlaggedResult,
-    openFeedbackResult,
-    blockedDomainsResult,
-    bioPageStatsResult,
-    campaignStatsResult,
+    totalLinks,
+    blockedLinks,
+    totalUsers,
+    bannedUsers,
+    pendingFlagged,
+    openFeedback,
+    blockedDomains,
+    totalBioPages,
+    bioPagesToday,
+    totalCampaigns,
+    activeCampaigns,
+    campaignsToday,
   ] = await Promise.all([
-    ctx.db
-      .select({
-        total: count(),
-        blocked: sql<number>`SUM(${link.blocked} = true)`,
-      })
-      .from(link),
-    ctx.db
-      .select({
-        total: count(),
-        banned: sql<number>`SUM(${user.banned} = true)`,
-      })
-      .from(user),
-    ctx.db
-      .select({ count: count() })
-      .from(flaggedLink)
-      .where(eq(flaggedLink.status, "pending")),
-    ctx.db
-      .select({ count: count() })
-      .from(feedback)
-      .where(eq(feedback.status, "open")),
-    ctx.db.select({ count: count() }).from(blockedDomain),
-    ctx.db
-      .select({
-        total: count(),
-        today: sql<number>`SUM(${bioPage.createdAt} >= ${today})`,
-      })
-      .from(bioPage),
-    ctx.db
-      .select({
-        total: count(),
-        active: sql<number>`SUM(${campaign.status} = 'active')`,
-        today: sql<number>`SUM(${campaign.createdAt} >= ${today})`,
-      })
-      .from(campaign),
+    ctx.prisma.link.count(),
+    ctx.prisma.link.count({ where: { blocked: true } }),
+    ctx.prisma.user.count(),
+    ctx.prisma.user.count({ where: { banned: true } }),
+    ctx.prisma.flaggedLink.count({ where: { status: "pending" } }),
+    ctx.prisma.feedback.count({ where: { status: "open" } }),
+    ctx.prisma.blockedDomain.count(),
+    ctx.prisma.bioPage.count(),
+    ctx.prisma.bioPage.count({ where: { createdAt: { gte: today } } }),
+    ctx.prisma.campaign.count(),
+    ctx.prisma.campaign.count({ where: { status: "active" } }),
+    ctx.prisma.campaign.count({ where: { createdAt: { gte: today } } }),
   ]);
-
-  const totalLinks = linkStatsResult[0]?.total ?? 0;
-  const blockedLinks = linkStatsResult[0]?.blocked ?? 0;
-  const totalUsers = userStatsResult[0]?.total ?? 0;
-  const bannedUsers = userStatsResult[0]?.banned ?? 0;
 
   return {
     totalLinks,
     totalUsers,
     blockedLinks,
     bannedUsers,
-    blockedPercent:
-      totalLinks > 0 ? Math.round((blockedLinks / totalLinks) * 100 * 10) / 10 : 0,
-    banRate:
-      totalUsers > 0 ? Math.round((bannedUsers / totalUsers) * 100 * 10) / 10 : 0,
-    pendingFlagged: pendingFlaggedResult[0]?.count ?? 0,
-    openFeedback: openFeedbackResult[0]?.count ?? 0,
-    blockedDomains: blockedDomainsResult[0]?.count ?? 0,
-    totalBioPages: bioPageStatsResult[0]?.total ?? 0,
-    bioPagesToday: Number(bioPageStatsResult[0]?.today ?? 0),
-    totalCampaigns: campaignStatsResult[0]?.total ?? 0,
-    activeCampaigns: Number(campaignStatsResult[0]?.active ?? 0),
-    campaignsToday: Number(campaignStatsResult[0]?.today ?? 0),
+    blockedPercent: totalLinks > 0 ? Math.round((blockedLinks / totalLinks) * 100 * 10) / 10 : 0,
+    banRate: totalUsers > 0 ? Math.round((bannedUsers / totalUsers) * 100 * 10) / 10 : 0,
+    pendingFlagged,
+    openFeedback,
+    blockedDomains,
+    totalBioPages,
+    bioPagesToday,
+    totalCampaigns,
+    activeCampaigns,
+    campaignsToday,
   };
 }
-
-// ---------------------------------------------------------------------------
-// User-base analytics (subscriptions)
-// ---------------------------------------------------------------------------
-
-/**
- * The webhook flips `subscription.plan` to "free" on cancel/expire, so
- * `plan IN ('pro','ultra')` already means "currently paying". There is no
- * historical event log, so churn-over-time is not derivable.
- */
 
 function sharePct(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 1000) / 10;
 }
 
-export async function getUserBaseSummary(
-  ctx: ProtectedTRPCContext,
-  input: GetUserBaseSummaryInput,
-) {
+export async function getUserBaseSummary(ctx: ProtectedTRPCContext, input: GetUserBaseSummaryInput) {
   const { from, to } = input;
   const { prevFrom, prevTo } = getPreviousPeriod(from, to);
 
   const [
-    totalUsersResult,
+    totalUsers,
     newUsersInRange,
     newUsersPrev,
     tierBreakdown,
-    paidPrevResult,
+    paidPrevCount,
     newPaidInRange,
     newPaidPrev,
   ] = await Promise.all([
-    ctx.db.select({ total: count() }).from(user),
-    ctx.db
-      .select({ total: count() })
-      .from(user)
-      .where(between(user.createdAt, from, to)),
-    ctx.db
-      .select({ total: count() })
-      .from(user)
-      .where(between(user.createdAt, prevFrom, prevTo)),
-    ctx.db
-      .select({ plan: subscription.plan, total: count() })
-      .from(subscription)
-      .where(inArray(subscription.plan, PAID_PLANS))
-      .groupBy(subscription.plan),
-    // Best-effort "paid at prevTo": rows that existed by prevTo and are still paid today.
-    ctx.db
-      .select({ total: count() })
-      .from(subscription)
-      .where(
-        and(
-          inArray(subscription.plan, PAID_PLANS),
-          sql`${subscription.createdAt} <= ${prevTo}`,
-        ),
-      ),
-    ctx.db
-      .select({ total: count() })
-      .from(subscription)
-      .where(
-        and(
-          inArray(subscription.plan, PAID_PLANS),
-          between(subscription.createdAt, from, to),
-        ),
-      ),
-    ctx.db
-      .select({ total: count() })
-      .from(subscription)
-      .where(
-        and(
-          inArray(subscription.plan, PAID_PLANS),
-          between(subscription.createdAt, prevFrom, prevTo),
-        ),
-      ),
+    ctx.prisma.user.count(),
+    ctx.prisma.user.count({ where: { createdAt: { gte: from, lte: to } } }),
+    ctx.prisma.user.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
+    ctx.prisma.subscription.groupBy({
+      by: ["plan"],
+      where: { plan: { in: PAID_PLANS as SubscriptionPlan[] } },
+      _count: { _all: true },
+    }),
+    ctx.prisma.subscription.count({
+      where: {
+        plan: { in: PAID_PLANS as SubscriptionPlan[] },
+        createdAt: { lte: prevTo },
+      },
+    }),
+    ctx.prisma.subscription.count({
+      where: {
+        plan: { in: PAID_PLANS as SubscriptionPlan[] },
+        createdAt: { gte: from, lte: to },
+      },
+    }),
+    ctx.prisma.subscription.count({
+      where: {
+        plan: { in: PAID_PLANS as SubscriptionPlan[] },
+        createdAt: { gte: prevFrom, lte: prevTo },
+      },
+    }),
   ]);
-
-  const totalUsers = totalUsersResult[0]?.total ?? 0;
 
   const tierMap = new Map<PaidPlan, number>();
   for (const row of tierBreakdown) {
     if (row.plan && (PAID_PLANS as string[]).includes(row.plan)) {
-      tierMap.set(row.plan as PaidPlan, row.total);
+      tierMap.set(row.plan as PaidPlan, row._count._all);
     }
   }
   const proCount = tierMap.get("pro") ?? 0;
@@ -1112,8 +842,7 @@ export async function getUserBaseSummary(
   const paidUsers = proCount + ultraCount;
   const freeUsers = totalUsers - paidUsers;
 
-  const mrr =
-    proCount * PLAN_PRICES_USD.pro + ultraCount * PLAN_PRICES_USD.ultra;
+  const mrr = proCount * PLAN_PRICES_USD.pro + ultraCount * PLAN_PRICES_USD.ultra;
 
   return {
     totalUsers,
@@ -1121,67 +850,37 @@ export async function getUserBaseSummary(
     paidUsers,
     paidPercent: sharePct(paidUsers, totalUsers),
     mrr,
-    newUsers: newUsersInRange[0]?.total ?? 0,
-    newUsersGrowth: pctChange(
-      newUsersInRange[0]?.total ?? 0,
-      newUsersPrev[0]?.total ?? 0,
-    ),
-    newPaid: newPaidInRange[0]?.total ?? 0,
-    newPaidGrowth: pctChange(
-      newPaidInRange[0]?.total ?? 0,
-      newPaidPrev[0]?.total ?? 0,
-    ),
-    paidGrowth: pctChange(paidUsers, paidPrevResult[0]?.total ?? 0),
+    newUsers: newUsersInRange,
+    newUsersGrowth: pctChange(newUsersInRange, newUsersPrev),
+    newPaid: newPaidInRange,
+    newPaidGrowth: pctChange(newPaidInRange, newPaidPrev),
+    paidGrowth: pctChange(paidUsers, paidPrevCount),
     tiers: {
-      free: {
-        count: freeUsers,
-        share: sharePct(freeUsers, totalUsers),
-        mrr: 0,
-      },
-      pro: {
-        count: proCount,
-        share: sharePct(proCount, totalUsers),
-        mrr: proCount * PLAN_PRICES_USD.pro,
-      },
-      ultra: {
-        count: ultraCount,
-        share: sharePct(ultraCount, totalUsers),
-        mrr: ultraCount * PLAN_PRICES_USD.ultra,
-      },
+      free: { count: freeUsers, share: sharePct(freeUsers, totalUsers), mrr: 0 },
+      pro: { count: proCount, share: sharePct(proCount, totalUsers), mrr: proCount * PLAN_PRICES_USD.pro },
+      ultra: { count: ultraCount, share: sharePct(ultraCount, totalUsers), mrr: ultraCount * PLAN_PRICES_USD.ultra },
     },
   };
 }
 
-export async function getSubscriptionTimeline(
-  ctx: ProtectedTRPCContext,
-  input: GetSubscriptionTimelineInput,
-) {
+export async function getSubscriptionTimeline(ctx: ProtectedTRPCContext, input: GetSubscriptionTimelineInput) {
   const { from, to } = input;
 
-  const dateExpr = sql<string>`DATE_FORMAT(${subscription.createdAt}, '%Y-%m')`;
-
-  const rows = await ctx.db
-    .select({
-      date: dateExpr,
-      plan: subscription.plan,
-      total: count(),
-    })
-    .from(subscription)
-    .where(
-      and(
-        inArray(subscription.plan, PAID_PLANS),
-        between(subscription.createdAt, from, to),
-      ),
-    )
-    .groupBy(dateExpr, subscription.plan)
-    .orderBy(dateExpr);
+  const rows = await ctx.prisma.$queryRawUnsafe<{ date: string; plan: string; total: bigint }[]>(
+    `SELECT TO_CHAR("createdAt", 'YYYY-MM') as date, plan, COUNT(*) as total
+     FROM "Subscription"
+     WHERE plan IN ($1, $2) AND "createdAt" >= $3 AND "createdAt" <= $4
+     GROUP BY 1, plan
+     ORDER BY 1`,
+    "pro", "ultra", from, to
+  );
 
   const byDate = new Map<string, { pro: number; ultra: number }>();
   for (const row of rows) {
-    const key = String(row.date);
+    const key = row.date;
     const entry = byDate.get(key) ?? { pro: 0, ultra: 0 };
-    if (row.plan === "pro") entry.pro = row.total;
-    else if (row.plan === "ultra") entry.ultra = row.total;
+    if (row.plan === "pro") entry.pro = Number(row.total);
+    else if (row.plan === "ultra") entry.ultra = Number(row.total);
     byDate.set(key, entry);
   }
 
@@ -1199,28 +898,30 @@ export async function getSubscriptionTimeline(
   return result;
 }
 
-export async function getRecentSubscriptions(
-  ctx: ProtectedTRPCContext,
-  input: GetRecentSubscriptionsInput,
-) {
-  const rows = await ctx.db
-    .select({
-      id: subscription.id,
-      userId: subscription.userId,
-      plan: subscription.plan,
-      status: subscription.status,
-      createdAt: subscription.createdAt,
-      renewsAt: subscription.renewsAt,
-      endsAt: subscription.endsAt,
-      userName: user.name,
-      userEmail: user.email,
-      userImage: user.imageUrl,
-    })
-    .from(subscription)
-    .innerJoin(user, eq(subscription.userId, user.id))
-    .where(inArray(subscription.plan, PAID_PLANS))
-    .orderBy(desc(subscription.createdAt))
-    .limit(input.limit);
+export async function getRecentSubscriptions(ctx: ProtectedTRPCContext, input: GetRecentSubscriptionsInput) {
+  const rows = await ctx.prisma.subscription.findMany({
+    where: { plan: { in: PAID_PLANS as SubscriptionPlan[] } },
+    select: {
+      id: true,
+      userId: true,
+      plan: true,
+      status: true,
+      createdAt: true,
+      renewsAt: true,
+      endsAt: true,
+      user: { select: { name: true, email: true, imageUrl: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: input.limit,
+  });
 
-  return rows;
+  return rows.map((r) => {
+    const { user, ...rest } = r;
+    return {
+      ...rest,
+      userName: user?.name ?? null,
+      userEmail: user?.email ?? null,
+      userImage: user?.imageUrl ?? null,
+    };
+  });
 }

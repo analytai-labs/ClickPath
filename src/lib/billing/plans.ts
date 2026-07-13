@@ -1,4 +1,4 @@
-import type { Subscription } from "@/server/db/schema";
+import type { Subscription } from "@prisma/client";
 
 export type Plan = "free" | "pro" | "ultra";
 export type BillingInterval = "monthly" | "annual";

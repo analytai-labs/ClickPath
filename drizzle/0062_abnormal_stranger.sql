@@ -1,1 +1,0 @@
-ALTER TABLE `Subscription` ADD `billingInterval` enum('monthly','annual') DEFAULT 'monthly';

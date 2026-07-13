@@ -1,1 +1,0 @@
-ALTER TABLE `UniqueLinkVisit` DROP INDEX `UniqueLinkVisit_ipHash_unique`;

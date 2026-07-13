@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { socialIcon } from "./social-icons";
 import { type ResolvedBioTheme, resolveBioTheme } from "./theme";
 
-import type { BioPageTheme } from "@/server/db/schema";
+import type { BioPageTheme } from "@/server/db/types";
 import type { CSSProperties } from "react";
 
 // Shared, presentational renderer used by BOTH the builder's live preview and

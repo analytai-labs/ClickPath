@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { RESERVED_TEAM_SLUGS } from "@/server/db/schema";
+import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 
 // Slug validation regex: lowercase letters, numbers, and hyphens only
 const slugRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;

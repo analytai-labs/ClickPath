@@ -1,11 +1,9 @@
 import { IconBan } from "@tabler/icons-react";
-import { and, eq } from "drizzle-orm";
 import { Funnel_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { db } from "@/server/db";
-import { geoRule, link } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 const funnelSans = Funnel_Sans({
   subsets: ["latin"],
@@ -20,9 +18,9 @@ interface BlockedPageProps {
 export default async function BlockedPage({ params, searchParams }: BlockedPageProps) {
   const [{ linkId }, { geo }] = await Promise.all([params, searchParams]);
 
-  const linkRecord = await db.query.link.findFirst({
-    where: eq(link.id, Number(linkId)),
-    columns: { id: true, blocked: true, blockedReason: true },
+  const linkRecord = await prisma.link.findUnique({
+    where: { id: Number(linkId) },
+    select: { id: true, blocked: true, blockedReason: true },
   });
 
   if (!linkRecord) {
@@ -39,12 +37,12 @@ export default async function BlockedPage({ params, searchParams }: BlockedPageP
     // Fetch the geo rule's custom block message server-side
     const geoRuleId = Number(geo);
     const rule = Number.isFinite(geoRuleId)
-      ? await db.query.geoRule.findFirst({
-          where: and(
-            eq(geoRule.id, geoRuleId),
-            eq(geoRule.linkId, linkRecord.id),
-          ),
-          columns: { blockMessage: true },
+      ? await prisma.geoRule.findFirst({
+          where: {
+            id: geoRuleId,
+            linkId: linkRecord.id,
+          },
+          select: { blockMessage: true },
         })
       : null;
     reason =

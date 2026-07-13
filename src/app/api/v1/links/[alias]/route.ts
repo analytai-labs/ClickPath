@@ -1,8 +1,5 @@
-import { and, eq } from "drizzle-orm";
-
 import { logger } from "@/lib/logger";
-import { db } from "@/server/db";
-import { link } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 import {
   getApiDomainParamsFromSearchParams,
@@ -86,10 +83,10 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ ali
   }
 
   try {
-    await db
-      .update(link)
-      .set(filteredUpdateData)
-      .where(and(eq(link.alias, alias), eq(link.domain, domain)));
+    await prisma.link.updateMany({
+      where: { alias, domain },
+      data: filteredUpdateData,
+    });
 
     // Fetch the updated link data to return
     const updatedAlias = filteredUpdateData.alias ?? alias; // Use new alias if provided
@@ -105,15 +102,10 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ ali
   } catch (error) {
     log.error({ err: error, alias, domain }, "failed to update link");
 
-    // Check for unique constraint violation. drizzle-orm >= 0.44 wraps driver
-    // errors in DrizzleQueryError, so the original mysql2 error lives at error.cause.
     const cause =
       error instanceof Error && error.cause instanceof Error ? error.cause : error;
     const isDuplicateKey = (candidate: unknown) =>
-      candidate instanceof Error &&
-      (candidate.message.includes("Duplicate entry") ||
-        candidate.message.includes("ER_DUP_ENTRY") ||
-        (candidate as { code?: string }).code === "ER_DUP_ENTRY");
+      candidate !== null && typeof candidate === "object" && (candidate as any).code === "P2002";
 
     if ((isDuplicateKey(error) || isDuplicateKey(cause)) && filteredUpdateData.alias) {
       return new Response("Alias already exists for this domain", {
@@ -129,17 +121,16 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ ali
 }
 
 async function getLinkByAlias(alias: string, domain: string) {
-  const retrievedLink = await db
-    .select()
-    .from(link)
-    .where(and(eq(link.alias, alias), eq(link.domain, domain)));
-  if (!retrievedLink.length) return null;
+  const retrievedLink = await prisma.link.findFirst({
+    where: { alias, domain },
+  });
+  if (!retrievedLink) return null;
 
   return {
-    shortLink: `https://${retrievedLink[0]!.domain}/${retrievedLink[0]!.alias}`,
-    url: retrievedLink[0]!.url,
-    alias: retrievedLink[0]!.alias,
-    expiresAt: retrievedLink[0]!.disableLinkAfterDate,
-    expiresAfter: retrievedLink[0]!.disableLinkAfterClicks,
+    shortLink: `https://${retrievedLink.domain}/${retrievedLink.alias}`,
+    url: retrievedLink.url,
+    alias: retrievedLink.alias,
+    expiresAt: retrievedLink.disableLinkAfterDate,
+    expiresAfter: retrievedLink.disableLinkAfterClicks,
   };
 }

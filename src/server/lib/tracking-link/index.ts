@@ -1,10 +1,9 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { Prisma } from "@prisma/client";
 
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { generateShortLink } from "@/lib/core/links";
 import { runBackgroundTask } from "@/lib/utils/background";
-import { link, linkVisit, uniqueLinkVisit, user } from "@/server/db/schema";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { workspaceFilter, workspaceOwnership } from "@/server/lib/workspace";
 
@@ -15,7 +14,6 @@ import {
 } from "@/server/api/routers/link/utils";
 
 import type { WorkspaceTRPCContext } from "@/server/api/trpc";
-import type { db } from "@/server/db";
 
 // A "hidden tracking link" is a regular Link row that backs another resource
 // (a QR code, or a bio-page link block) rather than appearing in the user's
@@ -23,13 +21,10 @@ import type { db } from "@/server/db";
 // pipeline, so the backing resource gets click tracking for free. This module
 // is the single place that creates/updates/deletes them so QR and bio pages
 // stay consistent (quota accounting, cache invalidation, ownership).
-
-type TransactionClient = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 export type TrackingLinkKind = "qr" | "bio";
 
 export type PreparedTrackingLink = {
-  values: typeof link.$inferInsert;
+  values: Prisma.LinkUncheckedCreateInput;
   trackingUrl: string;
   alias: string;
   domain: string;
@@ -91,18 +86,20 @@ export async function prepareHiddenTrackingLink(
  * links, no quota drift). Returns the new link id.
  */
 export async function insertHiddenTrackingLink(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   ctx: WorkspaceTRPCContext,
   prepared: PreparedTrackingLink,
 ): Promise<number> {
-  const result = await tx.insert(link).values(prepared.values);
-  const linkId = Number(result[0].insertId);
+  const result = await tx.link.create({
+    data: prepared.values,
+  });
+  const linkId = result.id;
 
   if (prepared.shouldIncrementCount) {
-    await tx
-      .update(user)
-      .set({ monthlyLinkCount: prepared.currentCount + 1 })
-      .where(eq(user.id, ctx.auth.userId));
+    await tx.user.update({
+      where: { id: ctx.auth.userId },
+      data: { monthlyLinkCount: prepared.currentCount + 1 },
+    });
   }
 
   return linkId;
@@ -122,23 +119,26 @@ export async function updateHiddenTrackingLink(
     await assertUrlSafe(opts.url);
   }
 
-  const existing = await ctx.db.query.link.findFirst({
-    where: and(
-      eq(link.id, linkId),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId),
-    ),
+  const existing = await ctx.prisma.link.findFirst({
+    where: {
+      id: linkId,
+      ...workspaceFilter(ctx.workspace),
+    },
   });
 
   if (!existing) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Tracking link not found." });
   }
 
-  const updates: Partial<typeof link.$inferInsert> = {};
+  const updates: any = {};
   if (opts.url !== undefined) updates.url = opts.url;
   if (opts.name !== undefined) updates.name = opts.name;
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.update(link).set(updates).where(eq(link.id, linkId));
+    await ctx.prisma.link.update({
+      where: { id: linkId },
+      data: updates,
+    });
   }
 
   if (existing.alias) {
@@ -152,14 +152,14 @@ export async function updateHiddenTrackingLink(
  * commits (use purgeTrackingLinkCache with the link's domain + alias).
  */
 export async function deleteHiddenTrackingLink(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   linkId: number,
 ): Promise<void> {
   await Promise.all([
-    tx.delete(uniqueLinkVisit).where(eq(uniqueLinkVisit.linkId, linkId)),
-    tx.delete(linkVisit).where(eq(linkVisit.linkId, linkId)),
+    tx.uniqueLinkVisit.deleteMany({ where: { linkId } }),
+    tx.linkVisit.deleteMany({ where: { linkId } }),
   ]);
-  await tx.delete(link).where(eq(link.id, linkId));
+  await tx.link.delete({ where: { id: linkId } });
 }
 
 /** Invalidate the redirect cache for a tracking link's domain/alias. */

@@ -1,8 +1,6 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { runBackgroundTask } from "@/lib/utils/background";
-import { feedback, user } from "@/server/db/schema";
 import { sendFeedbackNotification } from "@/server/lib/notifications/discord";
 import { isR2Configured, r2UploadImage } from "@/server/lib/storage/r2";
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../../trpc";
@@ -58,14 +56,16 @@ export const feedbackRouter = createTRPCRouter({
       const userId = ctx.auth.userId;
 
       // Insert feedback record
-      const [inserted] = await ctx.db.insert(feedback).values({
-        userId,
-        type: input.type,
-        message: input.message,
-        imageUrls: [],
+      const inserted = await ctx.prisma.feedback.create({
+        data: {
+          userId,
+          type: input.type,
+          message: input.message,
+          imageUrls: [],
+        },
       });
 
-      const feedbackId = inserted.insertId;
+      const feedbackId = inserted.id;
 
       // Upload images to R2 if provided
       let imageUrls: string[] = [];
@@ -85,17 +85,17 @@ export const feedbackRouter = createTRPCRouter({
 
         // Update feedback with image URLs
         if (imageUrls.length > 0) {
-          await ctx.db
-            .update(feedback)
-            .set({ imageUrls })
-            .where(eq(feedback.id, Number(feedbackId)));
+          await ctx.prisma.feedback.update({
+            where: { id: Number(feedbackId) },
+            data: { imageUrls },
+          });
         }
       }
 
       // Get user info for Discord notification
-      const userRecord = await ctx.db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, userId),
-        columns: { email: true, name: true },
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
       });
 
       // Send Discord notification — waitUntil so the serverless function
@@ -125,20 +125,18 @@ export const feedbackRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { status, cursor, limit } = input;
 
-      const items = await ctx.db.query.feedback.findMany({
-        where: (table, { eq, and, lt }) => {
-          const conditions = [];
-          if (status) conditions.push(eq(table.status, status));
-          if (cursor) conditions.push(lt(table.id, cursor));
-          return conditions.length > 0 ? and(...conditions) : undefined;
+      const items = await ctx.prisma.feedback.findMany({
+        where: {
+          ...(status ? { status } : {}),
+          ...(cursor ? { id: { lt: cursor } } : {}),
         },
-        with: {
+        include: {
           user: {
-            columns: { name: true, email: true, imageUrl: true },
+            select: { name: true, email: true, imageUrl: true },
           },
         },
-        orderBy: (table, { desc }) => desc(table.id),
-        limit: limit + 1,
+        orderBy: { id: 'desc' },
+        take: limit + 1,
       });
 
       let nextCursor: number | undefined;
@@ -159,10 +157,10 @@ export const feedbackRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db
-        .update(feedback)
-        .set({ status: input.status })
-        .where(eq(feedback.id, input.id));
+      await ctx.prisma.feedback.update({
+        where: { id: input.id },
+        data: { status: input.status },
+      });
 
       return { success: true };
     }),

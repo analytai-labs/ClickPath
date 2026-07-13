@@ -26,7 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
-import type { BioBlockType } from "@/server/db/schema";
+import type { BioBlockType } from "@prisma/client";
 
 import { DateTimePicker } from "./date-time-picker";
 

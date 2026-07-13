@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq, inArray } from "drizzle-orm";
 
 import {
   canUseGeoRules,
@@ -7,7 +6,6 @@ import {
   isUnlimitedGeoRules,
 } from "@/lib/billing/plans";
 import { deleteGeoRulesFromCache } from "@/lib/core/cache";
-import { geoRule, link } from "@/server/db/schema";
 
 import { checkWorkspaceLinkLimit, verifyLinkOwnership } from "../link/utils";
 
@@ -39,8 +37,8 @@ async function checkGeoRulesLimit(
   }
 
   // Check current rule count for the link
-  const existingRules = await ctx.db.query.geoRule.findMany({
-    where: eq(geoRule.linkId, linkId),
+  const existingRules = await ctx.prisma.geoRule.findMany({
+    where: { linkId },
   });
 
   // Exclude the rule being updated from the count
@@ -69,9 +67,9 @@ export async function getGeoRulesByLinkId(
 ) {
   await verifyLinkOwnership(ctx, input.linkId);
 
-  return ctx.db.query.geoRule.findMany({
-    where: eq(geoRule.linkId, input.linkId),
-    orderBy: [asc(geoRule.priority)],
+  return ctx.prisma.geoRule.findMany({
+    where: { linkId: input.linkId },
+    orderBy: { priority: "asc" },
   });
 }
 
@@ -86,31 +84,33 @@ export async function createGeoRule(
   await checkGeoRulesLimit(ctx, input.linkId);
 
   // Get the max priority to add the new rule at the end
-  const existingRules = await ctx.db.query.geoRule.findMany({
-    where: eq(geoRule.linkId, input.linkId),
-    orderBy: [asc(geoRule.priority)],
+  const existingRules = await ctx.prisma.geoRule.findMany({
+    where: { linkId: input.linkId },
+    orderBy: { priority: "asc" },
   });
 
   const maxPriority = existingRules.length > 0
     ? Math.max(...existingRules.map((r) => r.priority))
     : -1;
 
-  const [result] = await ctx.db.insert(geoRule).values({
-    linkId: input.linkId,
-    type: input.rule.type,
-    condition: input.rule.condition,
-    values: input.rule.values,
-    action: input.rule.action,
-    destination: input.rule.destination,
-    blockMessage: input.rule.blockMessage,
-    priority: maxPriority + 1,
+  const result = await ctx.prisma.geoRule.create({
+    data: {
+      linkId: input.linkId,
+      type: input.rule.type,
+      condition: input.rule.condition,
+      values: input.rule.values,
+      action: input.rule.action,
+      destination: input.rule.destination,
+      blockMessage: input.rule.blockMessage,
+      priority: maxPriority + 1,
+    },
   });
 
   // Invalidate cache
   await deleteGeoRulesFromCache(input.linkId);
 
   return {
-    id: Number(result.insertId),
+    id: result.id,
     linkId: input.linkId,
     ...input.rule,
     priority: maxPriority + 1,
@@ -125,8 +125,8 @@ export async function updateGeoRule(
   input: UpdateGeoRuleInput
 ) {
   // First, get the rule to find its linkId
-  const existingRule = await ctx.db.query.geoRule.findFirst({
-    where: eq(geoRule.id, input.ruleId),
+  const existingRule = await ctx.prisma.geoRule.findFirst({
+    where: { id: input.ruleId },
   });
 
   if (!existingRule) {
@@ -140,17 +140,17 @@ export async function updateGeoRule(
   await verifyLinkOwnership(ctx, existingRule.linkId);
 
   // Update the rule
-  await ctx.db
-    .update(geoRule)
-    .set({
+  await ctx.prisma.geoRule.update({
+    where: { id: input.ruleId },
+    data: {
       type: input.rule.type,
       condition: input.rule.condition,
       values: input.rule.values,
       action: input.rule.action,
       destination: input.rule.destination,
       blockMessage: input.rule.blockMessage,
-    })
-    .where(eq(geoRule.id, input.ruleId));
+    },
+  });
 
   // Invalidate cache
   await deleteGeoRulesFromCache(existingRule.linkId);
@@ -171,8 +171,8 @@ export async function deleteGeoRule(
   input: DeleteGeoRuleInput
 ) {
   // First, get the rule to find its linkId
-  const existingRule = await ctx.db.query.geoRule.findFirst({
-    where: eq(geoRule.id, input.ruleId),
+  const existingRule = await ctx.prisma.geoRule.findFirst({
+    where: { id: input.ruleId },
   });
 
   if (!existingRule) {
@@ -186,7 +186,7 @@ export async function deleteGeoRule(
   await verifyLinkOwnership(ctx, existingRule.linkId);
 
   // Delete the rule
-  await ctx.db.delete(geoRule).where(eq(geoRule.id, input.ruleId));
+  await ctx.prisma.geoRule.delete({ where: { id: input.ruleId } });
 
   // Invalidate cache
   await deleteGeoRulesFromCache(existingRule.linkId);
@@ -204,8 +204,8 @@ export async function reorderGeoRules(
   await verifyLinkOwnership(ctx, input.linkId);
 
   // Verify all rule IDs belong to this link
-  const existingRules = await ctx.db.query.geoRule.findMany({
-    where: eq(geoRule.linkId, input.linkId),
+  const existingRules = await ctx.prisma.geoRule.findMany({
+    where: { linkId: input.linkId },
   });
 
   const existingRuleIds = new Set(existingRules.map((r) => r.id));
@@ -221,10 +221,10 @@ export async function reorderGeoRules(
   // Update priorities based on the order in ruleIds
   await Promise.all(
     input.ruleIds.map((ruleId, index) =>
-      ctx.db
-        .update(geoRule)
-        .set({ priority: index })
-        .where(eq(geoRule.id, ruleId))
+      ctx.prisma.geoRule.update({
+        where: { id: ruleId },
+        data: { priority: index },
+      })
     )
   );
 

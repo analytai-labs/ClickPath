@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
 import { Resend } from "resend";
 
 import WelcomeEmail from "@/emails/welcome-to-pro";
@@ -7,8 +6,7 @@ import { getIntervalFromVariantId, getPlanFromIds } from "@/lib/billing/plans";
 import { logger } from "@/lib/logger";
 import { webhookHasMeta } from "@/lib/typeguards";
 import { runBackgroundTask } from "@/lib/utils/background";
-import { db } from "@/server/db";
-import { subscription } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 import type {
   LemonsqueezySubscriptionAttributes,
@@ -74,8 +72,8 @@ async function processWebhook(webhookEvent: LemonsqueezyWebhookPayload) {
     const cardLastFour = lemonsqueezySubscription.card_last_four;
 
     if (event_name === "subscription_created") {
-      const user = await db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, userId),
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
       });
 
       if (!user) {
@@ -86,9 +84,9 @@ async function processWebhook(webhookEvent: LemonsqueezyWebhookPayload) {
         return;
       }
 
-      await db
-        .insert(subscription)
-        .values({
+      await prisma.subscription.upsert({
+        where: { userId },
+        create: {
           userId: userId,
           subscriptionId,
           customerId,
@@ -103,26 +101,22 @@ async function processWebhook(webhookEvent: LemonsqueezyWebhookPayload) {
           renewsAt: new Date(renewsAt),
           createdAt: new Date(createdAt),
           endsAt: endsAt ? new Date(endsAt) : null,
-        })
-        .onDuplicateKeyUpdate({
-          // A returning customer already has a row, so refresh the full
-          // subscription state — not just status/dates — or their plan,
-          // interval, and subscriptionId would stay stale.
-          set: {
-            subscriptionId,
-            customerId,
-            orderId,
-            status,
-            plan,
-            billingInterval,
-            variantId,
-            productId,
-            cardBrand,
-            cardLastFour,
-            renewsAt: new Date(renewsAt),
-            endsAt: endsAt ? new Date(endsAt) : null,
-          },
-        });
+        },
+        update: {
+          subscriptionId,
+          customerId,
+          orderId,
+          status,
+          plan,
+          billingInterval,
+          variantId,
+          productId,
+          cardBrand,
+          cardLastFour,
+          renewsAt: new Date(renewsAt),
+          endsAt: endsAt ? new Date(endsAt) : null,
+        },
+      });
 
       const email = user.email;
       const name = user.name;
@@ -142,9 +136,9 @@ async function processWebhook(webhookEvent: LemonsqueezyWebhookPayload) {
     } else if (event_name === "subscription_updated") {
       // handle subscription updated. Sent when a subscription is updated
 
-      await db
-        .update(subscription)
-        .set({
+      await prisma.subscription.updateMany({
+        where: { userId },
+        data: {
           status,
           plan,
           billingInterval,
@@ -154,29 +148,29 @@ async function processWebhook(webhookEvent: LemonsqueezyWebhookPayload) {
           endsAt: endsAt ? new Date(endsAt) : null,
           cardBrand,
           cardLastFour,
-        })
-        .where(eq(subscription.userId, userId));
+        },
+      });
     } else if (event_name === "subscription_cancelled") {
       // Keep the plan/variant intact — a cancelled subscription stays entitled
       // until endsAt. resolvePlan() drops it to free once that date passes.
-      await db
-        .update(subscription)
-        .set({
+      await prisma.subscription.updateMany({
+        where: { userId },
+        data: {
           status,
           endsAt: endsAt ? new Date(endsAt) : null,
-        })
-        .where(eq(subscription.userId, userId));
+        },
+      });
     } else if (event_name === "subscription_expired") {
-      await db
-        .update(subscription)
-        .set({
+      await prisma.subscription.updateMany({
+        where: { userId },
+        data: {
           status,
           plan: "free",
           variantId: 0,
           productId: 0,
           endsAt: new Date(), // set endsAt to now to indicate the subscription has ended
-        })
-        .where(eq(subscription.userId, userId));
+        },
+      });
     } else if (event_name === "order_created") {
       // handle order created
     }

@@ -30,7 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Plan } from "@/lib/billing/plans";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
-import type { BioBlockType } from "@/server/db/schema";
+import type { BioBlockType } from "@prisma/client";
+import type { BioPageTheme } from "@/server/db/types";
 
 import { AnalyticsPanel } from "./analytics-panel";
 import { BlockFormDialog } from "./block-form-dialog";
@@ -88,7 +89,7 @@ export function BioPageBuilder({
     title: page.title ?? "",
     description: page.description ?? "",
     avatarUrl: page.avatarUrl ?? null,
-    theme: page.theme ?? {},
+    theme: (page.theme as BioPageTheme) ?? {},
     removeBranding: page.removeBranding ?? false,
     customDomain: page.customDomain ?? "",
     socialImageUrl: page.socialImageUrl ?? null,

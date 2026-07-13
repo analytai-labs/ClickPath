@@ -167,9 +167,9 @@ export default function AdminFeedbackPage() {
                       </p>
 
                       {/* Image thumbnails */}
-                      {item.imageUrls && item.imageUrls.length > 0 && (
+                      {(item.imageUrls as string[]) && (item.imageUrls as string[]).length > 0 && (
                         <div className="mt-3 flex gap-2">
-                          {item.imageUrls.map((url, i) => (
+                          {(item.imageUrls as string[]).map((url, i) => (
                             <a
                               key={i}
                               href={url}

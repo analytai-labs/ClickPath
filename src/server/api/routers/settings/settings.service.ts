@@ -1,27 +1,24 @@
-import { eq } from "drizzle-orm";
-
 import { DEFAULT_PLATFORM_DOMAIN, isPlatformDomain } from "@/lib/constants/domains";
 import { redis } from "@/lib/core/cache";
-import { siteSettings } from "@/server/db/schema";
 
 import type { ProtectedTRPCContext } from "../../trpc";
 import type { UpdateSiteSettingsInput } from "./settings.input";
 
 export async function getSiteSettings(ctx: ProtectedTRPCContext) {
-  const settings = await ctx.db.query.siteSettings.findFirst({
-    where: (table, { eq }) => eq(table.userId, ctx.auth.userId),
+  const settings = await ctx.prisma.siteSettings.findFirst({
+    where: { userId: ctx.auth.userId },
   });
 
   // If no settings exist, create default settings
   if (!settings) {
-    const [newSettings] = await ctx.db.insert(siteSettings).values({
-      userId: ctx.auth.userId,
-      defaultDomain: DEFAULT_PLATFORM_DOMAIN,
+    const newSettings = await ctx.prisma.siteSettings.create({
+      data: {
+        userId: ctx.auth.userId,
+        defaultDomain: DEFAULT_PLATFORM_DOMAIN,
+      }
     });
 
-    return ctx.db.query.siteSettings.findFirst({
-      where: (table, { eq }) => eq(table.id, newSettings.insertId),
-    });
+    return newSettings;
   }
 
   return settings;
@@ -31,18 +28,17 @@ export async function updateSiteSettings(
   ctx: ProtectedTRPCContext,
   input: UpdateSiteSettingsInput,
 ) {
-  const existingSettings = await ctx.db.query.siteSettings.findFirst({
-    where: (table, { eq }) => eq(table.userId, ctx.auth.userId),
+  const existingSettings = await ctx.prisma.siteSettings.findFirst({
+    where: { userId: ctx.auth.userId },
   });
 
   if (!isPlatformDomain(input.defaultDomain)) {
-    const domain = await ctx.db.query.customDomain.findFirst({
-      where: (table, { and }) =>
-        and(
-          eq(table.userId, ctx.auth.userId),
-          eq(table.domain, input.defaultDomain),
-          eq(table.status, "active"),
-        ),
+    const domain = await ctx.prisma.customDomain.findFirst({
+      where: {
+        userId: ctx.auth.userId,
+        domain: input.defaultDomain,
+        status: "active",
+      }
     });
 
     if (!domain) {
@@ -53,11 +49,16 @@ export async function updateSiteSettings(
   }
 
   if (existingSettings) {
-    await ctx.db.update(siteSettings).set(input).where(eq(siteSettings.userId, ctx.auth.userId));
+    await ctx.prisma.siteSettings.updateMany({
+      where: { userId: ctx.auth.userId },
+      data: input,
+    });
   } else {
-    await ctx.db.insert(siteSettings).values({
-      userId: ctx.auth.userId,
-      ...input,
+    await ctx.prisma.siteSettings.create({
+      data: {
+        userId: ctx.auth.userId,
+        ...input,
+      }
     });
   }
 

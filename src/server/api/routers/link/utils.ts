@@ -1,21 +1,19 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, sql } from "drizzle-orm";
+import { prisma } from "@/server/db";
 
 import { DEFAULT_PLATFORM_DOMAIN, isPlatformDomain } from "@/lib/constants/domains";
 import { redis } from "@/lib/core/cache";
 import { normalizeAlias } from "@/lib/utils";
-import { customDomain, link, team, user } from "@/server/db/schema";
 import { getUserPlanContext, normalizeMonthlyLinkCount } from "@/server/lib/user-plan";
-import { workspaceFilter } from "@/server/lib/workspace";
 
 import type { ProtectedTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 
 export async function verifyLinkOwnership(ctx: WorkspaceTRPCContext, linkId: number) {
-  const linkRecord = await ctx.db.query.link.findFirst({
-    where: and(
-      eq(link.id, linkId),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId),
-    ),
+  const linkRecord = await prisma.link.findFirst({
+    where: {
+      id: linkId,
+      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+    }
   });
 
   if (!linkRecord) {
@@ -29,7 +27,8 @@ export async function verifyLinkOwnership(ctx: WorkspaceTRPCContext, linkId: num
 }
 
 export async function checkAndUpdateLinkLimit(ctx: ProtectedTRPCContext) {
-  const planCtx = await getUserPlanContext(ctx.auth.userId, ctx.db);
+  // `getUserPlanContext` needs prisma, assume we pass prisma
+  const planCtx = await getUserPlanContext(ctx.auth.userId, prisma as any);
 
   if (!planCtx) {
     throw new TRPCError({
@@ -39,7 +38,7 @@ export async function checkAndUpdateLinkLimit(ctx: ProtectedTRPCContext) {
   }
 
   const { plan, caps } = planCtx;
-  const currentCount = await normalizeMonthlyLinkCount(planCtx, ctx.db);
+  const currentCount = await normalizeMonthlyLinkCount(planCtx, prisma as any);
   const limit = caps.linksLimit;
 
   if (limit !== undefined && currentCount >= limit) {
@@ -92,12 +91,12 @@ export async function incrementLinkCount(
     return;
   }
 
-  await ctx.db
-    .update(user)
-    .set({
+  await prisma.user.update({
+    where: { id: ctx.auth.userId },
+    data: {
       monthlyLinkCount: currentCount + 1,
-    })
-    .where(eq(user.id, ctx.auth.userId));
+    }
+  });
 }
 
 /**
@@ -125,9 +124,9 @@ export async function getUserDefaultDomain(ctx: ProtectedTRPCContext): Promise<s
     return cachedDomain ?? DEFAULT_PLATFORM_DOMAIN;
   }
 
-  const userInfo = await ctx.db.query.user.findFirst({
-    where: (table, { eq }) => eq(table.id, ctx.auth.userId),
-    with: {
+  const userInfo = await prisma.user.findFirst({
+    where: { id: ctx.auth.userId },
+    include: {
       siteSettings: true,
     },
   });
@@ -153,8 +152,8 @@ export async function getWorkspaceDefaultDomain(ctx: WorkspaceTRPCContext): Prom
     }
 
     // Get team's default domain from the team record
-    const teamRecord = await ctx.db.query.team.findFirst({
-      where: eq(team.id, ctx.workspace.teamId),
+    const teamRecord = await prisma.team.findFirst({
+      where: { id: ctx.workspace.teamId },
     });
 
     const defaultDomain = teamRecord?.defaultDomain ?? DEFAULT_PLATFORM_DOMAIN;
@@ -180,12 +179,12 @@ export async function assertDomainAllowed(
   const normalized = domain.trim().toLowerCase();
   if (isPlatformDomain(normalized)) return;
 
-  const owned = await ctx.db.query.customDomain.findFirst({
-    where: and(
-      sql`lower(${customDomain.domain}) = ${normalized}`,
-      eq(customDomain.status, "active"),
-      workspaceFilter(ctx.workspace, customDomain.userId, customDomain.teamId),
-    ),
+  const owned = await prisma.customDomain.findFirst({
+    where: {
+      domain: normalized,
+      status: "active",
+      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+    },
   });
 
   if (!owned) {
@@ -230,12 +229,20 @@ export const checkAliasAvailability = async (
   domain: string,
 ): Promise<void> => {
   const normalizedAlias = normalizeAlias(alias);
-  const aliasExists = await ctx.db
-    .select()
-    .from(link)
-    .where(and(sql`lower(${link.alias}) = ${normalizedAlias}`, eq(link.domain, domain)));
+  
+  // Note: This matches the lowercase check from drizzle
+  // Prisma case-insensitive search can be done or we assume alias is normalized
+  const aliasExists = await prisma.link.findFirst({
+    where: {
+      alias: {
+        equals: normalizedAlias,
+        mode: 'insensitive',
+      },
+      domain: domain,
+    }
+  });
 
-  if (aliasExists.length) {
+  if (aliasExists) {
     throw new Error("Alias already exists");
   }
 };

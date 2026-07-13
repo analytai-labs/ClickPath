@@ -1,14 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { PrismaClient, Team } from "@prisma/client";
 
 import { resolvePlan } from "@/lib/billing/plans";
 import { extractPlatformSubdomain } from "@/lib/constants/domains";
-import { db } from "@/server/db";
-import { RESERVED_TEAM_SLUGS, team, teamMember } from "@/server/db/schema";
+import { prisma } from "@/server/db";
+import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 
 import type { WorkspaceContext, PersonalWorkspaceContext, TeamWorkspaceContext } from "./types";
 
-type DbClient = typeof db;
+type DbClient = PrismaClient;
 
 /**
  * Extracts the subdomain from a hostname.
@@ -63,7 +63,7 @@ export function extractSubdomain(hostname: string): string | null {
 export async function resolveWorkspaceContext(
   userId: string,
   hostname: string,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<WorkspaceContext> {
   const subdomain = extractSubdomain(hostname);
 
@@ -84,10 +84,10 @@ async function getPersonalWorkspaceContext(
   dbClient: DbClient
 ): Promise<PersonalWorkspaceContext> {
   // Fetch user with subscription to determine plan
-  const userRecord = await dbClient.query.user.findFirst({
-    where: (table, { eq }) => eq(table.id, userId),
-    with: {
-      subscriptions: true,
+  const userRecord = await dbClient.user.findFirst({
+    where: { id: userId },
+    include: {
+      subscription: true,
     },
   });
 
@@ -98,7 +98,7 @@ async function getPersonalWorkspaceContext(
     });
   }
 
-  const plan = resolvePlan(userRecord.subscriptions ?? null);
+  const plan = resolvePlan(userRecord.subscription ?? null);
 
   return {
     type: "personal",
@@ -119,8 +119,8 @@ async function getTeamWorkspaceContext(
   dbClient: DbClient
 ): Promise<TeamWorkspaceContext> {
   // Fetch team by slug (exclude soft-deleted teams)
-  const teamRecord = await dbClient.query.team.findFirst({
-    where: and(eq(team.slug, teamSlug), isNull(team.deletedAt)),
+  const teamRecord = await dbClient.team.findFirst({
+    where: { slug: teamSlug, deletedAt: null },
   });
 
   if (!teamRecord) {
@@ -131,11 +131,8 @@ async function getTeamWorkspaceContext(
   }
 
   // Check if user is a member of this team
-  const membership = await dbClient.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, teamRecord.id),
-      eq(teamMember.userId, userId)
-    ),
+  const membership = await dbClient.teamMember.findFirst({
+    where: { teamId: teamRecord.id, userId: userId },
   });
 
   if (!membership) {
@@ -163,11 +160,11 @@ async function getTeamWorkspaceContext(
 export async function getTeamWorkspaceContextById(
   userId: string,
   teamId: number,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<TeamWorkspaceContext> {
   // Fetch team by ID (exclude soft-deleted teams)
-  const teamRecord = await dbClient.query.team.findFirst({
-    where: and(eq(team.id, teamId), isNull(team.deletedAt)),
+  const teamRecord = await dbClient.team.findFirst({
+    where: { id: teamId, deletedAt: null },
   });
 
   if (!teamRecord) {
@@ -178,11 +175,8 @@ export async function getTeamWorkspaceContextById(
   }
 
   // Check if user is a member of this team
-  const membership = await dbClient.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, teamRecord.id),
-      eq(teamMember.userId, userId)
-    ),
+  const membership = await dbClient.teamMember.findFirst({
+    where: { teamId: teamRecord.id, userId: userId },
   });
 
   if (!membership) {
@@ -210,12 +204,12 @@ export async function getTeamWorkspaceContextById(
  */
 export async function userHasUltraPlan(
   userId: string,
-  dbClient: DbClient = db
+  dbClient: DbClient = prisma
 ): Promise<boolean> {
-  const userRecord = await dbClient.query.user.findFirst({
-    where: (table, { eq }) => eq(table.id, userId),
-    with: {
-      subscriptions: true,
+  const userRecord = await dbClient.user.findFirst({
+    where: { id: userId },
+    include: {
+      subscription: true,
     },
   });
 
@@ -223,7 +217,7 @@ export async function userHasUltraPlan(
     return false;
   }
 
-  const plan = resolvePlan(userRecord.subscriptions ?? null);
+  const plan = resolvePlan(userRecord.subscription ?? null);
   return plan === "ultra";
 }
 
@@ -232,11 +226,11 @@ export async function userHasUltraPlan(
  */
 export async function getUserTeams(
   userId: string,
-  dbClient: DbClient = db
-): Promise<Array<{ team: typeof team.$inferSelect; role: string }>> {
-  const memberships = await dbClient.query.teamMember.findMany({
-    where: eq(teamMember.userId, userId),
-    with: {
+  dbClient: DbClient = prisma
+): Promise<Array<{ team: Team; role: string }>> {
+  const memberships = await dbClient.teamMember.findMany({
+    where: { userId: userId },
+    include: {
       team: true,
     },
   });

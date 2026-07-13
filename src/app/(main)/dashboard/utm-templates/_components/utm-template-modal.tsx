@@ -34,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { api } from "@/trpc/react";
 
-import type { UtmTemplate } from "@/server/db/schema";
+import type { UtmTemplate } from "@prisma/client";
 
 const utmTemplateSchema = z.object({
   name: z.string().min(1, "Template name is required").max(100),

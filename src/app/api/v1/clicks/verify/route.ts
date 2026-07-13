@@ -1,9 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
-
 import { verifyVerifiedClickToken } from "@/lib/utils/verified-click-token";
-import { db } from "@/server/db";
-import { linkVisit } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 // Retry covers the race where the beacon lands before `recordClick` (running
 // in waitUntil) has inserted the row. Missed verifications are acceptable
@@ -17,12 +14,12 @@ function sleep(ms: number): Promise<void> {
 
 async function markVerified(visitId: string): Promise<boolean> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const [result] = await db
-      .update(linkVisit)
-      .set({ verifiedAt: sql`CURRENT_TIMESTAMP` })
-      .where(and(eq(linkVisit.visitId, visitId), isNull(linkVisit.verifiedAt)));
+    const result = await prisma.linkVisit.updateMany({
+      where: { visitId, verifiedAt: null },
+      data: { verifiedAt: new Date() }
+    });
 
-    if ((result?.affectedRows ?? 0) > 0) return true;
+    if (result.count > 0) return true;
     if (attempt < MAX_RETRIES) await sleep(RETRY_DELAY_MS);
   }
   return false;

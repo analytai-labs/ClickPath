@@ -1,15 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
-
-import { user } from "@/server/db/schema";
 
 import type { ProtectedTRPCContext } from "../../trpc";
 import type { UpdateUserProfileInput } from "./user.input";
 
 export async function getUserProfile(ctx: ProtectedTRPCContext) {
-  const userProfile = await ctx.db.query.user.findFirst({
-    where: (table, { eq }) => eq(table.id, ctx.auth.userId),
-    columns: {
+  const userProfile = await ctx.prisma.user.findUnique({
+    where: { id: ctx.auth.userId },
+    select: {
       id: true,
       name: true,
       email: true,
@@ -32,10 +29,10 @@ export async function updateUserProfile(
   ctx: ProtectedTRPCContext,
   input: UpdateUserProfileInput,
 ) {
-  await ctx.db
-    .update(user)
-    .set({ name: input.name })
-    .where(eq(user.id, ctx.auth.userId));
+  await ctx.prisma.user.update({
+    where: { id: ctx.auth.userId },
+    data: { name: input.name },
+  });
 
   return getUserProfile(ctx);
 }

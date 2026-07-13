@@ -1,8 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, sql } from "drizzle-orm";
-
 import { runBackgroundTask } from "@/lib/utils/background";
-import { flaggedLink, link } from "@/server/db/schema";
 import { sendAbuseReportNotification } from "@/server/lib/notifications/discord";
 
 import { createTRPCRouter, publicProcedure } from "../../trpc";
@@ -38,12 +35,12 @@ export const abuseRouter = createTRPCRouter({
       });
     }
 
-    const reportedLink = await ctx.db.query.link.findFirst({
-      where: and(
-        sql`lower(${link.alias}) = lower(${parsed.alias})`,
-        eq(link.domain, parsed.domain),
-      ),
-      columns: { id: true, url: true, domain: true, alias: true },
+    const reportedLink = await ctx.prisma.link.findFirst({
+      where: {
+        alias: { equals: parsed.alias, mode: "insensitive" },
+        domain: parsed.domain,
+      },
+      select: { id: true, url: true, domain: true, alias: true },
     });
 
     if (!reportedLink) {
@@ -57,12 +54,14 @@ export const abuseRouter = createTRPCRouter({
     const details = input.details?.trim() || null;
     const categoryLabel = ABUSE_CATEGORY_LABELS[input.category];
 
-    await ctx.db.insert(flaggedLink).values({
-      linkId: reportedLink.id,
-      reason: categoryLabel,
-      reporterEmail,
-      details,
-      status: "pending",
+    await ctx.prisma.flaggedLink.create({
+      data: {
+        linkId: reportedLink.id,
+        reason: categoryLabel,
+        reporterEmail,
+        details,
+        status: "pending",
+      },
     });
 
     void runBackgroundTask(

@@ -1,15 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, getTableColumns, inArray, sql, sum } from "drizzle-orm";
 
 import { getPlanCaps } from "@/lib/billing/plans";
-import {
-  folder,
-  folderPermission,
-  link,
-  linkVisit,
-  linkVisitDailySummary,
-  teamMember,
-} from "@/server/db/schema";
 import {
   getAccessibleFolderIds,
   getFolderPermissionMap,
@@ -17,7 +8,6 @@ import {
   requireFolderAccess,
   requireFolderPermissionManagement,
   shouldBypassFolderPermissions,
-  workspaceFilter,
   workspaceOwnership,
 } from "@/server/lib/workspace";
 import { getTagsForLink } from "../tag/tag.service";
@@ -33,6 +23,11 @@ import type {
   UpdateFolderInput,
   UpdateFolderPermissionsInput,
 } from "./folder.input";
+
+const getWorkspaceWhere = (workspace: any) =>
+  workspace.type === "team"
+    ? { teamId: workspace.teamId }
+    : { userId: workspace.userId, teamId: null };
 
 export const createFolder = async (
   ctx: WorkspaceTRPCContext,
@@ -54,15 +49,14 @@ export const createFolder = async (
   const ownership = workspaceOwnership(ctx.workspace);
 
   // Use transaction to atomically check limits, duplicates, and insert
-  return await ctx.db.transaction(async (tx) => {
+  return await ctx.prisma.$transaction(async (tx) => {
     // Team workspaces (Ultra) have no folder limit (undefined)
     if (folderLimit !== undefined) {
-      const currentFolders = await tx
-        .select({ count: sql<number>`count(*)` })
-        .from(folder)
-        .where(workspaceFilter(ctx.workspace, folder.userId, folder.teamId));
+      const currentFolders = await tx.folder.count({
+        where: getWorkspaceWhere(ctx.workspace),
+      });
 
-      if (Number(currentFolders[0]?.count ?? 0) >= folderLimit) {
+      if (currentFolders >= folderLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message:
@@ -72,11 +66,11 @@ export const createFolder = async (
     }
 
     // Check for duplicate folder name in workspace
-    const existingFolder = await tx.query.folder.findFirst({
-      where: and(
-        eq(folder.name, input.name),
-        workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-      ),
+    const existingFolder = await tx.folder.findFirst({
+      where: {
+        name: input.name,
+        ...getWorkspaceWhere(ctx.workspace),
+      },
     });
 
     if (existingFolder) {
@@ -86,12 +80,14 @@ export const createFolder = async (
       });
     }
 
-    const [inserted] = await tx.insert(folder).values({
-      name: input.name,
-      description: input.description,
-      userId: ownership.userId,
-      teamId: ownership.teamId,
-    }).$returningId();
+    const inserted = await tx.folder.create({
+      data: {
+        name: input.name,
+        description: input.description,
+        userId: ownership.userId,
+        teamId: ownership.teamId,
+      },
+    });
 
     if (!inserted) {
       throw new TRPCError({
@@ -110,16 +106,23 @@ export const createFolder = async (
 
 export const listFolders = async (ctx: WorkspaceTRPCContext) => {
   // Get all folders in workspace
-  const allFolders = await ctx.db.query.folder.findMany({
-    where: workspaceFilter(ctx.workspace, folder.userId, folder.teamId),
-    orderBy: (table, { desc }) => [desc(table.createdAt)],
+  const allFolders = await ctx.prisma.folder.findMany({
+    where: getWorkspaceWhere(ctx.workspace),
+    orderBy: { createdAt: "desc" },
   });
 
   // Filter folders based on access permissions (for team members)
   let accessibleFolders = allFolders;
-  if (ctx.workspace.type === "team" && !shouldBypassFolderPermissions(ctx.workspace)) {
+  if (
+    ctx.workspace.type === "team" &&
+    !shouldBypassFolderPermissions(ctx.workspace)
+  ) {
     const folderIds = allFolders.map((f) => f.id);
-    const accessibleIds = await getAccessibleFolderIds(ctx.db, ctx.workspace, folderIds);
+    const accessibleIds = await getAccessibleFolderIds(
+      ctx.prisma,
+      ctx.workspace,
+      folderIds
+    );
     accessibleFolders = allFolders.filter((f) => accessibleIds.includes(f.id));
   }
 
@@ -127,24 +130,24 @@ export const listFolders = async (ctx: WorkspaceTRPCContext) => {
   let permissionMap = new Map<number, string[]>();
   if (ctx.workspace.type === "team" && isWorkspaceAdmin(ctx.workspace)) {
     const folderIds = accessibleFolders.map((f) => f.id);
-    permissionMap = await getFolderPermissionMap(ctx.db, folderIds);
+    permissionMap = await getFolderPermissionMap(ctx.prisma, folderIds);
   }
 
   // Get link counts for each folder
   const foldersWithCounts = await Promise.all(
     accessibleFolders.map(async (folderItem) => {
-      const linkCount = await ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(link)
-        .where(
-          and(workspaceFilter(ctx.workspace, link.userId, link.teamId), eq(link.folderId, folderItem.id))
-        );
+      const linkCount = await ctx.prisma.link.count({
+        where: {
+          ...getWorkspaceWhere(ctx.workspace),
+          folderId: folderItem.id,
+        },
+      });
 
       const permittedUserIds = permissionMap.get(folderItem.id) ?? [];
 
       return {
         ...folderItem,
-        linkCount: Number(linkCount[0]?.count ?? 0),
+        linkCount,
         // Permission info for UI (only populated for admins/owners)
         hasRestrictions: permittedUserIds.length > 0,
         permittedUserIds,
@@ -159,11 +162,11 @@ export const getFolder = async (
   ctx: WorkspaceTRPCContext,
   input: GetFolderInput
 ) => {
-  const folderData = await ctx.db.query.folder.findFirst({
-    where: and(
-      eq(folder.id, input.id),
-      workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-    ),
+  const folderData = await ctx.prisma.folder.findFirst({
+    where: {
+      id: input.id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!folderData) {
@@ -174,41 +177,35 @@ export const getFolder = async (
   }
 
   // Check access permission for team members
-  await requireFolderAccess(ctx.db, ctx.workspace, input.id);
+  await requireFolderAccess(ctx.prisma, ctx.workspace, input.id);
 
-  // Get all links in this folder with totalClicks. True totals combine raw
-  // visits with archived clicks rolled up by the analytics cleanup job.
-  const archivedClicksPerLink = ctx.db
-    .select({
-      linkId: linkVisitDailySummary.linkId,
-      clicks: sum(linkVisitDailySummary.clicks).as("archived_clicks"),
-    })
-    .from(linkVisitDailySummary)
-    .groupBy(linkVisitDailySummary.linkId)
-    .as("archivedClicksPerLink");
-
-  const folderLinks = await ctx.db
-    .select({
-      ...getTableColumns(link),
-      totalClicks: sql<number>`${count(linkVisit.id)} + COALESCE(MAX(${archivedClicksPerLink.clicks}), 0)`
-        .mapWith(Number)
-        .as("total_clicks"),
-    })
-    .from(link)
-    .leftJoin(linkVisit, eq(link.id, linkVisit.linkId))
-    .leftJoin(archivedClicksPerLink, eq(link.id, archivedClicksPerLink.linkId))
-    .where(
-      and(eq(link.folderId, input.id), workspaceFilter(ctx.workspace, link.userId, link.teamId))
-    )
-    .groupBy(link.id)
-    .orderBy(desc(link.createdAt));
+  const folderLinksRaw = await ctx.prisma.link.findMany({
+    where: {
+      folderId: input.id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
+    include: {
+      _count: {
+        select: { linkVisits: true },
+      },
+      dailySummaries: {
+        select: { clicks: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   // Fetch tags for each link
   const linksWithTags = await Promise.all(
-    folderLinks.map(async (linkItem) => {
+    folderLinksRaw.map(async (linkItem) => {
       const tagRecords = await getTagsForLink(ctx, linkItem.id);
+      
+      const archivedClicks = linkItem.dailySummaries.reduce((sum, s) => sum + s.clicks, 0);
+      const { _count, dailySummaries, ...rest } = linkItem;
+
       return {
-        ...linkItem,
+        ...rest,
+        totalClicks: _count.linkVisits + archivedClicks,
         tags: tagRecords.map((tagRecord) => tagRecord.name),
         folder: { id: folderData.id, name: folderData.name },
       };
@@ -226,11 +223,11 @@ export const updateFolder = async (
   input: UpdateFolderInput
 ) => {
   // Check if folder exists and belongs to workspace
-  const existingFolder = await ctx.db.query.folder.findFirst({
-    where: and(
-      eq(folder.id, input.id),
-      workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-    ),
+  const existingFolder = await ctx.prisma.folder.findFirst({
+    where: {
+      id: input.id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!existingFolder) {
@@ -241,16 +238,15 @@ export const updateFolder = async (
   }
 
   // Check access permission for team members
-  await requireFolderAccess(ctx.db, ctx.workspace, input.id);
+  await requireFolderAccess(ctx.prisma, ctx.workspace, input.id);
 
   // Check for duplicate name (excluding current folder)
-  const duplicateFolder = await ctx.db.query.folder.findFirst({
-    where: (table, { eq, and, ne }) =>
-      and(
-        eq(table.name, input.name),
-        workspaceFilter(ctx.workspace, table.userId, table.teamId),
-        ne(table.id, input.id)
-      ),
+  const duplicateFolder = await ctx.prisma.folder.findFirst({
+    where: {
+      name: input.name,
+      ...getWorkspaceWhere(ctx.workspace),
+      id: { not: input.id },
+    },
   });
 
   if (duplicateFolder) {
@@ -260,13 +256,16 @@ export const updateFolder = async (
     });
   }
 
-  await ctx.db
-    .update(folder)
-    .set({
+  await ctx.prisma.folder.updateMany({
+    where: {
+      id: input.id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
+    data: {
       name: input.name,
       description: input.description,
-    })
-    .where(and(eq(folder.id, input.id), workspaceFilter(ctx.workspace, folder.userId, folder.teamId)));
+    },
+  });
 
   return {
     id: input.id,
@@ -280,11 +279,11 @@ export const deleteFolder = async (
   input: DeleteFolderInput
 ) => {
   // Check if folder exists and belongs to workspace
-  const existingFolder = await ctx.db.query.folder.findFirst({
-    where: and(
-      eq(folder.id, input.id),
-      workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-    ),
+  const existingFolder = await ctx.prisma.folder.findFirst({
+    where: {
+      id: input.id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!existingFolder) {
@@ -295,23 +294,28 @@ export const deleteFolder = async (
   }
 
   // Check access permission for team members
-  await requireFolderAccess(ctx.db, ctx.workspace, input.id);
+  await requireFolderAccess(ctx.prisma, ctx.workspace, input.id);
 
   // Use transaction to delete folder, permissions, and update links atomically
-  await ctx.db.transaction(async (tx) => {
+  await ctx.prisma.$transaction(async (tx) => {
     // Move all links in this folder to unfoldered (folderId = null)
-    await tx
-      .update(link)
-      .set({ folderId: null })
-      .where(and(eq(link.folderId, input.id), workspaceFilter(ctx.workspace, link.userId, link.teamId)));
+    await tx.link.updateMany({
+      where: {
+        folderId: input.id,
+        ...getWorkspaceWhere(ctx.workspace),
+      },
+      data: { folderId: null },
+    });
 
     // Delete folder permissions
-    await tx
-      .delete(folderPermission)
-      .where(eq(folderPermission.folderId, input.id));
+    await tx.folderPermission.deleteMany({
+      where: { folderId: input.id },
+    });
 
     // Delete the folder
-    await tx.delete(folder).where(eq(folder.id, input.id));
+    await tx.folder.delete({
+      where: { id: input.id },
+    });
   });
 
   return { success: true };
@@ -322,11 +326,11 @@ export const moveLinkToFolder = async (
   input: MoveLinkToFolderInput
 ) => {
   // Check if link exists and belongs to workspace
-  const existingLink = await ctx.db.query.link.findFirst({
-    where: and(
-      eq(link.id, input.linkId),
-      workspaceFilter(ctx.workspace, link.userId, link.teamId)
-    ),
+  const existingLink = await ctx.prisma.link.findFirst({
+    where: {
+      id: input.linkId,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!existingLink) {
@@ -339,11 +343,11 @@ export const moveLinkToFolder = async (
   // If folderId is provided, check if folder exists and belongs to workspace
   if (input.folderId !== null) {
     const folderId = input.folderId;
-    const existingFolder = await ctx.db.query.folder.findFirst({
-      where: and(
-        eq(folder.id, folderId),
-        workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-      ),
+    const existingFolder = await ctx.prisma.folder.findFirst({
+      where: {
+        id: folderId,
+        ...getWorkspaceWhere(ctx.workspace),
+      },
     });
 
     if (!existingFolder) {
@@ -354,14 +358,14 @@ export const moveLinkToFolder = async (
     }
 
     // Check access permission for team members
-    await requireFolderAccess(ctx.db, ctx.workspace, folderId);
+    await requireFolderAccess(ctx.prisma, ctx.workspace, folderId);
   }
 
   // Update link's folderId
-  await ctx.db
-    .update(link)
-    .set({ folderId: input.folderId })
-    .where(eq(link.id, input.linkId));
+  await ctx.prisma.link.update({
+    where: { id: input.linkId },
+    data: { folderId: input.folderId },
+  });
 
   return { success: true };
 };
@@ -380,11 +384,11 @@ export const moveBulkLinksToFolder = async (
   // If folderId is provided, check if folder exists and belongs to workspace
   if (input.folderId !== null) {
     const folderId = input.folderId;
-    const existingFolder = await ctx.db.query.folder.findFirst({
-      where: and(
-        eq(folder.id, folderId),
-        workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-      ),
+    const existingFolder = await ctx.prisma.folder.findFirst({
+      where: {
+        id: folderId,
+        ...getWorkspaceWhere(ctx.workspace),
+      },
     });
 
     if (!existingFolder) {
@@ -395,16 +399,17 @@ export const moveBulkLinksToFolder = async (
     }
 
     // Check access permission for team members
-    await requireFolderAccess(ctx.db, ctx.workspace, folderId);
+    await requireFolderAccess(ctx.prisma, ctx.workspace, folderId);
   }
 
   // Update all links in the array
-  await ctx.db
-    .update(link)
-    .set({ folderId: input.folderId })
-    .where(
-      and(inArray(link.id, input.linkIds), workspaceFilter(ctx.workspace, link.userId, link.teamId))
-    );
+  await ctx.prisma.link.updateMany({
+    where: {
+      id: { in: input.linkIds },
+      ...getWorkspaceWhere(ctx.workspace),
+    },
+    data: { folderId: input.folderId },
+  });
 
   return {
     success: true,
@@ -413,13 +418,12 @@ export const moveBulkLinksToFolder = async (
 };
 
 export const getFolderStats = async (ctx: WorkspaceTRPCContext) => {
-  const folderCount = await ctx.db
-    .select({ count: sql<number>`count(*)` })
-    .from(folder)
-    .where(workspaceFilter(ctx.workspace, folder.userId, folder.teamId));
+  const folderCount = await ctx.prisma.folder.count({
+    where: getWorkspaceWhere(ctx.workspace),
+  });
 
   return {
-    totalFolders: Number(folderCount[0]?.count ?? 0),
+    totalFolders: folderCount,
   };
 };
 
@@ -435,11 +439,11 @@ export const getFolderPermissions = async (
   requireFolderPermissionManagement(ctx.workspace);
 
   // Verify folder exists and belongs to workspace
-  const folderData = await ctx.db.query.folder.findFirst({
-    where: and(
-      eq(folder.id, input.folderId),
-      workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-    ),
+  const folderData = await ctx.prisma.folder.findFirst({
+    where: {
+      id: input.folderId,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!folderData) {
@@ -450,11 +454,11 @@ export const getFolderPermissions = async (
   }
 
   // Get permissions with user info
-  const permissions = await ctx.db.query.folderPermission.findMany({
-    where: eq(folderPermission.folderId, input.folderId),
-    with: {
+  const permissions = await ctx.prisma.folderPermission.findMany({
+    where: { folderId: input.folderId },
+    include: {
       user: {
-        columns: {
+        select: {
           id: true,
           name: true,
           email: true,
@@ -489,11 +493,11 @@ export const updateFolderPermissions = async (
   requireFolderPermissionManagement(ctx.workspace);
 
   // Verify folder exists and belongs to workspace
-  const folderData = await ctx.db.query.folder.findFirst({
-    where: and(
-      eq(folder.id, input.folderId),
-      workspaceFilter(ctx.workspace, folder.userId, folder.teamId)
-    ),
+  const folderData = await ctx.prisma.folder.findFirst({
+    where: {
+      id: input.folderId,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 
   if (!folderData) {
@@ -507,13 +511,17 @@ export const updateFolderPermissions = async (
   const uniqueUserIds = input.isRestricted ? [...new Set(input.userIds)] : [];
 
   // Validate userIds are actual team members (if any provided)
-  if (uniqueUserIds.length > 0 && ctx.workspace.type === "team" && ctx.workspace.teamId) {
-    const validMembers = await ctx.db.query.teamMember.findMany({
-      where: and(
-        eq(teamMember.teamId, ctx.workspace.teamId),
-        inArray(teamMember.userId, uniqueUserIds)
-      ),
-      columns: { userId: true },
+  if (
+    uniqueUserIds.length > 0 &&
+    ctx.workspace.type === "team" &&
+    ctx.workspace.teamId
+  ) {
+    const validMembers = await ctx.prisma.teamMember.findMany({
+      where: {
+        teamId: ctx.workspace.teamId,
+        userId: { in: uniqueUserIds },
+      },
+      select: { userId: true },
     });
 
     const validUserIds = new Set(validMembers.map((m) => m.userId));
@@ -527,26 +535,26 @@ export const updateFolderPermissions = async (
     }
   }
 
-  await ctx.db.transaction(async (tx) => {
+  await ctx.prisma.$transaction(async (tx) => {
     // Update the folder's isRestricted flag
-    await tx
-      .update(folder)
-      .set({ isRestricted: input.isRestricted })
-      .where(eq(folder.id, input.folderId));
+    await tx.folder.update({
+      where: { id: input.folderId },
+      data: { isRestricted: input.isRestricted },
+    });
 
     // Remove all existing permissions for this folder
-    await tx
-      .delete(folderPermission)
-      .where(eq(folderPermission.folderId, input.folderId));
+    await tx.folderPermission.deleteMany({
+      where: { folderId: input.folderId },
+    });
 
     // If restricted with specific users, create permission records
     if (input.isRestricted && uniqueUserIds.length > 0) {
-      await tx.insert(folderPermission).values(
-        uniqueUserIds.map((userId) => ({
+      await tx.folderPermission.createMany({
+        data: uniqueUserIds.map((userId) => ({
           folderId: input.folderId,
           userId,
-        }))
-      );
+        })),
+      });
     }
   });
 

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { env } from "@/env.mjs";
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
 
-import type { Link } from "@/server/db/schema";
+import type { Link } from "@prisma/client";
 
 const linkSchema = z.object({
   id: z.string().transform((str) => Number(str)),
@@ -97,7 +97,7 @@ function convertToLink(data: Record<string, string>): Link {
     disableLinkAfterDate: parsed.disableLinkAfterDate
       ? new Date(parsed.disableLinkAfterDate)
       : null,
-    metadata: parsed.metadata as Record<string, unknown>,
+    metadata: parsed.metadata as any,
     tags: parsed.tags || [],
     archived: parsed.archived || false,
     folderId: parsed.folderId ?? null,

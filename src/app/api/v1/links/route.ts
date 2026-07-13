@@ -1,10 +1,7 @@
-import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { generateShortLink } from "@/lib/core/links";
-import { db } from "@/server/db";
-import { link } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { assertUrlSafe } from "@/server/lib/phishing";
 
 import { resolveApiDomainForUser, validateAndGetToken } from "../utils";
@@ -85,11 +82,10 @@ type ShortenLinkInput = {
 };
 
 async function checkLinkAliasCollision(alias: string, domain: string) {
-  const existingLink = await db
-    .select()
-    .from(link)
-    .where(and(eq(link.alias, alias), eq(link.domain, domain)));
-  return existingLink.length > 0;
+  const existingLink = await prisma.link.findFirst({
+    where: { alias, domain },
+  });
+  return !!existingLink;
 }
 
 async function createNewLink(
@@ -104,6 +100,7 @@ async function createNewLink(
       throw new Error("You need to upgrade to a pro plan to use password protection");
     }
 
+    const bcrypt = await import("bcryptjs");
     const hashedPassword = bcrypt.hashSync(data.password, 10);
     data.password = hashedPassword;
   }
@@ -136,19 +133,17 @@ async function createNewLink(
     passwordHash: data.password,
     domain,
     userId,
-    utmParams: data.utmParams ?? null,
+    utmParams: data.utmParams ? (data.utmParams as any) : null,
   };
 
-  const newLink = await db.insert(link).values(newLinkData);
-  const newLinkId = newLink[0].insertId;
+  const retrievedLink = await prisma.link.create({ data: newLinkData });
 
-  const retrievedLink = await db.select().from(link).where(eq(link.id, newLinkId));
   return {
-    shortLink: `https://${retrievedLink[0]!.domain}/${retrievedLink[0]!.alias}`,
-    url: retrievedLink[0]!.url,
-    alias: retrievedLink[0]!.alias,
-    expiresAt: retrievedLink[0]!.disableLinkAfterDate,
-    expiresAfter: retrievedLink[0]!.disableLinkAfterClicks,
-    isProtected: !!retrievedLink[0]!.passwordHash,
+    shortLink: `https://${retrievedLink.domain}/${retrievedLink.alias}`,
+    url: retrievedLink.url,
+    alias: retrievedLink.alias,
+    expiresAt: retrievedLink.disableLinkAfterDate,
+    expiresAfter: retrievedLink.disableLinkAfterClicks,
+    isProtected: !!retrievedLink.passwordHash,
   };
 }

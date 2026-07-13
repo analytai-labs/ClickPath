@@ -14,7 +14,7 @@ import { api } from "@/trpc/react";
 import { UtmTemplateCard } from "./_components/utm-template-card";
 import { UtmTemplateModal } from "./_components/utm-template-modal";
 
-import type { UtmTemplate } from "@/server/db/schema";
+import type { UtmTemplate } from "@prisma/client";
 
 export default function UtmTemplatesPage() {
   const [modalOpen, setModalOpen] = useState(false);

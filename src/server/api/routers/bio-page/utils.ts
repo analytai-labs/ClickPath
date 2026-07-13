@@ -1,12 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { count } from "drizzle-orm";
-
 import { getBioPageLimit } from "@/lib/billing/plans";
-import { bioPage } from "@/server/db/schema";
-import { workspaceFilter } from "@/server/lib/workspace";
-
-import type { BioPage } from "@/server/db/schema";
+import type { BioPage } from "@prisma/client";
 import type { WorkspaceTRPCContext } from "../../trpc";
+import { workspaceFilter } from "@/server/lib/workspace";
 
 // Handles live at /p/<slug>, but we still exclude every top-level app route name
 // defensively (in case bio pages are ever lifted to the root namespace) plus
@@ -35,12 +31,9 @@ export async function checkBioPageLimit(ctx: WorkspaceTRPCContext): Promise<void
   const limit = getBioPageLimit(ctx.workspace.plan);
   if (limit === undefined) return; // unlimited (Ultra / team workspaces)
 
-  const [row] = await ctx.db
-    .select({ count: count() })
-    .from(bioPage)
-    .where(workspaceFilter(ctx.workspace, bioPage.userId, bioPage.teamId));
-
-  const current = Number(row?.count ?? 0);
+  const current = await ctx.prisma.bioPage.count({
+    where: workspaceFilter(ctx.workspace)
+  });
   if (current >= limit) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -63,26 +56,26 @@ export function pageBelongsToWorkspace(
   return page.teamId === null && page.userId === ctx.workspace.userId;
 }
 
-/** Translate a MySQL unique-constraint violation into a friendly CONFLICT. */
 export function rethrowBioDuplicate(error: unknown): never {
-  // drizzle-orm >= 0.44 wraps driver errors in DrizzleQueryError; the original
-  // mysql2 error (with the constraint name) lives at error.cause.
-  const cause = (error as Error | undefined)?.cause;
-  const message =
-    String((error as { message?: string })?.message ?? "") +
-    " " +
-    String((cause as { message?: string })?.message ?? "");
-  if (/bio_slug_unique/.test(message)) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "That handle is already taken. Please choose another.",
-    });
-  }
-  if (/bio_custom_domain_unique/.test(message)) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "That custom domain is already used by another bio page.",
-    });
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as any).code === "P2002"
+  ) {
+    const meta = (error as any).meta;
+    if (meta?.target?.includes("slug")) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "That handle is already taken. Please choose another.",
+      });
+    }
+    if (meta?.target?.includes("customDomain")) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "That custom domain is already used by another bio page.",
+      });
+    }
   }
   throw error;
 }

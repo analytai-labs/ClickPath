@@ -1,14 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { eq, inArray } from "drizzle-orm";
-
-import { folder, folderPermission } from "@/server/db/schema";
+import { PrismaClient } from "@prisma/client";
 
 import { isWorkspaceAdmin } from "./permissions";
 import type { WorkspaceContext } from "./types";
 
-import type { db as Database } from "@/server/db";
-
-type DatabaseType = typeof Database;
+type DatabaseType = PrismaClient;
 
 /**
  * Resource-level permission system for folder access control in teams.
@@ -66,9 +62,9 @@ export async function canAccessFolder(
   }
 
   // Get the folder to check isRestricted flag
-  const folderData = await db.query.folder.findFirst({
-    where: eq(folder.id, folderId),
-    columns: { isRestricted: true },
+  const folderData = await db.folder.findFirst({
+    where: { id: folderId },
+    select: { isRestricted: true },
   });
 
   // Folder doesn't exist - deny access
@@ -82,8 +78,8 @@ export async function canAccessFolder(
   }
 
   // Restricted: check if user is in the permission list
-  const permissions = await db.query.folderPermission.findMany({
-    where: eq(folderPermission.folderId, folderId),
+  const permissions = await db.folderPermission.findMany({
+    where: { folderId: folderId },
   });
 
   // Restricted with no permissions = admins/owners only (user already failed bypass check)
@@ -142,9 +138,9 @@ export async function getAccessibleFolderIds(
   }
 
   // Get folder restriction status
-  const folders = await db.query.folder.findMany({
-    where: inArray(folder.id, teamFolderIds),
-    columns: { id: true, isRestricted: true },
+  const folders = await db.folder.findMany({
+    where: { id: { in: teamFolderIds } },
+    select: { id: true, isRestricted: true },
   });
 
   // Build a map of folder id -> isRestricted
@@ -158,8 +154,8 @@ export async function getAccessibleFolderIds(
 
   const allPermissions =
     restrictedFolderIds.length > 0
-      ? await db.query.folderPermission.findMany({
-          where: inArray(folderPermission.folderId, restrictedFolderIds),
+      ? await db.folderPermission.findMany({
+          where: { folderId: { in: restrictedFolderIds } },
         })
       : [];
 
@@ -210,8 +206,8 @@ export async function getFolderPermissionMap(
     return new Map();
   }
 
-  const allPermissions = await db.query.folderPermission.findMany({
-    where: inArray(folderPermission.folderId, folderIds),
+  const allPermissions = await db.folderPermission.findMany({
+    where: { folderId: { in: folderIds } },
   });
 
   // Group by folder ID

@@ -1,8 +1,6 @@
-import { and, eq } from "drizzle-orm";
-
 import { BIO_OG_SIZE, bioOgImageResponse } from "@/components/bio/og-image";
-import { db } from "@/server/db";
-import { bioPage } from "@/server/db/schema";
+import { prisma } from "@/server/db";
+import { type BioPageTheme } from "@/server/db/types";
 
 export const runtime = "nodejs";
 export const alt = "Bio page preview";
@@ -14,10 +12,10 @@ type Props = { params: Promise<{ host: string }> };
 export default async function Image({ params }: Props) {
   const { host } = await params;
   const domain = decodeURIComponent(host).toLowerCase().replace(/^www\./, "");
-  const page = await db.query.bioPage
+  const page = await prisma.bioPage
     .findFirst({
-      where: and(eq(bioPage.customDomain, domain), eq(bioPage.isPublished, true)),
-      columns: {
+      where: { customDomain: domain, isPublished: true },
+      select: {
         title: true,
         slug: true,
         description: true,
@@ -28,5 +26,5 @@ export default async function Image({ params }: Props) {
     })
     .catch(() => null);
 
-  return bioOgImageResponse(page ?? null, page?.slug ?? "");
+  return bioOgImageResponse(page ? { ...page, theme: page.theme as BioPageTheme } : null, page?.slug ?? "");
 }

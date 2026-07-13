@@ -1,1 +1,0 @@
-ALTER TABLE `Link` ADD CONSTRAINT `unique_alias_domain` UNIQUE(`alias`,`domain`);

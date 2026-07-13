@@ -380,7 +380,7 @@ function ExportCsvButton({
   const handleExport = () => {
     const header = ["Name", "Short link", "Destination", "Type", "Channel", "Clicks", "Share"];
     const channelByLinkId = new Map(
-      campaign.links.map((l) => [l.id, l.utmParams?.utm_source ?? ""]),
+      campaign.links.map((l) => [l.id, (l.utmParams as Record<string, string>)?.utm_source ?? ""]),
     );
     // Prefix formula-trigger characters so Excel/Sheets treat user-controlled
     // values (link names, URLs, utm_source) as text, not executable formulas.

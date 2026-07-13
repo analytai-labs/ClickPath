@@ -6,8 +6,7 @@ import { Webhook } from "svix";
 import { env } from "@/env.mjs";
 import WelcomeEmail from "@/lib/email/templates/welcome-email";
 import { logger } from "@/lib/logger";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 const resend = new Resend(env.RESEND_API_KEY);
 const log = logger.child({ webhook: "clerk" });
@@ -66,11 +65,13 @@ export async function POST(req: Request) {
   // Get the user info
   const userInfo = getUserInfo(payload as Payload);
 
-  await db.insert(user).values({
-    id: id!,
-    name: userInfo.name,
-    email: userInfo.email,
-    imageUrl: userInfo.avatarUrl,
+  await prisma.user.create({
+    data: {
+      id: id!,
+      name: userInfo.name,
+      email: userInfo.email,
+      imageUrl: userInfo.avatarUrl,
+    }
   });
 
   const { error } = await resend.emails.send({

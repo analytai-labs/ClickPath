@@ -69,7 +69,7 @@ export function CampaignLinks({ campaign }: { campaign: CampaignData }) {
         <div className="divide-y divide-neutral-200/70 dark:divide-border">
           {campaign.links.map((memberLink, index) => {
             const shortUrl = `${memberLink.domain}/${memberLink.alias ?? ""}`;
-            const channel = memberLink.utmParams?.utm_source;
+            const channel = (memberLink.utmParams as Record<string, string>)?.utm_source;
             return (
               <motion.div
                 key={memberLink.id}

@@ -1,11 +1,8 @@
-import { sql } from "drizzle-orm";
-
 import { parseDeviceDetails, parseReferrer, resolveGeo } from "@/lib/core/analytics/visitor";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { hashIp } from "@/lib/utils/ip-hash";
 import { isBot } from "@/lib/utils/is-bot";
-import { db } from "@/server/db";
-import { bioPageView, uniqueBioPageView } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { registerEventUsage } from "@/server/lib/event-usage";
 import { sendEventUsageEmail } from "@/server/lib/notifications/event-usage";
 
@@ -24,10 +21,11 @@ type RecordBioPageViewOptions = {
  * concurrent inserts silently collapse to a no-op.
  */
 async function recordUniqueView(ipHash: string, bioPageId: number) {
-  await db
-    .insert(uniqueBioPageView)
-    .values({ ipHash, bioPageId })
-    .onDuplicateKeyUpdate({ set: { bioPageId: sql`bioPageId` } });
+  await prisma.uniqueBioPageView.create({
+    data: { ipHash, bioPageId }
+  }).catch(() => {
+    // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
+  });
 }
 
 /**
@@ -47,7 +45,7 @@ export async function recordBioPageView(opts: RecordBioPageViewOptions): Promise
   const ipForHash = ip && ip !== "undefined" ? ip : "localhost-dev";
   const ipHash = hashIp(ipForHash);
 
-  const usage = await registerEventUsage(ownerId, db);
+  const usage = await registerEventUsage(ownerId, prisma);
 
   if (usage.alertLevelTriggered && usage.limit && usage.userEmail && usage.plan) {
     await runBackgroundTask(
@@ -67,13 +65,15 @@ export async function recordBioPageView(opts: RecordBioPageViewOptions): Promise
   const { countryName, continentName, cityName } = resolveGeo(country, city);
 
   await Promise.all([
-    db.insert(bioPageView).values({
-      bioPageId,
-      ...deviceDetails,
-      referer: parseReferrer(headers.get("referer")),
-      country: countryName,
-      city: cityName,
-      continent: continentName,
+    prisma.bioPageView.create({
+      data: {
+        bioPageId,
+        ...deviceDetails,
+        referer: parseReferrer(headers.get("referer")),
+        country: countryName,
+        city: cityName,
+        continent: continentName,
+      }
     }),
     recordUniqueView(ipHash, bioPageId),
   ]);

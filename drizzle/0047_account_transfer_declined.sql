@@ -1,1 +1,0 @@
-ALTER TABLE `AccountTransfer` MODIFY COLUMN `status` enum('pending','accepted','cancelled','expired','declined') NOT NULL DEFAULT 'pending';

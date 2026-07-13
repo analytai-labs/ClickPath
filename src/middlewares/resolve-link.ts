@@ -1,5 +1,3 @@
-import { asc, eq } from "drizzle-orm";
-
 import {
   type Link,
   buildCacheKey,
@@ -12,8 +10,7 @@ import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { generateVisitId, signVerifiedClickToken } from "@/lib/utils/verified-click-token";
 import { recordClick, resolveLink } from "@/middlewares/record-click";
-import { db } from "@/server/db";
-import { geoRule, link as linkTable } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { getTotalClicks } from "@/server/lib/total-clicks";
 import { isOwnerOnPaidPlan } from "@/server/lib/user-plan";
 
@@ -21,7 +18,10 @@ const log = logger.child({ component: "link-resolver" });
 
 async function autoDisableLink(linkId: number, cacheKey: string): Promise<void> {
   try {
-    await db.update(linkTable).set({ disabled: true }).where(eq(linkTable.id, linkId));
+    await prisma.link.update({
+      where: { id: linkId },
+      data: { disabled: true }
+    });
     await deleteFromCache(cacheKey);
   } catch (err) {
     log.error({ err, linkId }, "failed to auto-disable link");
@@ -138,13 +138,14 @@ export async function resolveShortLink(
 
     let geoRules = cachedGeoRules;
     if (!geoRules) {
-      const rulesFromDb = await db.query.geoRule.findMany({
-        where: eq(geoRule.linkId, link.id),
-        orderBy: [asc(geoRule.priority)],
+      const rulesFromDb = await prisma.geoRule.findMany({
+        where: { linkId: link.id },
+        orderBy: { priority: "asc" }
       });
       if (rulesFromDb.length > 0) {
-        void runBackgroundTask(setGeoRulesInCache(link.id, rulesFromDb));
-        geoRules = rulesFromDb;
+        const typedRules = rulesFromDb.map(r => ({ ...r, values: r.values as string[] }));
+        void runBackgroundTask(setGeoRulesInCache(link.id, typedRules));
+        geoRules = typedRules;
       }
     }
 

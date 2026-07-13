@@ -1,11 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
 
-import { utmTemplate } from "@/server/db/schema";
-import {
-  workspaceFilter,
-  workspaceOwnership,
-} from "@/server/lib/workspace";
+import { prisma } from "@/server/db";
+import { workspaceOwnership } from "@/server/lib/workspace";
+import type { WorkspaceContext } from "@/server/lib/workspace";
 
 import type { WorkspaceTRPCContext } from "../../trpc";
 import type {
@@ -23,10 +20,16 @@ const ensureUltraPlan = (ctx: WorkspaceTRPCContext) => {
   }
 };
 
+const getWorkspaceWhere = (workspace: WorkspaceContext) => {
+  return workspace.type === "team"
+    ? { teamId: workspace.teamId }
+    : { userId: workspace.userId, teamId: null };
+};
+
 export const getUserUtmTemplates = async (ctx: WorkspaceTRPCContext) => {
-  return ctx.db.query.utmTemplate.findMany({
-    where: workspaceFilter(ctx.workspace, utmTemplate.userId, utmTemplate.teamId),
-    orderBy: (template) => template.name,
+  return prisma.utmTemplate.findMany({
+    where: getWorkspaceWhere(ctx.workspace),
+    orderBy: { name: "asc" },
   });
 };
 
@@ -34,8 +37,11 @@ export const getUtmTemplateById = async (
   ctx: WorkspaceTRPCContext,
   id: number
 ) => {
-  return ctx.db.query.utmTemplate.findFirst({
-    where: and(eq(utmTemplate.id, id), workspaceFilter(ctx.workspace, utmTemplate.userId, utmTemplate.teamId)),
+  return prisma.utmTemplate.findFirst({
+    where: {
+      id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
 };
 
@@ -47,23 +53,20 @@ export const createUtmTemplate = async (
 
   const ownership = workspaceOwnership(ctx.workspace);
 
-  const [result] = await ctx.db.insert(utmTemplate).values({
-    name: input.name,
-    utmSource: input.utmSource,
-    utmMedium: input.utmMedium,
-    utmCampaign: input.utmCampaign,
-    utmTerm: input.utmTerm,
-    utmContent: input.utmContent,
-    userId: ownership.userId,
-    teamId: ownership.teamId,
+  const result = await prisma.utmTemplate.create({
+    data: {
+      name: input.name,
+      utmSource: input.utmSource,
+      utmMedium: input.utmMedium,
+      utmCampaign: input.utmCampaign,
+      utmTerm: input.utmTerm,
+      utmContent: input.utmContent,
+      userId: ownership.userId,
+      teamId: ownership.teamId,
+    },
   });
 
-  return {
-    id: result.insertId,
-    ...input,
-    userId: ownership.userId,
-    teamId: ownership.teamId,
-  };
+  return result;
 };
 
 export const updateUtmTemplate = async (
@@ -74,29 +77,24 @@ export const updateUtmTemplate = async (
 
   const { id, ...data } = input;
 
-  // Only update if the template belongs to the workspace
-  const result = await ctx.db
-    .update(utmTemplate)
-    .set(data)
-    .where(and(eq(utmTemplate.id, id), workspaceFilter(ctx.workspace, utmTemplate.userId, utmTemplate.teamId)));
+  const existing = await prisma.utmTemplate.findFirst({
+    where: {
+      id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
+  });
 
-  if (result[0].affectedRows === 0) {
+  if (!existing) {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "Template not found or access denied",
     });
   }
 
-  const updated = await ctx.db.query.utmTemplate.findFirst({
-    where: and(eq(utmTemplate.id, id), workspaceFilter(ctx.workspace, utmTemplate.userId, utmTemplate.teamId)),
+  const updated = await prisma.utmTemplate.update({
+    where: { id },
+    data,
   });
-
-  if (!updated) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Failed to retrieve updated template",
-    });
-  }
 
   return updated;
 };
@@ -107,17 +105,23 @@ export const deleteUtmTemplate = async (
 ) => {
   ensureUltraPlan(ctx);
 
-  // Only delete if the template belongs to the workspace
-  const result = await ctx.db
-    .delete(utmTemplate)
-    .where(and(eq(utmTemplate.id, id), workspaceFilter(ctx.workspace, utmTemplate.userId, utmTemplate.teamId)));
+  const existing = await prisma.utmTemplate.findFirst({
+    where: {
+      id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
+  });
 
-  if (result[0].affectedRows === 0) {
+  if (!existing) {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "Template not found or access denied",
     });
   }
+
+  await prisma.utmTemplate.delete({
+    where: { id },
+  });
 
   return { success: true };
 };

@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
-import type { BioBlockType } from "@/server/db/schema";
+import type { BioBlockType } from "@prisma/client";
 
 import { BlockFormDialog } from "./block-form-dialog";
 

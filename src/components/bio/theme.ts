@@ -1,4 +1,4 @@
-import type { BioPageTheme } from "@/server/db/schema";
+import type { BioPageTheme } from "@/server/db/types";
 
 export type ResolvedBioTheme = {
   backgroundCss: string; // value for the CSS `background` property

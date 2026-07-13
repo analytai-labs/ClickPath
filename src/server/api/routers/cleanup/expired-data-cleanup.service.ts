@@ -1,7 +1,4 @@
-import { and, eq, lt, sql } from "drizzle-orm";
-
-import { db } from "@/server/db";
-import { customDomain, teamInvite } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 // Invalid domain retention: 30 days before cleanup
 const INVALID_DOMAIN_RETENTION_DAYS = 30;
@@ -33,27 +30,23 @@ export async function cleanupExpiredData(): Promise<ExpiredDataCleanupResult> {
   );
 
   // Delete expired team invites (expiresAt has passed and not accepted)
-  const expiredInvitesResult = await db
-    .delete(teamInvite)
-    .where(
-      and(
-        lt(teamInvite.expiresAt, now),
-        sql`${teamInvite.acceptedAt} IS NULL`
-      )
-    );
-  result.expiredInvitesDeleted = expiredInvitesResult[0].affectedRows;
+  const expiredInvitesResult = await prisma.teamInvite.deleteMany({
+    where: {
+      expiresAt: { lt: now },
+      acceptedAt: null,
+    }
+  });
+  result.expiredInvitesDeleted = expiredInvitesResult.count;
 
   // Delete invalid custom domains older than 30 days
   // These are domains that users added but never configured properly
-  const invalidDomainsResult = await db
-    .delete(customDomain)
-    .where(
-      and(
-        eq(customDomain.status, "invalid"),
-        lt(customDomain.createdAt, invalidDomainCutoffDate)
-      )
-    );
-  result.invalidDomainsDeleted = invalidDomainsResult[0].affectedRows;
+  const invalidDomainsResult = await prisma.customDomain.deleteMany({
+    where: {
+      status: "invalid",
+      createdAt: { lt: invalidDomainCutoffDate }
+    }
+  });
+  result.invalidDomainsDeleted = invalidDomainsResult.count;
 
   return result;
 }
@@ -70,42 +63,33 @@ export async function getExpiredDataCleanupStats() {
   );
 
   // Count expired invites
-  const expiredInvites = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(teamInvite)
-    .where(
-      and(
-        lt(teamInvite.expiresAt, now),
-        sql`${teamInvite.acceptedAt} IS NULL`
-      )
-    );
+  const expiredInvites = await prisma.teamInvite.count({
+    where: {
+      expiresAt: { lt: now },
+      acceptedAt: null,
+    }
+  });
 
   // Count invalid domains older than retention period
-  const invalidDomains = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(customDomain)
-    .where(
-      and(
-        eq(customDomain.status, "invalid"),
-        lt(customDomain.createdAt, invalidDomainCutoffDate)
-      )
-    );
+  const invalidDomains = await prisma.customDomain.count({
+    where: {
+      status: "invalid",
+      createdAt: { lt: invalidDomainCutoffDate }
+    }
+  });
 
   // Count all pending invites (not yet expired)
-  const pendingInvites = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(teamInvite)
-    .where(
-      and(
-        sql`${teamInvite.expiresAt} >= ${now}`,
-        sql`${teamInvite.acceptedAt} IS NULL`
-      )
-    );
+  const pendingInvites = await prisma.teamInvite.count({
+    where: {
+      expiresAt: { gte: now },
+      acceptedAt: null,
+    }
+  });
 
   return {
-    expiredInvitesCount: Number(expiredInvites[0]?.count ?? 0),
-    invalidDomainsCount: Number(invalidDomains[0]?.count ?? 0),
-    pendingInvitesCount: Number(pendingInvites[0]?.count ?? 0),
+    expiredInvitesCount: expiredInvites,
+    invalidDomainsCount: invalidDomains,
+    pendingInvitesCount: pendingInvites,
     invalidDomainRetentionDays: INVALID_DOMAIN_RETENTION_DAYS,
   };
 }

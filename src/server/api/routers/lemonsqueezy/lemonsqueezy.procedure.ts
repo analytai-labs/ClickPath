@@ -5,7 +5,6 @@ import {
   getSubscription,
   updateSubscription,
 } from "@lemonsqueezy/lemonsqueezy.js";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -17,7 +16,6 @@ import { configureLemonSqueezy } from "@/lib/config/lemonsqueezy";
 import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { sendDowngradeFeedbackNotification } from "@/server/lib/notifications/discord";
-import { subscription } from "@/server/db/schema";
 
 const log = logger.child({ component: "billing.lemonsqueezy" });
 
@@ -41,12 +39,12 @@ export const lemonsqueezyRouter = createTRPCRouter({
       const userId = ctx.auth.userId;
       const variantId = getVariantId(input.plan, input.interval);
 
-      const user = await ctx.db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, userId),
+      const user = await ctx.prisma.user.findFirst({
+        where: { id: userId },
       });
 
-      const userSubscription = await ctx.db.query.subscription.findFirst({
-        where: (table, { eq }) => eq(table.userId, userId),
+      const userSubscription = await ctx.prisma.subscription.findFirst({
+        where: { userId },
       });
 
       // Check if user has an active subscription
@@ -78,9 +76,9 @@ export const lemonsqueezyRouter = createTRPCRouter({
 
         // Update local DB to reflect the change immediately (optional but good for UI)
         try {
-          await ctx.db
-            .update(subscription)
-            .set({
+          await ctx.prisma.subscription.updateMany({
+            where: { userId },
+            data: {
               plan: input.plan,
               billingInterval: input.interval,
               variantId: variantId,
@@ -91,8 +89,8 @@ export const lemonsqueezyRouter = createTRPCRouter({
               renewsAt: updatedSub.data.data.attributes.renews_at
                 ? new Date(updatedSub.data.data.attributes.renews_at)
                 : null,
-            })
-            .where(eq(subscription.userId, userId));
+            },
+          });
         } catch (e) {
           log.error(
             { err: e, userId, subscriptionId: userSubscription.subscriptionId },
@@ -137,8 +135,8 @@ export const lemonsqueezyRouter = createTRPCRouter({
 
     const userId = ctx.auth.userId;
 
-    const userSubscription = await ctx.db.query.subscription.findFirst({
-      where: (table, { eq }) => eq(table.userId, userId),
+    const userSubscription = await ctx.prisma.subscription.findFirst({
+      where: { userId },
     });
 
     if (!userSubscription) {
@@ -154,17 +152,17 @@ export const lemonsqueezyRouter = createTRPCRouter({
     }
 
     try {
-      await ctx.db
-        .update(subscription)
-        .set({
+      await ctx.prisma.subscription.updateMany({
+        where: { userId },
+        data: {
           // Keep plan/variant — access is retained until endsAt; resolvePlan()
           // drops the user to free once that date passes.
           status: cancelledSub.data?.data.attributes.status,
           endsAt: cancelledSub.data?.data.attributes.ends_at
             ? new Date(cancelledSub.data?.data.attributes.ends_at)
             : null,
-        })
-        .where(eq(subscription.userId, userId));
+        },
+      });
     } catch (_e) {
       throw new Error("Failed to update subscription status");
     }
@@ -177,8 +175,8 @@ export const lemonsqueezyRouter = createTRPCRouter({
 
     const userId = ctx.auth.userId;
 
-    const userSubscription = await ctx.db.query.subscription.findFirst({
-      where: (table, { eq }) => eq(table.userId, userId),
+    const userSubscription = await ctx.prisma.subscription.findFirst({
+      where: { userId },
     });
 
     if (!userSubscription) {
@@ -224,13 +222,13 @@ export const lemonsqueezyRouter = createTRPCRouter({
       const { targetPlan, reason, additionalFeedback } = input;
 
       // Get user info for notification
-      const userRecord = await ctx.db.query.user.findFirst({
-        where: (table, { eq }) => eq(table.id, userId),
+      const userRecord = await ctx.prisma.user.findFirst({
+        where: { id: userId },
       });
 
       // Get current subscription
-      const userSubscription = await ctx.db.query.subscription.findFirst({
-        where: (table, { eq }) => eq(table.userId, userId),
+      const userSubscription = await ctx.prisma.subscription.findFirst({
+        where: { userId },
       });
 
       if (!userSubscription || userSubscription.status !== "active") {
@@ -270,17 +268,17 @@ export const lemonsqueezyRouter = createTRPCRouter({
           throw new Error(cancelledSub.error.message);
         }
 
-        await ctx.db
-          .update(subscription)
-          .set({
+        await ctx.prisma.subscription.updateMany({
+          where: { userId },
+          data: {
             // Keep plan/variant — access is retained until endsAt, matching the
             // message below; resolvePlan() drops to free once that date passes.
             status: cancelledSub.data?.data.attributes.status,
             endsAt: cancelledSub.data?.data.attributes.ends_at
               ? new Date(cancelledSub.data?.data.attributes.ends_at)
               : null,
-          })
-          .where(eq(subscription.userId, userId));
+          },
+        });
 
         return {
           status: "cancelled" as const,
@@ -305,9 +303,9 @@ export const lemonsqueezyRouter = createTRPCRouter({
         throw new Error(updatedSub.error.message);
       }
 
-      await ctx.db
-        .update(subscription)
-        .set({
+      await ctx.prisma.subscription.updateMany({
+        where: { userId },
+        data: {
           plan: targetPlan,
           billingInterval: interval,
           variantId: variantId,
@@ -318,8 +316,8 @@ export const lemonsqueezyRouter = createTRPCRouter({
           renewsAt: updatedSub.data.data.attributes.renews_at
             ? new Date(updatedSub.data.data.attributes.renews_at)
             : null,
-        })
-        .where(eq(subscription.userId, userId));
+        },
+      });
 
       return {
         status: "downgraded" as const,

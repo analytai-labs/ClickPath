@@ -1,25 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { addDays } from "date-fns";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 
 import { getPlanCaps, resolvePlan } from "@/lib/billing/plans";
 import type { Plan } from "@/lib/billing/plans";
 import { runBackgroundTask } from "@/lib/utils/background";
-import {
-  accountTransfer,
-  bioPage,
-  campaign,
-  customDomain,
-  folder,
-  link,
-  linkTag,
-  qrcode,
-  qrPreset,
-  tag,
-  user,
-  utmTemplate,
-} from "@/server/db/schema";
 import {
   sendAccountTransferEmail,
   sendTransferCompletedEmail,
@@ -92,48 +77,27 @@ export interface TransferResult {
  */
 async function countUserResources(
   userId: string,
-  db: ProtectedTRPCContext["db"]
+  prisma: any
 ): Promise<ResourceCounts> {
   const [links, domains, qrCodes, folders, tags, utmTemplates, qrPresets] =
     await Promise.all([
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(link)
-        .where(and(eq(link.userId, userId), isNull(link.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(customDomain)
-        .where(and(eq(customDomain.userId, userId), isNull(customDomain.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(qrcode)
-        .where(and(eq(qrcode.userId, userId), isNull(qrcode.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(folder)
-        .where(and(eq(folder.userId, userId), isNull(folder.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(tag)
-        .where(and(eq(tag.userId, userId), isNull(tag.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(utmTemplate)
-        .where(and(eq(utmTemplate.userId, userId), isNull(utmTemplate.teamId))),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(qrPreset)
-        .where(and(eq(qrPreset.userId, userId), isNull(qrPreset.teamId))),
+      prisma.link.count({ where: { userId, teamId: null } }),
+      prisma.customDomain.count({ where: { userId, teamId: null } }),
+      prisma.qrcode.count({ where: { userId, teamId: null } }),
+      prisma.folder.count({ where: { userId, teamId: null } }),
+      prisma.tag.count({ where: { userId, teamId: null } }),
+      prisma.utmTemplate.count({ where: { userId, teamId: null } }),
+      prisma.qrPreset.count({ where: { userId, teamId: null } }),
     ]);
 
   return {
-    links: Number(links[0]?.count ?? 0),
-    customDomains: Number(domains[0]?.count ?? 0),
-    qrCodes: Number(qrCodes[0]?.count ?? 0),
-    folders: Number(folders[0]?.count ?? 0),
-    tags: Number(tags[0]?.count ?? 0),
-    utmTemplates: Number(utmTemplates[0]?.count ?? 0),
-    qrPresets: Number(qrPresets[0]?.count ?? 0),
+    links,
+    customDomains: domains,
+    qrCodes,
+    folders,
+    tags,
+    utmTemplates,
+    qrPresets,
   };
 }
 
@@ -157,8 +121,8 @@ export async function validateAccountTransfer(
   const errors: TransferValidationResult["errors"] = [];
 
   // Get source user
-  const sourceUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, ctx.auth.userId),
+  const sourceUser = await ctx.prisma.user.findFirst({
+    where: { id: ctx.auth.userId },
   });
 
   if (!sourceUser) {
@@ -190,9 +154,9 @@ export async function validateAccountTransfer(
   }
 
   // Check target account exists
-  const targetUser = await ctx.db.query.user.findFirst({
-    where: eq(user.email, targetEmail.toLowerCase()),
-    with: { subscriptions: true },
+  const targetUser = await ctx.prisma.user.findFirst({
+    where: { email: targetEmail.toLowerCase() },
+    include: { subscription: true },
   });
 
   if (!targetUser) {
@@ -239,20 +203,12 @@ export async function validateAccountTransfer(
   }
 
   // Check for existing pending transfer (excluding the current one if specified)
-  const pendingTransferConditions = [
-    eq(accountTransfer.fromUserId, ctx.auth.userId),
-    eq(accountTransfer.status, "pending"),
-  ];
-
-  // If we're revalidating during accept, exclude the current transfer from the check
-  if (excludeTransferId !== undefined) {
-    pendingTransferConditions.push(
-      sql`${accountTransfer.id} != ${excludeTransferId}`
-    );
-  }
-
-  const existingTransfer = await ctx.db.query.accountTransfer.findFirst({
-    where: and(...pendingTransferConditions),
+  const existingTransfer = await ctx.prisma.accountTransfer.findFirst({
+    where: {
+      fromUserId: ctx.auth.userId,
+      status: "pending",
+      ...(excludeTransferId !== undefined ? { id: { not: excludeTransferId } } : {}),
+    },
   });
 
   if (existingTransfer) {
@@ -277,14 +233,14 @@ export async function validateAccountTransfer(
   }
 
   // Get target user's plan
-  const targetPlan = resolvePlan(targetUser.subscriptions ?? null);
+  const targetPlan = resolvePlan(targetUser.subscription ?? null);
   const targetCaps = getPlanCaps(targetPlan);
 
   // Count source resources
-  const resourceCounts = await countUserResources(ctx.auth.userId, ctx.db);
+  const resourceCounts = await countUserResources(ctx.auth.userId, ctx.prisma);
 
   // Get target's current counts
-  const targetCurrentCounts = await countUserResources(targetUser.id, ctx.db);
+  const targetCurrentCounts = await countUserResources(targetUser.id, ctx.prisma);
 
   // Check limits - BLOCK entire transfer if ANY resource would exceed caps
   if (targetCaps.linksLimit !== undefined) {
@@ -318,13 +274,13 @@ export async function validateAccountTransfer(
     // For folders, we need to account for potential merges
     // Get folder names from both accounts to see overlap
     const [sourceFolders, targetFolders] = await Promise.all([
-      ctx.db.query.folder.findMany({
-        where: and(eq(folder.userId, ctx.auth.userId), isNull(folder.teamId)),
-        columns: { name: true },
+      ctx.prisma.folder.findMany({
+        where: { userId: ctx.auth.userId, teamId: null },
+        select: { name: true },
       }),
-      ctx.db.query.folder.findMany({
-        where: and(eq(folder.userId, targetUser.id), isNull(folder.teamId)),
-        columns: { name: true },
+      ctx.prisma.folder.findMany({
+        where: { userId: targetUser.id, teamId: null },
+        select: { name: true },
       }),
     ]);
 
@@ -350,31 +306,16 @@ export async function validateAccountTransfer(
   // Campaigns: block the transfer if the source's ACTIVE campaigns would
   // exceed the target's active-campaign cap (archived don't count).
   if (targetCaps.campaignLimit !== undefined) {
-    const [srcCampaignRows, tgtCampaignRows] = await Promise.all([
-      ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(campaign)
-        .where(
-          and(
-            eq(campaign.userId, ctx.auth.userId),
-            isNull(campaign.teamId),
-            eq(campaign.status, "active")
-          )
-        ),
-      ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(campaign)
-        .where(
-          and(
-            eq(campaign.userId, targetUser.id),
-            isNull(campaign.teamId),
-            eq(campaign.status, "active")
-          )
-        ),
+    const [srcCampaigns, tgtCampaigns] = await Promise.all([
+      ctx.prisma.campaign.count({
+        where: { userId: ctx.auth.userId, teamId: null, status: "active" },
+      }),
+      ctx.prisma.campaign.count({
+        where: { userId: targetUser.id, teamId: null, status: "active" },
+      }),
     ]);
-    const srcCampaigns = Number(srcCampaignRows[0]?.count ?? 0);
     if (srcCampaigns > 0) {
-      const newTotal = Number(tgtCampaignRows[0]?.count ?? 0) + srcCampaigns;
+      const newTotal = tgtCampaigns + srcCampaigns;
       if (newTotal > targetCaps.campaignLimit) {
         errors.push({
           type: "LIMIT_EXCEEDED",
@@ -389,19 +330,16 @@ export async function validateAccountTransfer(
 
   // Bio pages: block the transfer if it would exceed the target's bio-page cap.
   if (targetCaps.bioPageLimit !== undefined) {
-    const [srcBioRows, tgtBioRows] = await Promise.all([
-      ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(bioPage)
-        .where(and(eq(bioPage.userId, ctx.auth.userId), isNull(bioPage.teamId))),
-      ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(bioPage)
-        .where(and(eq(bioPage.userId, targetUser.id), isNull(bioPage.teamId))),
+    const [srcBioPages, tgtBioPages] = await Promise.all([
+      ctx.prisma.bioPage.count({
+        where: { userId: ctx.auth.userId, teamId: null },
+      }),
+      ctx.prisma.bioPage.count({
+        where: { userId: targetUser.id, teamId: null },
+      }),
     ]);
-    const srcBioPages = Number(srcBioRows[0]?.count ?? 0);
     if (srcBioPages > 0) {
-      const newTotal = Number(tgtBioRows[0]?.count ?? 0) + srcBioPages;
+      const newTotal = tgtBioPages + srcBioPages;
       if (newTotal > targetCaps.bioPageLimit) {
         errors.push({
           type: "LIMIT_EXCEEDED",
@@ -447,31 +385,33 @@ export async function initiateAccountTransfer(
   const expiresAt = addDays(new Date(), 7); // 7 day expiry
 
   // Create transfer record
-  const [result] = await ctx.db.insert(accountTransfer).values({
-    fromUserId: ctx.auth.userId,
-    toEmail: input.targetEmail.toLowerCase(),
-    toUserId: validation.targetUserId,
-    token,
-    status: "pending",
-    linksCount: validation.resourceCounts.links,
-    customDomainsCount: validation.resourceCounts.customDomains,
-    qrCodesCount: validation.resourceCounts.qrCodes,
-    foldersCount: validation.resourceCounts.folders,
-    tagsCount: validation.resourceCounts.tags,
-    utmTemplatesCount: validation.resourceCounts.utmTemplates,
-    qrPresetsCount: validation.resourceCounts.qrPresets,
-    expiresAt,
+  const result = await ctx.prisma.accountTransfer.create({
+    data: {
+      fromUserId: ctx.auth.userId,
+      toEmail: input.targetEmail.toLowerCase(),
+      toUserId: validation.targetUserId,
+      token,
+      status: "pending",
+      linksCount: validation.resourceCounts.links,
+      customDomainsCount: validation.resourceCounts.customDomains,
+      qrCodesCount: validation.resourceCounts.qrCodes,
+      foldersCount: validation.resourceCounts.folders,
+      tagsCount: validation.resourceCounts.tags,
+      utmTemplatesCount: validation.resourceCounts.utmTemplates,
+      qrPresetsCount: validation.resourceCounts.qrPresets,
+      expiresAt,
+    },
   });
 
   // Get source user details for email
-  const sourceUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, ctx.auth.userId),
-    columns: { name: true, email: true },
+  const sourceUser = await ctx.prisma.user.findFirst({
+    where: { id: ctx.auth.userId },
+    select: { name: true, email: true },
   });
 
-  const targetUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, validation.targetUserId!),
-    columns: { name: true },
+  const targetUser = await ctx.prisma.user.findFirst({
+    where: { id: validation.targetUserId! },
+    select: { name: true },
   });
 
   // Send email to target account
@@ -487,7 +427,7 @@ export async function initiateAccountTransfer(
   );
 
   return {
-    transferId: Number(result.insertId),
+    transferId: result.id,
     token,
     expiresAt,
     resourceCounts: validation.resourceCounts,
@@ -502,11 +442,11 @@ export async function getTransferByToken(
   ctx: ProtectedTRPCContext,
   token: string
 ) {
-  const transfer = await ctx.db.query.accountTransfer.findFirst({
-    where: eq(accountTransfer.token, token),
-    with: {
+  const transfer = await ctx.prisma.accountTransfer.findFirst({
+    where: { token },
+    include: {
       fromUser: {
-        columns: {
+        select: {
           id: true,
           name: true,
           email: true,
@@ -545,11 +485,11 @@ export async function getTransferByToken(
 }
 
 export async function getPendingTransfer(ctx: ProtectedTRPCContext) {
-  const transfer = await ctx.db.query.accountTransfer.findFirst({
-    where: and(
-      eq(accountTransfer.fromUserId, ctx.auth.userId),
-      eq(accountTransfer.status, "pending")
-    ),
+  const transfer = await ctx.prisma.accountTransfer.findFirst({
+    where: {
+      fromUserId: ctx.auth.userId,
+      status: "pending"
+    },
   });
 
   if (!transfer) {
@@ -583,8 +523,8 @@ export async function acceptAccountTransfer(
   ctx: ProtectedTRPCContext,
   input: AcceptTransferInput
 ): Promise<TransferResult> {
-  const transfer = await ctx.db.query.accountTransfer.findFirst({
-    where: eq(accountTransfer.token, input.token),
+  const transfer = await ctx.prisma.accountTransfer.findFirst({
+    where: { token: input.token },
   });
 
   if (!transfer) {
@@ -595,8 +535,8 @@ export async function acceptAccountTransfer(
   }
 
   // Verify current user is the target
-  const currentUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, ctx.auth.userId),
+  const currentUser = await ctx.prisma.user.findFirst({
+    where: { id: ctx.auth.userId },
   });
 
   if (currentUser?.email?.toLowerCase() !== transfer.toEmail.toLowerCase()) {
@@ -615,10 +555,10 @@ export async function acceptAccountTransfer(
 
   if (transfer.expiresAt < new Date()) {
     // Mark as expired
-    await ctx.db
-      .update(accountTransfer)
-      .set({ status: "expired" })
-      .where(eq(accountTransfer.id, transfer.id));
+    await ctx.prisma.accountTransfer.update({
+      where: { id: transfer.id },
+      data: { status: "expired" },
+    });
 
     throw new TRPCError({
       code: "BAD_REQUEST",
@@ -659,9 +599,9 @@ export async function acceptAccountTransfer(
   );
 
   // Notify the source user that transfer was completed
-  const sourceUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, transfer.fromUserId),
-    columns: { name: true, email: true },
+  const sourceUser = await ctx.prisma.user.findFirst({
+    where: { id: transfer.fromUserId },
+    select: { name: true, email: true },
   });
 
   if (sourceUser?.email) {
@@ -713,27 +653,25 @@ async function executeResourceTransfer(
     campaignsTransferred: 0,
   };
 
-  await ctx.db.transaction(async (tx) => {
+  await ctx.prisma.$transaction(async (tx) => {
     // =========================================
     // Phase 0: Atomically claim the transfer (prevent race condition)
     // =========================================
     // Use conditional update to ensure only one request can claim this transfer.
     // If another request already changed status from "pending", this will update 0 rows.
-    const claimResult = await tx
-      .update(accountTransfer)
-      .set({
+    const claimResult = await tx.accountTransfer.updateMany({
+      where: {
+        id: transferId,
+        status: "pending",
+      },
+      data: {
         status: "accepted",
         acceptedAt: new Date(),
         toUserId: toUserId,
-      })
-      .where(
-        and(
-          eq(accountTransfer.id, transferId),
-          eq(accountTransfer.status, "pending")
-        )
-      );
+      },
+    });
 
-    if (claimResult[0].affectedRows === 0) {
+    if (claimResult.count === 0) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "This transfer has already been processed or is no longer pending",
@@ -743,12 +681,12 @@ async function executeResourceTransfer(
     // =========================================
     // Phase 1: Handle Folders (by name merge)
     // =========================================
-    const sourceFolders = await tx.query.folder.findMany({
-      where: and(eq(folder.userId, fromUserId), isNull(folder.teamId)),
+    const sourceFolders = await tx.folder.findMany({
+      where: { userId: fromUserId, teamId: null },
     });
 
-    const targetFolders = await tx.query.folder.findMany({
-      where: and(eq(folder.userId, toUserId), isNull(folder.teamId)),
+    const targetFolders = await tx.folder.findMany({
+      where: { userId: toUserId, teamId: null },
     });
 
     const targetFoldersByName = new Map(
@@ -767,14 +705,16 @@ async function executeResourceTransfer(
         result.foldersMerged++;
       } else {
         // Create new folder in target account
-        const [newFolder] = await tx.insert(folder).values({
-          name: sourceFolder.name,
-          description: sourceFolder.description,
-          userId: toUserId,
-          teamId: null,
-          isRestricted: false, // Reset restriction (no team context)
+        const newFolder = await tx.folder.create({
+          data: {
+            name: sourceFolder.name,
+            description: sourceFolder.description,
+            userId: toUserId,
+            teamId: null,
+            isRestricted: false, // Reset restriction (no team context)
+          },
         });
-        const newFolderId = Number(newFolder.insertId);
+        const newFolderId = newFolder.id;
         folderIdMapping.set(sourceFolder.id, newFolderId);
         targetFoldersByName.set(folderNameKey, { ...sourceFolder, id: newFolderId });
         result.foldersCreated++;
@@ -786,12 +726,12 @@ async function executeResourceTransfer(
     // =========================================
     // Phase 2: Handle Tags (by name merge)
     // =========================================
-    const sourceTags = await tx.query.tag.findMany({
-      where: and(eq(tag.userId, fromUserId), isNull(tag.teamId)),
+    const sourceTags = await tx.tag.findMany({
+      where: { userId: fromUserId, teamId: null },
     });
 
-    const targetTags = await tx.query.tag.findMany({
-      where: and(eq(tag.userId, toUserId), isNull(tag.teamId)),
+    const targetTags = await tx.tag.findMany({
+      where: { userId: toUserId, teamId: null },
     });
 
     const targetTagsByName = new Map(
@@ -810,12 +750,14 @@ async function executeResourceTransfer(
         result.tagsMerged++;
       } else {
         // Create new tag in target account
-        const [newTag] = await tx.insert(tag).values({
-          name: sourceTag.name,
-          userId: toUserId,
-          teamId: null,
+        const newTag = await tx.tag.create({
+          data: {
+            name: sourceTag.name,
+            userId: toUserId,
+            teamId: null,
+          },
         });
-        const newTagId = Number(newTag.insertId);
+        const newTagId = newTag.id;
         tagIdMapping.set(sourceTag.id, newTagId);
         targetTagsByName.set(tagNameKey, { ...sourceTag, id: newTagId });
         result.tagsCreated++;
@@ -827,16 +769,16 @@ async function executeResourceTransfer(
     // =========================================
     // Phase 3: Transfer Links (with folder remapping)
     // =========================================
-    const sourceLinks = await tx.query.link.findMany({
-      where: and(eq(link.userId, fromUserId), isNull(link.teamId)),
+    const sourceLinks = await tx.link.findMany({
+      where: { userId: fromUserId, teamId: null },
     });
 
     if (sourceLinks.length > 0) {
       const linkIds = sourceLinks.map((l) => l.id);
 
       // Get all link-tag associations for these links
-      const sourceLinkTags = await tx.query.linkTag.findMany({
-        where: inArray(linkTag.linkId, linkIds),
+      const sourceLinkTags = await tx.linkTag.findMany({
+        where: { linkId: { in: linkIds } },
       });
 
       // Update links ownership and folder IDs
@@ -845,19 +787,21 @@ async function executeResourceTransfer(
           ? folderIdMapping.get(sourceLink.folderId) ?? null
           : null;
 
-        await tx
-          .update(link)
-          .set({
+        await tx.link.update({
+          where: { id: sourceLink.id },
+          data: {
             userId: toUserId,
             teamId: null,
             folderId: newFolderId,
-          })
-          .where(eq(link.id, sourceLink.id));
+          },
+        });
       }
 
       // Delete old link-tag associations
       if (sourceLinkTags.length > 0) {
-        await tx.delete(linkTag).where(inArray(linkTag.linkId, linkIds));
+        await tx.linkTag.deleteMany({
+          where: { linkId: { in: linkIds } },
+        });
       }
 
       // Recreate link-tag associations with new tag IDs
@@ -876,7 +820,9 @@ async function executeResourceTransfer(
 
       const newLinkTags = Array.from(linkTagSet.values());
       if (newLinkTags.length > 0) {
-        await tx.insert(linkTag).values(newLinkTags);
+        await tx.linkTag.createMany({
+          data: newLinkTags,
+        });
       }
 
       result.linksTransferred = sourceLinks.length;
@@ -888,42 +834,42 @@ async function executeResourceTransfer(
     // =========================================
     // Phase 4: Transfer QR Codes
     // =========================================
-    const qrCodesUpdate = await tx
-      .update(qrcode)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(qrcode.userId, fromUserId), isNull(qrcode.teamId)));
+    const qrCodesUpdate = await tx.qrCode.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.qrCodesTransferred = qrCodesUpdate[0].affectedRows;
+    result.qrCodesTransferred = qrCodesUpdate.count;
 
     // =========================================
     // Phase 5: Transfer QR Presets
     // =========================================
-    const qrPresetsUpdate = await tx
-      .update(qrPreset)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(qrPreset.userId, fromUserId), isNull(qrPreset.teamId)));
+    const qrPresetsUpdate = await tx.qrPreset.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.qrPresetsTransferred = qrPresetsUpdate[0].affectedRows;
+    result.qrPresetsTransferred = qrPresetsUpdate.count;
 
     // =========================================
     // Phase 6: Transfer Custom Domains
     // =========================================
-    const domainsUpdate = await tx
-      .update(customDomain)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(customDomain.userId, fromUserId), isNull(customDomain.teamId)));
+    const domainsUpdate = await tx.customDomain.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.customDomainsTransferred = domainsUpdate[0].affectedRows;
+    result.customDomainsTransferred = domainsUpdate.count;
 
     // =========================================
     // Phase 7: Transfer UTM Templates
     // =========================================
-    const utmUpdate = await tx
-      .update(utmTemplate)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(utmTemplate.userId, fromUserId), isNull(utmTemplate.teamId)));
+    const utmUpdate = await tx.utmTemplate.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.utmTemplatesTransferred = utmUpdate[0].affectedRows;
+    result.utmTemplatesTransferred = utmUpdate.count;
 
     // =========================================
     // Phase 7b: Transfer Bio Pages
@@ -931,12 +877,12 @@ async function executeResourceTransfer(
     // Backing links already moved in Phase 3 (they're personal links).
     // Reassigning BioPage ownership keeps the page + its blocks consistent with
     // those links. bioBlock / bioPageView rows reference ids, so need no change.
-    const bioPagesUpdate = await tx
-      .update(bioPage)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(bioPage.userId, fromUserId), isNull(bioPage.teamId)));
+    const bioPagesUpdate = await tx.bioPage.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.bioPagesTransferred = bioPagesUpdate[0].affectedRows;
+    result.bioPagesTransferred = bioPagesUpdate.count;
 
     // =========================================
     // Phase 7c: Transfer Campaigns
@@ -947,13 +893,13 @@ async function executeResourceTransfer(
     // source campaign colliding with the target's gets a numeric suffix
     // before the ownership flip.
     const [sourceCampaigns, targetCampaigns] = await Promise.all([
-      tx.query.campaign.findMany({
-        where: and(eq(campaign.userId, fromUserId), isNull(campaign.teamId)),
-        columns: { id: true, slug: true, name: true },
+      tx.campaign.findMany({
+        where: { userId: fromUserId, teamId: null },
+        select: { id: true, slug: true, name: true },
       }),
-      tx.query.campaign.findMany({
-        where: and(eq(campaign.userId, toUserId), isNull(campaign.teamId)),
-        columns: { slug: true, name: true },
+      tx.campaign.findMany({
+        where: { userId: toUserId, teamId: null },
+        select: { slug: true, name: true },
       }),
     ]);
 
@@ -980,36 +926,36 @@ async function executeResourceTransfer(
         suffix += 1;
       } while (allSlugs.has(newSlug) || allNames.has(newName.toLowerCase()));
 
-      await tx
-        .update(campaign)
-        .set({ slug: newSlug, name: newName })
-        .where(eq(campaign.id, sourceCampaign.id));
+      await tx.campaign.update({
+        where: { id: sourceCampaign.id },
+        data: { slug: newSlug, name: newName },
+      });
       allSlugs.add(newSlug);
       allNames.add(newName.toLowerCase());
     }
 
-    const campaignsUpdate = await tx
-      .update(campaign)
-      .set({ userId: toUserId, teamId: null })
-      .where(and(eq(campaign.userId, fromUserId), isNull(campaign.teamId)));
+    const campaignsUpdate = await tx.campaign.updateMany({
+      where: { userId: fromUserId, teamId: null },
+      data: { userId: toUserId, teamId: null },
+    });
 
-    result.campaignsTransferred = campaignsUpdate[0].affectedRows;
+    result.campaignsTransferred = campaignsUpdate.count;
 
     // =========================================
     // Phase 8: Clean up source folders and tags
     // =========================================
     // Delete source folders (they've been recreated or merged)
     if (sourceFolders.length > 0) {
-      await tx.delete(folder).where(
-        and(eq(folder.userId, fromUserId), isNull(folder.teamId))
-      );
+      await tx.folder.deleteMany({
+        where: { userId: fromUserId, teamId: null },
+      });
     }
 
     // Delete source tags (they've been recreated or merged)
     if (sourceTags.length > 0) {
-      await tx.delete(tag).where(
-        and(eq(tag.userId, fromUserId), isNull(tag.teamId))
-      );
+      await tx.tag.deleteMany({
+        where: { userId: fromUserId, teamId: null },
+      });
     }
 
     // Note: API tokens and subscriptions are NOT transferred
@@ -1027,8 +973,8 @@ export async function cancelAccountTransfer(
   ctx: ProtectedTRPCContext,
   input: CancelTransferInput
 ) {
-  const transfer = await ctx.db.query.accountTransfer.findFirst({
-    where: eq(accountTransfer.id, input.transferId),
+  const transfer = await ctx.prisma.accountTransfer.findFirst({
+    where: { id: input.transferId },
   });
 
   if (!transfer) {
@@ -1052,10 +998,10 @@ export async function cancelAccountTransfer(
     });
   }
 
-  await ctx.db
-    .update(accountTransfer)
-    .set({ status: "cancelled" })
-    .where(eq(accountTransfer.id, input.transferId));
+  await ctx.prisma.accountTransfer.update({
+    where: { id: input.transferId },
+    data: { status: "cancelled" },
+  });
 
   return { success: true };
 }
@@ -1068,8 +1014,8 @@ export async function declineAccountTransfer(
   ctx: ProtectedTRPCContext,
   input: { token: string }
 ) {
-  const transfer = await ctx.db.query.accountTransfer.findFirst({
-    where: eq(accountTransfer.token, input.token),
+  const transfer = await ctx.prisma.accountTransfer.findFirst({
+    where: { token: input.token },
   });
 
   if (!transfer) {
@@ -1080,8 +1026,8 @@ export async function declineAccountTransfer(
   }
 
   // Verify current user is the target
-  const currentUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, ctx.auth.userId),
+  const currentUser = await ctx.prisma.user.findFirst({
+    where: { id: ctx.auth.userId },
   });
 
   if (currentUser?.email?.toLowerCase() !== transfer.toEmail.toLowerCase()) {
@@ -1099,15 +1045,15 @@ export async function declineAccountTransfer(
   }
 
   // Mark as declined
-  await ctx.db
-    .update(accountTransfer)
-    .set({ status: "declined" })
-    .where(eq(accountTransfer.id, transfer.id));
+  await ctx.prisma.accountTransfer.update({
+    where: { id: transfer.id },
+    data: { status: "declined" },
+  });
 
   // Notify the source user
-  const sourceUser = await ctx.db.query.user.findFirst({
-    where: eq(user.id, transfer.fromUserId),
-    columns: { name: true, email: true },
+  const sourceUser = await ctx.prisma.user.findFirst({
+    where: { id: transfer.fromUserId },
+    select: { name: true, email: true },
   });
 
   if (sourceUser?.email) {

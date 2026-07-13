@@ -1,0 +1,789 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum TeamRole {
+  owner
+  admin
+  member
+}
+
+enum InviteRole {
+  admin
+  member
+}
+
+enum SubscriptionPlan {
+  free
+  pro
+  ultra
+}
+
+enum BillingInterval {
+  monthly
+  annual
+}
+
+enum GeoRuleType {
+  country
+  continent
+}
+
+enum GeoRuleCondition {
+  in
+  not_in
+}
+
+enum GeoRuleAction {
+  redirect
+  block
+}
+
+enum QrContentType {
+  link
+  text
+}
+
+enum PatternStyle {
+  square
+  diamond
+  star
+  fluid
+  rounded
+  tile
+  stripe
+  fluid_line   @map("fluid-line")
+  stripe_column @map("stripe-column")
+}
+
+enum CornerStyle {
+  circle
+  circle_diamond @map("circle-diamond")
+  square
+  square_diamond @map("square-diamond")
+  rounded_circle @map("rounded-circle")
+  rounded
+  circle_star    @map("circle-star")
+}
+
+enum DomainStatus {
+  pending
+  active
+  invalid
+}
+
+enum FlagStatus {
+  pending
+  blocked
+  dismissed
+}
+
+enum CampaignStatus {
+  active
+  archived
+}
+
+enum TransferStatus {
+  pending
+  accepted
+  cancelled
+  expired
+  declined
+}
+
+enum FeedbackType {
+  bug
+  feature
+  question
+}
+
+enum FeedbackStatus {
+  open
+  resolved
+  dismissed
+}
+
+enum PlanSnapshot {
+  free
+  pro
+  ultra
+}
+
+enum BioBlockType {
+  link
+  heading
+  text
+  social
+  divider
+  email
+}
+
+// Models
+model Team {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(255)
+  slug          String    @unique @db.VarChar(100)
+  avatarUrl     String?   @db.Text
+  defaultDomain String?   @default("ishortn.ink") @db.VarChar(255)
+  ownerId       String    @db.VarChar(32)
+  createdAt     DateTime? @default(now())
+  updatedAt     DateTime? @updatedAt
+  deletedAt     DateTime?
+
+  owner         User      @relation(fields: [ownerId], references: [id])
+  members       TeamMember[]
+  invites       TeamInvite[]
+  links         Link[]
+  folders       Folder[]
+  qrcodes       QrCode[]
+  customDomains CustomDomain[]
+  tags          Tag[]
+  utmTemplates  UtmTemplate[]
+  campaigns     Campaign[]
+  siteSettings  SiteSettings[]
+  bioPages      BioPage[]
+  qrPresets     QrPreset[]
+
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+model TeamMember {
+  id        Int       @id @default(autoincrement())
+  teamId    Int
+  userId    String    @db.VarChar(32)
+  role      TeamRole
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  team      Team      @relation(fields: [teamId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId], name: "unique_team_user")
+  @@index([teamId, userId])
+  @@index([userId])
+}
+
+model TeamInvite {
+  id         Int        @id @default(autoincrement())
+  teamId     Int
+  email      String?    @db.VarChar(255)
+  role       InviteRole @default(member)
+  token      String     @unique @db.VarChar(64)
+  invitedBy  String     @db.VarChar(32)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime?  @default(now())
+
+  team       Team       @relation(fields: [teamId], references: [id])
+  inviter    User       @relation(fields: [invitedBy], references: [id])
+
+  @@index([teamId])
+}
+
+model User {
+  id                      String    @id @db.VarChar(32)
+  name                    String?   @db.VarChar(255)
+  email                   String?   @unique @db.VarChar(255)
+  createdAt               DateTime? @default(now())
+  imageUrl                String?   @db.Text
+  qrCodeCount             Int?      @default(0)
+  monthlyLinkCount        Int?      @default(0)
+  lastLinkCountReset      DateTime? @default(now())
+  monthlyEventCount       Int?      @default(0)
+  lastEventCountReset     DateTime? @default(now())
+  eventUsageAlertLevel    Int?      @default(0)
+  lastViewedChangelogSlug String?   @db.VarChar(100)
+  deletedAt               DateTime?
+  isAdmin                 Boolean?  @default(false)
+  banned                  Boolean?  @default(false)
+  bannedAt                DateTime?
+  bannedReason            String?   @db.VarChar(255)
+
+  links             Link[]
+  tokens            Token[]
+  qrcodes           QrCode[]
+  subscription      Subscription?
+  customDomains     CustomDomain[]
+  siteSettings      SiteSettings?
+  tags              Tag[]
+  folders           Folder[]
+  folderPermissions FolderPermission[]
+  utmTemplates      UtmTemplate[]
+  teamMemberships   TeamMember[]
+  ownedTeams        Team[]
+  outgoingTransfers AccountTransfer[] @relation("outgoingTransfers")
+  incomingTransfers AccountTransfer[] @relation("incomingTransfers")
+  feedbacks         Feedback[]
+  audienceFeedback  AudienceFeedback?
+  teamInvitesSent   TeamInvite[]
+  flaggedLinksResolved FlaggedLink[]
+  blockedDomainsCreated BlockedDomain[]
+  qrPresets         QrPreset[]
+  campaigns         Campaign[]
+  bioPages          BioPage[]
+
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id              Int               @id @default(autoincrement())
+  userId          String            @unique @db.VarChar(32)
+  orderId         Int?              @default(0)
+  subscriptionId  Int?              @default(0)
+  customerId      Int?              @default(0)
+  renewsAt        DateTime?         
+  createdAt       DateTime?
+  endsAt          DateTime?         
+  status          String?           @default("") @db.VarChar(255)
+  plan            SubscriptionPlan? @default(free)
+  billingInterval BillingInterval?  @default(monthly)
+  variantId       Int?              @default(0)
+  productId       Int?              @default(0)
+  cardBrand       String?           @default("") @db.VarChar(255)
+  cardLastFour    String?           @default("") @db.VarChar(4)
+
+  user            User              @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Link {
+  id                     Int       @id @default(autoincrement())
+  name                   String?   @db.VarChar(255)
+  url                    String?   @db.Text
+  alias                  String?   @db.VarChar(20)
+  domain                 String    @default("ishortn.ink") @db.VarChar(255)
+  createdAt              DateTime? @default(now())
+  disableLinkAfterClicks Int?
+  disableLinkAfterDate   DateTime? 
+  disabled               Boolean?  @default(false)
+  publicStats            Boolean?  @default(false)
+  userId                 String    @db.VarChar(32)
+  teamId                 Int?
+  createdByUserId        String?   @db.VarChar(32)
+  passwordHash           String?   @db.Text
+  note                   String?   @db.VarChar(255)
+  metadata               Json?
+  utmParams              Json?
+  tags                   Json?     @default("[]")
+  archived               Boolean?  @default(false)
+  folderId               Int?
+  campaignId             Int?
+  cloaking               Boolean?  @default(false)
+  verifiedClicksEnabled  Boolean?  @default(false)
+  isQrCode               Boolean?  @default(false)
+  isBioLink              Boolean?  @default(false)
+  blocked                Boolean?  @default(false)
+  blockedAt              DateTime?
+  blockedReason          String?   @db.VarChar(255)
+
+  user                   User               @relation(fields: [userId], references: [id])
+  team                   Team?              @relation(fields: [teamId], references: [id])
+  folder                 Folder?            @relation(fields: [folderId], references: [id])
+  campaign               Campaign?          @relation(fields: [campaignId], references: [id])
+  linkVisits             LinkVisit[]
+  uniqueLinkVisits       UniqueLinkVisit[]
+  linkTags               LinkTag[]
+  geoRules               GeoRule[]
+  flaggedLinks           FlaggedLink[]
+  milestones             LinkMilestone[]
+  qrCodes                QrCode[]
+  dailySummaries         LinkVisitDailySummary[]
+  bioBlocks              BioBlock[]
+
+  @@unique([alias, domain], name: "unique_alias_domain")
+  @@index([userId])
+  @@index([teamId])
+  @@index([alias, domain])
+  @@index([folderId])
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([blocked, blockedAt])
+  @@index([domain])
+  @@index([userId, teamId, isQrCode, archived])
+}
+
+model GeoRule {
+  id           Int              @id @default(autoincrement())
+  linkId       Int
+  type         GeoRuleType
+  condition    GeoRuleCondition @default(in)
+  values       Json
+  action       GeoRuleAction
+  destination  String?          @db.VarChar(2048)
+  blockMessage String?          @db.VarChar(500)
+  priority     Int              @default(0)
+  createdAt    DateTime?        @default(now())
+
+  link         Link             @relation(fields: [linkId], references: [id])
+  linkVisits   LinkVisit[]
+
+  @@index([linkId])
+  @@index([linkId, priority])
+}
+
+model LinkVisit {
+  id               Int       @id @default(autoincrement())
+  linkId           Int
+  device           String?   @db.VarChar(255)
+  browser          String?   @db.VarChar(255)
+  os               String?   @db.VarChar(255)
+  model            String?   @default("") @db.VarChar(255)
+  referer          String?   @db.VarChar(255)
+  country          String?   @db.VarChar(255)
+  city             String?   @db.VarChar(255)
+  continent        String?   @default("N/A") @db.VarChar(255)
+  matchedGeoRuleId Int?
+  visitId          String?   @unique @db.Char(36)
+  verifiedAt       DateTime?
+  createdAt        DateTime? @default(now())
+
+  link             Link      @relation(fields: [linkId], references: [id])
+  matchedGeoRule   GeoRule?  @relation(fields: [matchedGeoRuleId], references: [id])
+
+  @@index([linkId])
+  @@index([matchedGeoRuleId])
+  @@index([linkId, createdAt])
+  @@index([createdAt])
+}
+
+model UniqueLinkVisit {
+  id        Int       @id @default(autoincrement())
+  linkId    Int
+  ipHash    String    @db.Char(64)
+  createdAt DateTime? @default(now())
+
+  link      Link      @relation(fields: [linkId], references: [id])
+
+  @@unique([linkId, ipHash], name: "unique_visit_idx")
+  @@index([linkId])
+  @@index([ipHash])
+  @@index([linkId, createdAt])
+}
+
+model LinkVisitDailySummary {
+  id           Int    @id @default(autoincrement())
+  linkId       Int
+  date         String
+  clicks       Int    @default(0)
+  uniqueClicks Int    @default(0)
+
+  link         Link   @relation(fields: [linkId], references: [id])
+
+  @@unique([linkId, date], name: "link_date_unique")
+}
+
+model LinkMilestone {
+  id         Int       @id @default(autoincrement())
+  linkId     Int
+  userId     String    @db.VarChar(32)
+  threshold  Int
+  notifiedAt DateTime?
+  createdAt  DateTime? @default(now())
+
+  link       Link      @relation(fields: [linkId], references: [id])
+
+  @@unique([linkId, threshold], name: "link_threshold_unique")
+  @@index([linkId])
+}
+
+model Token {
+  id        Int       @id @default(autoincrement())
+  token     String?   @db.VarChar(255)
+  createdAt DateTime? @default(now())
+  userId    String    @db.VarChar(32)
+
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([token])
+}
+
+model QrCode {
+  id           Int           @id @default(autoincrement())
+  qrCode       String?       @db.Text
+  title        String?       @default("") @db.VarChar(255)
+  createdAt    DateTime?     @default(now())
+  userId       String        @db.VarChar(32)
+  teamId       Int?
+  linkId       Int?          @default(0)
+  contentType  QrContentType
+  content      String        @db.Text
+  patternStyle PatternStyle
+  cornerStyle  CornerStyle
+  color        String        @db.VarChar(7)
+
+  user         User          @relation(fields: [userId], references: [id])
+  team         Team?         @relation(fields: [teamId], references: [id])
+  link         Link?         @relation(fields: [linkId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([linkId])
+}
+
+model QrPreset {
+  id               Int       @id @default(autoincrement())
+  name             String    @db.VarChar(255)
+  userId           String    @db.VarChar(32)
+  teamId           Int?
+  pixelStyle       String    @default("rounded") @db.VarChar(50)
+  markerShape      String    @default("square") @db.VarChar(50)
+  markerInnerShape String    @default("auto") @db.VarChar(50)
+  darkColor        String    @default("#000000") @db.VarChar(9)
+  lightColor       String    @default("#ffffff") @db.VarChar(9)
+  effect           String    @default("none") @db.VarChar(50)
+  effectRadius     Int       @default(12)
+  marginNoise      Boolean   @default(false)
+  marginNoiseRate  String    @default("0.5") @db.VarChar(10)
+  logoImage        String?   @db.Text
+  logoSize         Int       @default(25)
+  logoMargin       Int       @default(4)
+  logoBorderRadius Int       @default(8)
+  createdAt        DateTime? @default(now())
+  updatedAt        DateTime? @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id])
+  team             Team?     @relation(fields: [teamId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model SiteSettings {
+  id            Int       @id @default(autoincrement())
+  userId        String    @unique @db.VarChar(32)
+  teamId        Int?
+  defaultDomain String?   @default("ishortn.ink") @db.VarChar(255)
+  createdAt     DateTime? @default(now())
+  updatedAt     DateTime? @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id])
+  team          Team?     @relation(fields: [teamId], references: [id])
+
+  @@index([teamId])
+}
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(50)
+  createdAt DateTime? @default(now())
+  userId    String    @db.VarChar(32)
+  teamId    Int?
+
+  user      User      @relation(fields: [userId], references: [id])
+  team      Team?     @relation(fields: [teamId], references: [id])
+  linkTags  LinkTag[]
+
+  @@unique([name, teamId], name: "unique_tag_team")
+  @@index([name])
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Folder {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  description  String?   @db.Text
+  userId       String    @db.VarChar(32)
+  teamId       Int?
+  isRestricted Boolean   @default(false)
+  createdAt    DateTime? @default(now())
+  updatedAt    DateTime? @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id])
+  team         Team?     @relation(fields: [teamId], references: [id])
+  links        Link[]
+  permissions  FolderPermission[]
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model FolderPermission {
+  folderId  Int
+  userId    String    @db.VarChar(32)
+  createdAt DateTime? @default(now())
+
+  folder    Folder    @relation(fields: [folderId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@id([folderId, userId])
+  @@index([userId])
+}
+
+model LinkTag {
+  linkId    Int
+  tagId     Int
+  createdAt DateTime? @default(now())
+
+  link      Link      @relation(fields: [linkId], references: [id])
+  tag       Tag       @relation(fields: [tagId], references: [id])
+
+  @@id([linkId, tagId])
+  @@index([tagId])
+}
+
+model BlockedDomain {
+  id              Int       @id @default(autoincrement())
+  domain          String    @unique @db.VarChar(255)
+  reason          String?   @db.VarChar(255)
+  createdAt       DateTime? @default(now())
+  createdByUserId String?   @db.VarChar(32)
+
+  createdBy       User?     @relation(fields: [createdByUserId], references: [id])
+}
+
+model FlaggedLink {
+  id               Int         @id @default(autoincrement())
+  linkId           Int
+  reason           String?     @db.VarChar(255)
+  reporterEmail    String?     @db.VarChar(320)
+  details          String?     @db.Text
+  status           FlagStatus  @default(pending)
+  flaggedAt        DateTime?   @default(now())
+  resolvedAt       DateTime?
+  resolvedByUserId String?     @db.VarChar(32)
+
+  link             Link        @relation(fields: [linkId], references: [id])
+  resolvedBy       User?       @relation(fields: [resolvedByUserId], references: [id])
+
+  @@index([linkId])
+  @@index([status])
+}
+
+model CustomDomain {
+  id                  Int          @id @default(autoincrement())
+  domain              String?      @db.VarChar(255)
+  userId              String       @db.VarChar(32)
+  teamId              Int?
+  createdAt           DateTime?    @default(now())
+  status              DomainStatus? @default(pending)
+  verificationDetails Json?
+  lastReminderSentAt  DateTime?
+
+  user                User         @relation(fields: [userId], references: [id])
+  team                Team?        @relation(fields: [teamId], references: [id])
+
+  @@unique([domain, userId, teamId], name: "domain_workspace_unique")
+  @@index([userId])
+  @@index([teamId])
+  @@index([status, createdAt])
+}
+
+model UtmTemplate {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  utmSource   String?   @db.VarChar(255)
+  utmMedium   String?   @db.VarChar(255)
+  utmCampaign String?   @db.VarChar(255)
+  utmTerm     String?   @db.VarChar(255)
+  utmContent  String?   @db.VarChar(255)
+  userId      String    @db.VarChar(32)
+  teamId      Int?
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id])
+  team        Team?     @relation(fields: [teamId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Campaign {
+  id              Int            @id @default(autoincrement())
+  name            String         @db.VarChar(100)
+  slug            String         @db.VarChar(100)
+  description     String?        @db.Text
+  status          CampaignStatus @default(active)
+  startDate       DateTime?
+  endDate         DateTime?
+  utmSource       String?        @db.VarChar(255)
+  utmMedium       String?        @db.VarChar(255)
+  utmTerm         String?        @db.VarChar(255)
+  utmContent      String?        @db.VarChar(255)
+  userId          String         @db.VarChar(32)
+  teamId          Int?
+  createdByUserId String?        @db.VarChar(32)
+  createdAt       DateTime?      @default(now())
+  updatedAt       DateTime?      @updatedAt
+
+  user            User           @relation(fields: [userId], references: [id])
+  team            Team?          @relation(fields: [teamId], references: [id])
+  links           Link[]
+
+  @@unique([slug, userId, teamId], name: "campaign_slug_workspace_unique")
+  @@index([userId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model AccountTransfer {
+  id                 Int            @id @default(autoincrement())
+  fromUserId         String         @db.VarChar(32)
+  toEmail            String         @db.VarChar(255)
+  toUserId           String?        @db.VarChar(32)
+  token              String         @unique @db.VarChar(64)
+  status             TransferStatus @default(pending)
+  linksCount         Int            @default(0)
+  customDomainsCount Int            @default(0)
+  qrCodesCount       Int            @default(0)
+  foldersCount       Int            @default(0)
+  tagsCount          Int            @default(0)
+  utmTemplatesCount  Int            @default(0)
+  qrPresetsCount     Int            @default(0)
+  expiresAt          DateTime
+  acceptedAt         DateTime?
+  createdAt          DateTime?      @default(now())
+
+  fromUser           User           @relation("outgoingTransfers", fields: [fromUserId], references: [id])
+  toUser             User?          @relation("incomingTransfers", fields: [toUserId], references: [id])
+
+  @@index([fromUserId])
+  @@index([toEmail])
+  @@index([status])
+}
+
+model Feedback {
+  id         Int            @id @default(autoincrement())
+  userId     String         @db.VarChar(32)
+  type       FeedbackType
+  message    String         @db.Text
+  imageUrls  Json?          @default("[]")
+  status     FeedbackStatus @default(open)
+  createdAt  DateTime?      @default(now())
+
+  user       User           @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AudienceFeedback {
+  id                 Int           @id @default(autoincrement())
+  userId             String        @unique @db.VarChar(32)
+  role               String?       @db.VarChar(64)
+  useCase            String?       @db.VarChar(64)
+  monthlyVolume      String?       @db.VarChar(64)
+  acquisitionChannel String?       @db.VarChar(64)
+  acquisitionDetail  String?       @db.Text
+  priorTool          String?       @db.VarChar(64)
+  switchReason       String?       @db.Text
+  magicFeature       String?       @db.VarChar(64)
+  upgradeReason      String?       @db.VarChar(64)
+  upgradeBlocker     String?       @db.Text
+  improvementWish    String?       @db.Text
+  planSnapshot       PlanSnapshot?
+  submittedAt        DateTime?
+  dismissedAt        DateTime?
+  dismissCount       Int           @default(0)
+  createdAt          DateTime?     @default(now())
+  updatedAt          DateTime?     @updatedAt
+
+  user               User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([submittedAt])
+}
+
+model BioPage {
+  id              Int       @id @default(autoincrement())
+  userId          String    @db.VarChar(32)
+  teamId          Int?
+  createdByUserId String?   @db.VarChar(32)
+  slug            String    @unique @db.VarChar(100)
+  title           String?   @db.VarChar(255)
+  description     String?   @db.Text
+  avatarUrl       String?   @db.Text
+  theme           Json?
+  socialImageUrl  String?   @db.Text
+  seoTitle        String?   @db.VarChar(255)
+  seoDescription  String?   @db.VarChar(500)
+  customDomain    String?   @unique @db.VarChar(255)
+  removeBranding  Boolean?  @default(false)
+  isPublished     Boolean?  @default(false)
+  createdAt       DateTime? @default(now())
+  updatedAt       DateTime? @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id])
+  team            Team?     @relation(fields: [teamId], references: [id])
+  blocks          BioBlock[]
+  dailySummaries  BioPageViewDailySummary[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([isPublished])
+}
+
+model BioBlock {
+  id             Int          @id @default(autoincrement())
+  bioPageId      Int
+  type           BioBlockType
+  title          String?      @db.VarChar(255)
+  content        String?      @db.Text
+  url            String?      @db.Text
+  linkId         Int?
+  position       Int          @default(0)
+  isVisible      Boolean      @default(true)
+  scheduledAt    DateTime?
+  scheduledUntil DateTime?
+  createdAt      DateTime?    @default(now())
+  updatedAt      DateTime?    @updatedAt
+
+  bioPage        BioPage      @relation(fields: [bioPageId], references: [id])
+  link           Link?        @relation(fields: [linkId], references: [id])
+
+  @@index([bioPageId])
+  @@index([bioPageId, position])
+  @@index([linkId])
+}
+
+model BioPageView {
+  id          Int       @id @default(autoincrement())
+  bioPageId   Int
+  device      String?   @db.VarChar(255)
+  browser     String?   @db.VarChar(255)
+  os          String?   @db.VarChar(255)
+  model       String?   @default("") @db.VarChar(255)
+  referer     String?   @db.VarChar(255)
+  country     String?   @db.VarChar(255)
+  city        String?   @db.VarChar(255)
+  continent   String?   @default("N/A") @db.VarChar(255)
+  createdAt   DateTime? @default(now())
+
+  @@index([bioPageId])
+  @@index([bioPageId, createdAt])
+  @@index([createdAt])
+}
+
+model UniqueBioPageView {
+  id        Int       @id @default(autoincrement())
+  bioPageId Int
+  ipHash    String    @db.Char(64)
+  createdAt DateTime? @default(now())
+
+  @@unique([bioPageId, ipHash], name: "unique_bio_view_idx")
+  @@index([bioPageId])
+  @@index([bioPageId, createdAt])
+}
+
+model BioPageViewDailySummary {
+  id          Int    @id @default(autoincrement())
+  bioPageId   Int
+  date        String
+  views       Int    @default(0)
+  uniqueViews Int    @default(0)
+
+  bioPage     BioPage @relation(fields: [bioPageId], references: [id])
+
+  @@unique([bioPageId, date], name: "bio_page_date_unique")
+}

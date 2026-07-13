@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { addDays } from "date-fns";
-import { and, eq, isNull } from "drizzle-orm";
-import crypto from "node:crypto";
+import * as crypto from "node:crypto";
 
 import { redis } from "@/lib/core/cache";
 import { getAppBaseDomain, isPlatformDomain } from "@/lib/constants/domains";
 import { runBackgroundTask } from "@/lib/utils/background";
-import { customDomain, RESERVED_TEAM_SLUGS, team, teamInvite, teamMember, user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
+import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 import { sendTeamInviteEmail } from "@/server/lib/notifications/team-invite";
 import {
   requireMinimumRole,
@@ -53,8 +53,8 @@ export async function createTeam(
   }
 
   // Check if slug is already taken (exclude soft-deleted teams)
-  const existingTeam = await ctx.db.query.team.findFirst({
-    where: and(eq(team.slug, normalizedSlug), isNull(team.deletedAt)),
+  const existingTeam = await prisma.team.findFirst({
+    where: { slug: normalizedSlug, deletedAt: null },
   });
 
   if (existingTeam) {
@@ -65,21 +65,25 @@ export async function createTeam(
   }
 
   // Create team in transaction
-  const result = await ctx.db.transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // Create the team with normalized slug
-    const [teamResult] = await tx.insert(team).values({
-      name: input.name,
-      slug: normalizedSlug,
-      ownerId: ctx.auth.userId,
+    const teamResult = await tx.team.create({
+      data: {
+        name: input.name,
+        slug: normalizedSlug,
+        ownerId: ctx.auth.userId,
+      },
     });
 
-    const teamId = Number(teamResult.insertId);
+    const teamId = teamResult.id;
 
     // Add owner as team member
-    await tx.insert(teamMember).values({
-      teamId,
-      userId: ctx.auth.userId,
-      role: "owner",
+    await tx.teamMember.create({
+      data: {
+        teamId,
+        userId: ctx.auth.userId,
+        role: "owner",
+      },
     });
 
     return { teamId, slug: normalizedSlug };
@@ -102,12 +106,12 @@ export async function updateTeam(ctx: TeamTRPCContext, input: UpdateTeamInput) {
   requirePermission(ctx.workspace, "team.settings", "update team settings");
 
   if (input.defaultDomain && !isPlatformDomain(input.defaultDomain)) {
-    const validDomain = await ctx.db.query.customDomain.findFirst({
-      where: and(
-        eq(customDomain.domain, input.defaultDomain),
-        eq(customDomain.teamId, ctx.workspace.teamId),
-        eq(customDomain.status, "active")
-      ),
+    const validDomain = await prisma.customDomain.findFirst({
+      where: {
+        domain: input.defaultDomain,
+        teamId: ctx.workspace.teamId,
+        status: "active",
+      },
     });
 
     if (!validDomain) {
@@ -118,22 +122,17 @@ export async function updateTeam(ctx: TeamTRPCContext, input: UpdateTeamInput) {
     }
   }
 
-  await ctx.db
-    .update(team)
-    .set({
+  const updatedTeam = await prisma.team.update({
+    where: { id: ctx.workspace.teamId },
+    data: {
       name: input.name,
       avatarUrl: input.avatarUrl,
       defaultDomain: input.defaultDomain,
-    })
-    .where(eq(team.id, ctx.workspace.teamId));
+    },
+  });
 
   // Invalidate the team default domain cache
   await redis.del(`team_default_domain:${ctx.workspace.teamId}`);
-
-  // Fetch and return updated team
-  const updatedTeam = await ctx.db.query.team.findFirst({
-    where: eq(team.id, ctx.workspace.teamId),
-  });
 
   return updatedTeam;
 }
@@ -159,8 +158,8 @@ export async function updateTeamSlug(
   }
 
   // Check if new slug is already taken (exclude soft-deleted teams)
-  const existingTeam = await ctx.db.query.team.findFirst({
-    where: and(eq(team.slug, normalizedSlug), isNull(team.deletedAt)),
+  const existingTeam = await prisma.team.findFirst({
+    where: { slug: normalizedSlug, deletedAt: null },
   });
 
   if (existingTeam && existingTeam.id !== ctx.workspace.teamId) {
@@ -170,10 +169,10 @@ export async function updateTeamSlug(
     });
   }
 
-  await ctx.db
-    .update(team)
-    .set({ slug: normalizedSlug })
-    .where(eq(team.id, ctx.workspace.teamId));
+  await prisma.team.update({
+    where: { id: ctx.workspace.teamId },
+    data: { slug: normalizedSlug },
+  });
 
   return { slug: normalizedSlug };
 }
@@ -190,22 +189,22 @@ export async function deleteTeam(ctx: TeamTRPCContext) {
   // Soft delete: set deletedAt timestamp
   // Team resources (links, folders, QR codes, etc.) are preserved during grace period
   // A background cleanup job will permanently delete everything after 30 days
-  await ctx.db.transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     // Delete all pending invites (no need to preserve these)
-    await tx
-      .delete(teamInvite)
-      .where(eq(teamInvite.teamId, ctx.workspace.teamId));
+    await tx.teamInvite.deleteMany({
+      where: { teamId: ctx.workspace.teamId },
+    });
 
     // Remove all members (they can no longer access the team)
-    await tx
-      .delete(teamMember)
-      .where(eq(teamMember.teamId, ctx.workspace.teamId));
+    await tx.teamMember.deleteMany({
+      where: { teamId: ctx.workspace.teamId },
+    });
 
     // Soft delete the team by setting deletedAt
-    await tx
-      .update(team)
-      .set({ deletedAt: new Date() })
-      .where(eq(team.id, ctx.workspace.teamId));
+    await tx.team.update({
+      where: { id: ctx.workspace.teamId },
+      data: { deletedAt: new Date() },
+    });
   });
 
   return { success: true };
@@ -215,9 +214,9 @@ export async function deleteTeam(ctx: TeamTRPCContext) {
  * List all teams the user is a member of (excludes soft-deleted teams)
  */
 export async function listUserTeams(ctx: ProtectedTRPCContext) {
-  const memberships = await ctx.db.query.teamMember.findMany({
-    where: eq(teamMember.userId, ctx.auth.userId),
-    with: {
+  const memberships = await prisma.teamMember.findMany({
+    where: { userId: ctx.auth.userId },
+    include: {
       team: true,
     },
   });
@@ -248,8 +247,8 @@ export async function checkSlugAvailability(
   }
 
   // Only check active teams (not soft-deleted)
-  const existingTeam = await ctx.db.query.team.findFirst({
-    where: and(eq(team.slug, slug), isNull(team.deletedAt)),
+  const existingTeam = await prisma.team.findFirst({
+    where: { slug: slug, deletedAt: null },
   });
 
   if (existingTeam) {
@@ -267,11 +266,11 @@ export async function checkSlugAvailability(
  * List all members of the current team
  */
 export async function listMembers(ctx: TeamTRPCContext) {
-  const members = await ctx.db.query.teamMember.findMany({
-    where: eq(teamMember.teamId, ctx.workspace.teamId),
-    with: {
+  const members = await prisma.teamMember.findMany({
+    where: { teamId: ctx.workspace.teamId },
+    include: {
       user: {
-        columns: {
+        select: {
           id: true,
           name: true,
           email: true,
@@ -300,11 +299,11 @@ export async function updateMemberRole(
   requirePermission(ctx.workspace, "team.settings", "update member role");
 
   // Cannot change owner's role
-  const targetMember = await ctx.db.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, ctx.workspace.teamId),
-      eq(teamMember.userId, input.userId)
-    ),
+  const targetMember = await prisma.teamMember.findFirst({
+    where: {
+      teamId: ctx.workspace.teamId,
+      userId: input.userId,
+    },
   });
 
   if (!targetMember) {
@@ -330,15 +329,15 @@ export async function updateMemberRole(
     });
   }
 
-  await ctx.db
-    .update(teamMember)
-    .set({ role: input.role })
-    .where(
-      and(
-        eq(teamMember.teamId, ctx.workspace.teamId),
-        eq(teamMember.userId, input.userId)
-      )
-    );
+  await prisma.teamMember.update({
+    where: {
+      unique_team_user: {
+        teamId: ctx.workspace.teamId,
+        userId: input.userId,
+      }
+    },
+    data: { role: input.role },
+  });
 
   return { success: true };
 }
@@ -361,11 +360,11 @@ export async function removeMember(
   }
 
   // Cannot remove owner
-  const targetMember = await ctx.db.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, ctx.workspace.teamId),
-      eq(teamMember.userId, input.userId)
-    ),
+  const targetMember = await prisma.teamMember.findFirst({
+    where: {
+      teamId: ctx.workspace.teamId,
+      userId: input.userId,
+    },
   });
 
   if (!targetMember) {
@@ -390,14 +389,14 @@ export async function removeMember(
     });
   }
 
-  await ctx.db
-    .delete(teamMember)
-    .where(
-      and(
-        eq(teamMember.teamId, ctx.workspace.teamId),
-        eq(teamMember.userId, input.userId)
-      )
-    );
+  await prisma.teamMember.delete({
+    where: {
+      unique_team_user: {
+        teamId: ctx.workspace.teamId,
+        userId: input.userId,
+      }
+    },
+  });
 
   return { success: true };
 }
@@ -414,14 +413,14 @@ export async function leaveTeam(ctx: TeamTRPCContext) {
     });
   }
 
-  await ctx.db
-    .delete(teamMember)
-    .where(
-      and(
-        eq(teamMember.teamId, ctx.workspace.teamId),
-        eq(teamMember.userId, ctx.auth.userId)
-      )
-    );
+  await prisma.teamMember.delete({
+    where: {
+      unique_team_user: {
+        teamId: ctx.workspace.teamId,
+        userId: ctx.auth.userId,
+      }
+    },
+  });
 
   return { success: true };
 }
@@ -436,11 +435,11 @@ export async function transferOwnership(
   requireMinimumRole(ctx.workspace, "owner", "transfer team ownership");
 
   // Check if new owner is a member
-  const newOwner = await ctx.db.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, ctx.workspace.teamId),
-      eq(teamMember.userId, input.newOwnerId)
-    ),
+  const newOwner = await prisma.teamMember.findFirst({
+    where: {
+      teamId: ctx.workspace.teamId,
+      userId: input.newOwnerId,
+    },
   });
 
   if (!newOwner) {
@@ -451,34 +450,34 @@ export async function transferOwnership(
   }
 
   // Transfer in transaction
-  await ctx.db.transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     // Demote current owner to admin
-    await tx
-      .update(teamMember)
-      .set({ role: "admin" })
-      .where(
-        and(
-          eq(teamMember.teamId, ctx.workspace.teamId),
-          eq(teamMember.userId, ctx.auth.userId)
-        )
-      );
+    await tx.teamMember.update({
+      where: {
+        unique_team_user: {
+          teamId: ctx.workspace.teamId,
+          userId: ctx.auth.userId,
+        }
+      },
+      data: { role: "admin" },
+    });
 
     // Promote new owner
-    await tx
-      .update(teamMember)
-      .set({ role: "owner" })
-      .where(
-        and(
-          eq(teamMember.teamId, ctx.workspace.teamId),
-          eq(teamMember.userId, input.newOwnerId)
-        )
-      );
+    await tx.teamMember.update({
+      where: {
+        unique_team_user: {
+          teamId: ctx.workspace.teamId,
+          userId: input.newOwnerId,
+        }
+      },
+      data: { role: "owner" },
+    });
 
     // Update team owner reference
-    await tx
-      .update(team)
-      .set({ ownerId: input.newOwnerId })
-      .where(eq(team.id, ctx.workspace.teamId));
+    await tx.team.update({
+      where: { id: ctx.workspace.teamId },
+      data: { ownerId: input.newOwnerId },
+    });
   });
 
   return { success: true };
@@ -511,16 +510,16 @@ export async function createInvite(
 
   // If email provided, check if already a member
   if (input.email) {
-    const existingUser = await ctx.db.query.user.findFirst({
-      where: eq(user.email, input.email),
+    const existingUser = await prisma.user.findFirst({
+      where: { email: input.email },
     });
 
     if (existingUser) {
-      const existingMember = await ctx.db.query.teamMember.findFirst({
-        where: and(
-          eq(teamMember.teamId, ctx.workspace.teamId),
-          eq(teamMember.userId, existingUser.id)
-        ),
+      const existingMember = await prisma.teamMember.findFirst({
+        where: {
+          teamId: ctx.workspace.teamId,
+          userId: existingUser.id,
+        },
       });
 
       if (existingMember) {
@@ -532,33 +531,35 @@ export async function createInvite(
     }
   }
 
-  const [result] = await ctx.db.insert(teamInvite).values({
-    teamId: ctx.workspace.teamId,
-    email: input.email ?? null,
-    role: input.role,
-    token,
-    invitedBy: ctx.auth.userId,
-    expiresAt,
+  const result = await prisma.teamInvite.create({
+    data: {
+      teamId: ctx.workspace.teamId,
+      email: input.email ?? null,
+      role: input.role,
+      token,
+      invitedBy: ctx.auth.userId,
+      expiresAt,
+    },
   });
 
   // Send email invitation if email provided
   if (input.email) {
     // Get inviter's name
-    const inviter = await ctx.db.query.user.findFirst({
-      where: eq(user.id, ctx.auth.userId),
-      columns: { name: true },
+    const inviter = await prisma.user.findFirst({
+      where: { id: ctx.auth.userId },
+      select: { name: true },
     });
 
     // Get recipient's name if they exist
-    const recipient = await ctx.db.query.user.findFirst({
-      where: eq(user.email, input.email),
-      columns: { name: true },
+    const recipient = await prisma.user.findFirst({
+      where: { email: input.email },
+      select: { name: true },
     });
 
     void runBackgroundTask(
       sendTeamInviteEmail({
         email: input.email,
-        recipientName: recipient?.name,
+        recipientName: recipient?.name || undefined,
         teamName: ctx.workspace.team.name,
         teamSlug: ctx.workspace.team.slug,
         inviterName: inviter?.name || "Someone",
@@ -571,7 +572,7 @@ export async function createInvite(
   const baseDomain = getAppBaseDomain();
 
   return {
-    inviteId: Number(result.insertId),
+    inviteId: result.id,
     token,
     inviteUrl: `https://${baseDomain}/teams/accept-invite?token=${token}`,
     expiresAt,
@@ -584,18 +585,18 @@ export async function createInvite(
 export async function listInvites(ctx: TeamTRPCContext) {
   requirePermission(ctx.workspace, "team.invite", "view team invites");
 
-  const invites = await ctx.db.query.teamInvite.findMany({
-    where: eq(teamInvite.teamId, ctx.workspace.teamId),
-    with: {
+  const invites = await prisma.teamInvite.findMany({
+    where: { teamId: ctx.workspace.teamId },
+    include: {
       inviter: {
-        columns: {
+        select: {
           id: true,
           name: true,
           email: true,
         },
       },
     },
-    orderBy: (table, { desc }) => desc(table.createdAt),
+    orderBy: { createdAt: "desc" },
   });
 
   // Filter out accepted invites
@@ -622,11 +623,11 @@ export async function revokeInvite(
 ) {
   requirePermission(ctx.workspace, "team.invite", "revoke team invite");
 
-  const invite = await ctx.db.query.teamInvite.findFirst({
-    where: and(
-      eq(teamInvite.id, input.inviteId),
-      eq(teamInvite.teamId, ctx.workspace.teamId)
-    ),
+  const invite = await prisma.teamInvite.findFirst({
+    where: {
+      id: input.inviteId,
+      teamId: ctx.workspace.teamId,
+    },
   });
 
   if (!invite) {
@@ -636,7 +637,9 @@ export async function revokeInvite(
     });
   }
 
-  await ctx.db.delete(teamInvite).where(eq(teamInvite.id, input.inviteId));
+  await prisma.teamInvite.delete({
+    where: { id: input.inviteId },
+  });
 
   return { success: true };
 }
@@ -648,9 +651,9 @@ export async function acceptInvite(
   ctx: ProtectedTRPCContext,
   input: AcceptInviteInput
 ) {
-  const invite = await ctx.db.query.teamInvite.findFirst({
-    where: eq(teamInvite.token, input.token),
-    with: {
+  const invite = await prisma.teamInvite.findFirst({
+    where: { token: input.token },
+    include: {
       team: true,
     },
   });
@@ -686,8 +689,8 @@ export async function acceptInvite(
 
   // If invite is email-specific, verify it matches
   if (invite.email) {
-    const currentUser = await ctx.db.query.user.findFirst({
-      where: eq(user.id, ctx.auth.userId),
+    const currentUser = await prisma.user.findFirst({
+      where: { id: ctx.auth.userId },
     });
 
     if (currentUser?.email !== invite.email) {
@@ -699,11 +702,11 @@ export async function acceptInvite(
   }
 
   // Check if already a member
-  const existingMember = await ctx.db.query.teamMember.findFirst({
-    where: and(
-      eq(teamMember.teamId, invite.teamId),
-      eq(teamMember.userId, ctx.auth.userId)
-    ),
+  const existingMember = await prisma.teamMember.findFirst({
+    where: {
+      teamId: invite.teamId,
+      userId: ctx.auth.userId,
+    },
   });
 
   if (existingMember) {
@@ -714,19 +717,21 @@ export async function acceptInvite(
   }
 
   // Accept invite in transaction
-  await ctx.db.transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     // Add user as member
-    await tx.insert(teamMember).values({
-      teamId: invite.teamId,
-      userId: ctx.auth.userId,
-      role: invite.role,
+    await tx.teamMember.create({
+      data: {
+        teamId: invite.teamId,
+        userId: ctx.auth.userId,
+        role: invite.role,
+      },
     });
 
     // Mark invite as accepted
-    await tx
-      .update(teamInvite)
-      .set({ acceptedAt: new Date() })
-      .where(eq(teamInvite.id, invite.id));
+    await tx.teamInvite.update({
+      where: { id: invite.id },
+      data: { acceptedAt: new Date() },
+    });
   });
 
   return {
@@ -743,11 +748,11 @@ export async function getInviteByToken(
   ctx: ProtectedTRPCContext,
   token: string
 ) {
-  const invite = await ctx.db.query.teamInvite.findFirst({
-    where: eq(teamInvite.token, token),
-    with: {
+  const invite = await prisma.teamInvite.findFirst({
+    where: { token },
+    include: {
       team: {
-        columns: {
+        select: {
           id: true,
           name: true,
           slug: true,
@@ -756,7 +761,7 @@ export async function getInviteByToken(
         },
       },
       inviter: {
-        columns: {
+        select: {
           id: true,
           name: true,
         },

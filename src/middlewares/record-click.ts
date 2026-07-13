@@ -1,12 +1,9 @@
-import { sql } from "drizzle-orm";
-
 import { parseDeviceDetails, parseReferrer, resolveGeo } from "@/lib/core/analytics/visitor";
 import { type Link, buildCacheKey, normalizeDomain, getFromCache, setInCache } from "@/lib/core/cache";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { hashIp } from "@/lib/utils/ip-hash";
 import { isBot } from "@/lib/utils/is-bot";
-import { db } from "@/server/db";
-import { linkVisit, uniqueLinkVisit } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { registerEventUsage } from "@/server/lib/event-usage";
 import { checkAndFireMilestones } from "@/server/lib/milestone-check";
 import { sendEventUsageEmail } from "@/server/lib/notifications/event-usage";
@@ -20,12 +17,11 @@ export async function resolveLink(domain: string, alias: string): Promise<Link |
   const cached: Link | null = await getFromCache(cacheKey);
   if (cached) return cached;
 
-  const link = await db.query.link.findFirst({
-    where: (table, { and, eq }) =>
-      and(
-        eq(table.domain, normalizeDomain(domain)),
-        sql`lower(${table.alias}) = lower(${alias.replace("/", "")})`,
-      ),
+  const link = await prisma.link.findFirst({
+    where: {
+      domain: normalizeDomain(domain),
+      alias: { equals: alias.replace("/", ""), mode: "insensitive" }
+    }
   });
   if (!link) return null;
 
@@ -38,10 +34,11 @@ export async function resolveLink(domain: string, alias: string): Promise<Link |
  * concurrent inserts silently collapse to a no-op.
  */
 async function recordUniqueClick(ipHash: string, linkId: number) {
-  await db
-    .insert(uniqueLinkVisit)
-    .values({ ipHash, linkId })
-    .onDuplicateKeyUpdate({ set: { linkId: sql`linkId` } });
+  await prisma.uniqueLinkVisit.create({
+    data: { ipHash, linkId }
+  }).catch(() => {
+    // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
+  });
 }
 
 type RecordClickOptions = {
@@ -70,7 +67,7 @@ export async function recordClick(opts: RecordClickOptions): Promise<void> {
   const ipForHash = ip && ip !== "undefined" ? ip : "localhost-dev";
   const ipHash = hashIp(ipForHash);
 
-  const usage = await registerEventUsage(link.userId, db);
+  const usage = await registerEventUsage(link.userId, prisma);
 
   if (usage.alertLevelTriggered && usage.limit && usage.userEmail && usage.plan) {
     await runBackgroundTask(
@@ -90,15 +87,17 @@ export async function recordClick(opts: RecordClickOptions): Promise<void> {
   const { countryName, continentName, cityName } = resolveGeo(country, city);
 
   await Promise.all([
-    db.insert(linkVisit).values({
-      linkId: link.id,
-      ...deviceDetails,
-      referer: parseReferrer(headers.get("referer")),
-      country: countryName,
-      city: cityName,
-      continent: continentName,
-      matchedGeoRuleId: matchedGeoRuleId ?? null,
-      visitId: visitId ?? null,
+    prisma.linkVisit.create({
+      data: {
+        linkId: link.id,
+        ...deviceDetails,
+        referer: parseReferrer(headers.get("referer")),
+        country: countryName,
+        city: cityName,
+        continent: continentName,
+        matchedGeoRuleId: matchedGeoRuleId ?? null,
+        visitId: visitId ?? null,
+      }
     }),
     recordUniqueClick(ipHash, link.id),
   ]);

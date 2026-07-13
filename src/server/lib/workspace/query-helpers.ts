@@ -1,33 +1,23 @@
-import { and, eq, isNull, type SQL } from "drizzle-orm";
-import type { MySqlColumn } from "drizzle-orm/mysql-core";
-
 import type { WorkspaceContext } from "./types";
 
 /**
  * Builds a WHERE clause for workspace-scoped queries.
  *
- * For personal workspaces: WHERE teamId IS NULL AND userId = <userId>
- * For team workspaces: WHERE teamId = <teamId>
+ * For personal workspaces: { teamId: null, userId: <userId> }
+ * For team workspaces: { teamId: <teamId> }
  *
  * @param workspace - The current workspace context
- * @param userIdColumn - The userId column from the table
- * @param teamIdColumn - The teamId column from the table
- * @returns SQL condition for filtering by workspace
+ * @returns Prisma condition for filtering by workspace
  */
-export function workspaceFilter<
-  TUserId extends MySqlColumn,
-  TTeamId extends MySqlColumn,
->(
-  workspace: WorkspaceContext,
-  userIdColumn: TUserId,
-  teamIdColumn: TTeamId
-): SQL {
+export function workspaceFilter(
+  workspace: WorkspaceContext
+): { teamId: number } | { userId: string; teamId: null } {
   if (workspace.type === "team") {
     // Team workspace: only show team resources
-    return eq(teamIdColumn, workspace.teamId);
+    return { teamId: workspace.teamId };
   } else {
     // Personal workspace: only show personal resources (teamId = null)
-    return and(eq(userIdColumn, workspace.userId), isNull(teamIdColumn))!;
+    return { userId: workspace.userId, teamId: null };
   }
 }
 

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 import { resolveBioTheme } from "./theme";
 
-import type { BioPageTheme } from "@/server/db/schema";
+import type { BioPageTheme } from "@/server/db/types";
 
 export const BIO_OG_SIZE = { width: 1200, height: 630 };
 

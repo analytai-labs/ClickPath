@@ -1,13 +1,11 @@
 import { geolocation, ipAddress } from "@vercel/functions";
-import { and, eq } from "drizzle-orm";
 import { type NextRequest } from "next/server";
 
 import { redis } from "@/lib/core/cache";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { hashIp } from "@/lib/utils/ip-hash";
 import { recordBioPageView } from "@/middlewares/record-bio-page-view";
-import { db } from "@/server/db";
-import { bioPage } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 
 const isLocalhost = process.env.NODE_ENV === "development";
 
@@ -25,9 +23,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Only record for a page that actually exists and is published.
-  const page = await db.query.bioPage.findFirst({
-    where: and(eq(bioPage.id, bioPageId), eq(bioPage.isPublished, true)),
-    columns: { id: true, userId: true },
+  const page = await prisma.bioPage.findFirst({
+    where: { id: bioPageId, isPublished: true },
+    select: { id: true, userId: true },
   });
   if (!page) return new Response(null, { status: 204 });
 

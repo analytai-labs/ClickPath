@@ -1,11 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { IconBan } from "@tabler/icons-react";
-import { eq } from "drizzle-orm";
 import { Funnel_Sans } from "next/font/google";
 
 import { cn } from "@/lib/utils";
-import { db } from "@/server/db";
-import { user } from "@/server/db/schema";
+import { prisma } from "@/server/db";
 import { ChangelogBanner } from "@/components/changelog/changelog-banner";
 import { ChangelogToast } from "@/components/changelog/changelog-toast";
 
@@ -29,9 +27,9 @@ export default async function DashboardLayout({ children }: Props) {
   let isAdmin = false;
 
   if (session?.userId) {
-    const currentUser = await db.query.user.findFirst({
-      where: eq(user.id, session.userId),
-      columns: { banned: true, bannedReason: true, isAdmin: true },
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { banned: true, bannedReason: true, isAdmin: true },
     });
 
     isAdmin = currentUser?.isAdmin ?? false;

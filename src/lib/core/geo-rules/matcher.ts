@@ -1,7 +1,7 @@
 import { getCountryContinentCode } from "@/lib/countries";
 import { logger } from "@/lib/logger";
 
-import type { GeoRule as DbGeoRule } from "@/server/db/schema";
+import type { GeoRule as DbGeoRule } from "@prisma/client";
 import type { GeoRuleMatchResult } from "@/lib/types/geo-rules";
 
 const log = logger.child({ component: "geo-rules" });
@@ -14,7 +14,7 @@ function ruleMatches(
   countryCode: string,
   continentCode: string | null
 ): boolean {
-  const normalizedValues = rule.values.map((v) => v.toUpperCase());
+  const normalizedValues = (rule.values as string[])?.map((v) => v.toUpperCase()) ?? [];
 
   let matches = false;
 

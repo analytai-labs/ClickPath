@@ -1,13 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq } from "drizzle-orm";
 import { endOfMonth, endOfYear, startOfMonth, startOfYear, subDays, subMonths } from "date-fns";
 
 import { getCampaignLimit } from "@/lib/billing/plans";
-import { campaign } from "@/server/db/schema";
-import { workspaceFilter } from "@/server/lib/workspace";
 
 import type { RangeEnum } from "../link/link.input";
-import type { Campaign } from "@/server/db/schema";
+import type { Campaign } from "@prisma/client";
 import type { WorkspaceTRPCContext } from "../../trpc";
 
 export type UtmParams = {
@@ -18,9 +15,6 @@ export type UtmParams = {
   utm_content?: string;
 };
 
-// Silent normalization instead of validation errors — casing/spacing
-// mistakes are the #1 cause of fragmented UTM data. Shared with the client
-// so slug previews match what gets persisted.
 export { normalizeCampaignSlug } from "@/lib/campaigns/slug";
 
 export function normalizeUtmValue(value: string | null | undefined): string | null {
@@ -29,14 +23,6 @@ export function normalizeUtmValue(value: string | null | undefined): string | nu
   return normalized === "" ? null : normalized;
 }
 
-/**
- * Merge a campaign's UTM defaults into a link's utmParams. Explicit link
- * values win for source/medium/term/content; campaign defaults only fill
- * gaps. utm_campaign is the exception: it is the campaign's analytics
- * identity and ALWAYS comes from the slug — otherwise a link moved from
- * campaign A to B keeps stamping A's utm_campaign and misattributes B's
- * traffic. Returns undefined when there is nothing to stamp.
- */
 export function mergeCampaignUtm(
   campaignRow: Pick<Campaign, "slug" | "utmSource" | "utmMedium" | "utmTerm" | "utmContent">,
   existing?: UtmParams | null,
@@ -61,7 +47,7 @@ export function mergeCampaignUtm(
 
 export function rethrowCampaignDuplicate(error: unknown): never {
   const message = String((error as { message?: string })?.message ?? "");
-  if (/campaign_slug_workspace_unique/.test(message)) {
+  if (/campaign_slug_workspace_unique/.test(message) || /Unique constraint failed on the fields: \(`slug`,`userId`,`teamId`\)/.test(message)) {
     throw new TRPCError({
       code: "CONFLICT",
       message:
@@ -79,16 +65,10 @@ const UTM_KEYS = [
   "utm_content",
 ] as const;
 
-/** Empty and absent UTM values are treated as equal. */
 export function utmParamsEqual(a?: UtmParams | null, b?: UtmParams | null): boolean {
   return UTM_KEYS.every((key) => (a?.[key] ?? "") === (b?.[key] ?? ""));
 }
 
-/**
- * Computed display state for a campaign. `status` stays user-set
- * (active/archived); scheduled/ended are derived from the dates for display
- * only — links keep working regardless.
- */
 export function getCampaignDisplayState(
   row: Pick<Campaign, "status" | "startDate" | "endDate">,
   now: Date = new Date(),
@@ -99,26 +79,22 @@ export function getCampaignDisplayState(
   return "active";
 }
 
-/**
- * Enforce the per-plan ACTIVE campaign cap for the current workspace.
- * Archived campaigns don't count — archiving frees a slot. Runs on create
- * and on unarchive.
- */
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) => 
+  workspace.type === "team" 
+    ? { teamId: workspace.teamId } 
+    : { userId: workspace.userId, teamId: null };
+
 export async function checkCampaignLimit(ctx: WorkspaceTRPCContext): Promise<void> {
   const limit = getCampaignLimit(ctx.workspace.plan);
   if (limit === undefined) return; // unlimited (Ultra / team workspaces)
 
-  const [row] = await ctx.db
-    .select({ count: count() })
-    .from(campaign)
-    .where(
-      and(
-        workspaceFilter(ctx.workspace, campaign.userId, campaign.teamId),
-        eq(campaign.status, "active"),
-      ),
-    );
+  const current = await ctx.prisma.campaign.count({
+    where: {
+      ...getWorkspaceWhere(ctx.workspace),
+      status: "active",
+    },
+  });
 
-  const current = Number(row?.count ?? 0);
   if (current >= limit) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -130,12 +106,6 @@ export async function checkCampaignLimit(ctx: WorkspaceTRPCContext): Promise<voi
   }
 }
 
-/**
- * Resolve a range enum into a [start, end] window. Matches the semantics of
- * getLinkVisits/getAllUserAnalytics, except last_month uses true calendar-
- * month arithmetic (subDays(30) misidentifies the month on 31-day
- * boundaries) and nothing mutates shared Date objects.
- */
 export function resolveRangeWindow(range: RangeEnum): { start: Date; end: Date } {
   const now = new Date();
   switch (range) {

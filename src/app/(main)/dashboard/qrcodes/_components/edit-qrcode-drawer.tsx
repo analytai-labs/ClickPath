@@ -78,7 +78,7 @@ function getFormDefaults(
       geoRules?.map((rule) => ({
         type: rule.type,
         condition: rule.condition,
-        values: rule.values,
+        values: rule.values as string[],
         action: rule.action,
         destination: rule.destination ?? undefined,
         blockMessage: rule.blockMessage ?? undefined,

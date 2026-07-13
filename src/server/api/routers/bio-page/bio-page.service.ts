@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, gte, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -11,15 +10,6 @@ import {
 } from "@/lib/billing/plans";
 import { normalizeSocialUrl } from "@/components/bio/social-links";
 import { isPlatformDomain } from "@/lib/constants/domains";
-import {
-  bioBlock,
-  bioPage,
-  bioPageView,
-  bioPageViewDailySummary,
-  link,
-  linkVisit,
-  uniqueBioPageView,
-} from "@/server/db/schema";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import {
   deleteHiddenTrackingLink,
@@ -28,7 +18,7 @@ import {
   purgeTrackingLinkCache,
   updateHiddenTrackingLink,
 } from "@/server/lib/tracking-link";
-import { requirePermission, workspaceFilter, workspaceOwnership } from "@/server/lib/workspace";
+import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
 import { assertDomainAllowed } from "../link/utils";
 import {
@@ -44,10 +34,19 @@ import type {
   ReorderBlocksInput,
   UpdateBioBlockInput,
   UpdateBioPageInput,
+  BioThemeInput,
 } from "./bio-page.input";
 import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
-import type { BioBlock, BioPageTheme, BioSocialLink } from "@/server/db/schema";
+import type { BioBlock, BioPage } from "@prisma/client";
 import type { ImageType } from "@/server/lib/storage/types";
+
+export type BioPageTheme = BioThemeInput;
+export type BioSocialLink = { platform: string; url: string };
+
+const getWorkspaceWhere = (workspace: any) =>
+  workspace.type === "team"
+    ? { teamId: workspace.teamId }
+    : { userId: workspace.userId, teamId: null };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,12 +56,6 @@ function forbidden(message: string): TRPCError {
   return new TRPCError({ code: "FORBIDDEN", message });
 }
 
-/**
- * On-demand revalidation of a page's public route after an edit. The custom-
- * domain route is force-dynamic, so only the ISR /p/[slug] route needs busting.
- * Wrapped in try/catch since mutations could theoretically run outside a
- * request context (ISR's 60s window is the fallback either way).
- */
 function revalidateBioPath(slug: string): void {
   try {
     revalidatePath(`/p/${slug}`);
@@ -81,9 +74,6 @@ function parseSocials(content: string | null): BioSocialLink[] {
   }
 }
 
-// Canonicalize each social entry to a real href before storing, so the public
-// renderer can use the value directly. Rejects entries that can't be resolved
-// (e.g. a non-email typed for the Email platform) with a clear message.
 function normalizeSocials(socials: BioSocialLink[]): BioSocialLink[] {
   return socials.map((s) => {
     const url = normalizeSocialUrl(s.platform, s.url);
@@ -114,11 +104,6 @@ function assertSchedulingAllowed(
   }
 }
 
-/**
- * Upload a new bio image (or clear it) and remove the previous R2 object when it
- * changed. deleteImage is a no-op for non-R2 (base64) values, so this is always
- * safe. Returns the value to persist.
- */
 async function resolveImageUpdate(
   ctx: WorkspaceTRPCContext,
   resourceId: number,
@@ -129,17 +114,15 @@ async function resolveImageUpdate(
   const value = next
     ? (await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next
     : null;
-  // Return the old object instead of deleting it here, so the caller can clean
-  // up only after the new value is committed to the DB.
   return { value, previousToDelete: previous && previous !== value ? previous : null };
 }
 
 async function fetchBioPageForWorkspace(ctx: WorkspaceTRPCContext, id: number) {
-  const page = await ctx.db.query.bioPage.findFirst({
-    where: and(
-      eq(bioPage.id, id),
-      workspaceFilter(ctx.workspace, bioPage.userId, bioPage.teamId),
-    ),
+  const page = await ctx.prisma.bioPage.findFirst({
+    where: {
+      id,
+      ...getWorkspaceWhere(ctx.workspace),
+    },
   });
   if (!page) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Bio page not found." });
@@ -148,9 +131,9 @@ async function fetchBioPageForWorkspace(ctx: WorkspaceTRPCContext, id: number) {
 }
 
 async function fetchBlockForWorkspace(ctx: WorkspaceTRPCContext, blockId: number) {
-  const block = await ctx.db.query.bioBlock.findFirst({
-    where: eq(bioBlock.id, blockId),
-    with: { bioPage: true },
+  const block = await ctx.prisma.bioBlock.findFirst({
+    where: { id: blockId },
+    include: { bioPage: true },
   });
   if (!block || !block.bioPage || !pageBelongsToWorkspace(ctx, block.bioPage)) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Block not found." });
@@ -163,20 +146,20 @@ async function fetchBlockForWorkspace(ctx: WorkspaceTRPCContext, blockId: number
 // ---------------------------------------------------------------------------
 
 export async function listBioPages(ctx: WorkspaceTRPCContext) {
-  const pages = await ctx.db.query.bioPage.findMany({
-    where: workspaceFilter(ctx.workspace, bioPage.userId, bioPage.teamId),
-    orderBy: (table, { desc }) => [desc(table.createdAt)],
+  const pages = await ctx.prisma.bioPage.findMany({
+    where: getWorkspaceWhere(ctx.workspace),
+    orderBy: { createdAt: "desc" },
   });
 
   const ids = pages.map((p) => p.id);
   const counts = ids.length
-    ? await ctx.db
-        .select({ bioPageId: bioBlock.bioPageId, count: count() })
-        .from(bioBlock)
-        .where(inArray(bioBlock.bioPageId, ids))
-        .groupBy(bioBlock.bioPageId)
+    ? await ctx.prisma.bioBlock.groupBy({
+        by: ["bioPageId"],
+        where: { bioPageId: { in: ids } },
+        _count: { bioPageId: true },
+      })
     : [];
-  const countMap = new Map(counts.map((c) => [c.bioPageId, Number(c.count)]));
+  const countMap = new Map(counts.map((c) => [c.bioPageId, Number(c._count.bioPageId)]));
 
   return pages.map((p) => ({ ...p, blockCount: countMap.get(p.id) ?? 0 }));
 }
@@ -206,14 +189,14 @@ function toEditorBlock(b: BioBlock, linkMap: Map<number, { domain: string; alias
 
 export async function getBioPage(ctx: WorkspaceTRPCContext, id: number) {
   const page = await fetchBioPageForWorkspace(ctx, id);
-  const blocks = await ctx.db.query.bioBlock.findMany({
-    where: eq(bioBlock.bioPageId, id),
-    orderBy: (t, { asc }) => [asc(t.position)],
+  const blocks = await ctx.prisma.bioBlock.findMany({
+    where: { bioPageId: id },
+    orderBy: { position: "asc" },
   });
 
   const linkIds = blocks.map((b) => b.linkId).filter((x): x is number => !!x);
   const links = linkIds.length
-    ? await ctx.db.query.link.findMany({ where: inArray(link.id, linkIds) })
+    ? await ctx.prisma.link.findMany({ where: { id: { in: linkIds } } })
     : [];
   const linkMap = new Map(
     links.map((l) => [l.id, { domain: l.domain, alias: l.alias, blocked: l.blocked }]),
@@ -229,15 +212,17 @@ export async function createBioPage(ctx: WorkspaceTRPCContext, input: CreateBioP
 
   const ownership = workspaceOwnership(ctx.workspace);
   try {
-    const [res] = await ctx.db.insert(bioPage).values({
-      slug: input.slug,
-      title: input.title ?? null,
-      description: input.description ?? null,
-      userId: ownership.userId,
-      teamId: ownership.teamId,
-      createdByUserId: ctx.auth.userId,
+    const res = await ctx.prisma.bioPage.create({
+      data: {
+        slug: input.slug,
+        title: input.title ?? null,
+        description: input.description ?? null,
+        userId: ownership.userId,
+        teamId: ownership.teamId,
+        createdByUserId: ctx.auth.userId,
+      },
     });
-    return { id: Number(res.insertId), slug: input.slug };
+    return { id: res.id, slug: input.slug };
   } catch (error) {
     rethrowBioDuplicate(error);
   }
@@ -247,7 +232,7 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
   const page = await fetchBioPageForWorkspace(ctx, input.id);
   requirePermission(ctx.workspace, "bio.edit", "edit bio pages");
   const plan = ctx.workspace.plan;
-  const updates: Partial<typeof bioPage.$inferInsert> = {};
+  const updates: any = {};
 
   if (input.slug !== undefined) {
     assertSlugAllowed(input.slug);
@@ -277,8 +262,6 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
       if (!canUseBioCustomDomain(plan)) {
         throw forbidden("Custom domains for bio pages are available on Pro and Ultra plans.");
       }
-      // Canonicalize the same way getByDomain looks it up (lowercase, no www),
-      // so a domain saved as "www.brand.com" still resolves at "brand.com".
       const normalized = input.customDomain.trim().toLowerCase().replace(/^www\./, "");
       if (isPlatformDomain(normalized)) {
         throw new TRPCError({
@@ -286,7 +269,7 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
           message: "Use a custom domain you own, not the platform domain.",
         });
       }
-      await assertDomainAllowed(ctx, normalized); // must be a verified domain in this workspace
+      await assertDomainAllowed(ctx, normalized);
       updates.customDomain = normalized;
     } else {
       updates.customDomain = null;
@@ -319,14 +302,15 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
 
   if (Object.keys(updates).length > 0) {
     try {
-      await ctx.db.update(bioPage).set(updates).where(eq(bioPage.id, page.id));
+      await ctx.prisma.bioPage.update({
+        where: { id: page.id },
+        data: updates,
+      });
     } catch (error) {
       rethrowBioDuplicate(error);
     }
   }
 
-  // Only after the row is updated do we delete replaced images, so a failed
-  // update (e.g. duplicate slug) never strands the page on a deleted image.
   for (const url of imagesToDelete) await deleteImage(url).catch(() => {});
   revalidateBioPath(page.slug);
   if (updates.slug && updates.slug !== page.slug) revalidateBioPath(updates.slug);
@@ -339,10 +323,10 @@ export async function togglePublished(
 ) {
   const page = await fetchBioPageForWorkspace(ctx, input.id);
   requirePermission(ctx.workspace, "bio.edit", "edit bio pages");
-  await ctx.db
-    .update(bioPage)
-    .set({ isPublished: input.isPublished })
-    .where(eq(bioPage.id, page.id));
+  await ctx.prisma.bioPage.update({
+    where: { id: page.id },
+    data: { isPublished: input.isPublished },
+  });
   revalidateBioPath(page.slug);
   return { success: true, isPublished: input.isPublished };
 }
@@ -351,28 +335,27 @@ export async function deleteBioPage(ctx: WorkspaceTRPCContext, id: number) {
   const page = await fetchBioPageForWorkspace(ctx, id);
   requirePermission(ctx.workspace, "bio.delete", "delete bio pages");
 
-  const blocks = await ctx.db.query.bioBlock.findMany({ where: eq(bioBlock.bioPageId, page.id) });
+  const blocks = await ctx.prisma.bioBlock.findMany({ where: { bioPageId: page.id } });
   const linkIds = blocks.map((b) => b.linkId).filter((x): x is number => !!x);
   const backingLinks = linkIds.length
-    ? await ctx.db.query.link.findMany({ where: inArray(link.id, linkIds) })
+    ? await ctx.prisma.link.findMany({ where: { id: { in: linkIds } } })
     : [];
 
-  await ctx.db.transaction(async (tx) => {
+  await ctx.prisma.$transaction(async (tx) => {
     for (const linkId of linkIds) {
       await deleteHiddenTrackingLink(tx, linkId);
     }
-    await tx.delete(bioBlock).where(eq(bioBlock.bioPageId, page.id));
-    await tx.delete(bioPageView).where(eq(bioPageView.bioPageId, page.id));
-    await tx.delete(uniqueBioPageView).where(eq(uniqueBioPageView.bioPageId, page.id));
-    await tx.delete(bioPageViewDailySummary).where(eq(bioPageViewDailySummary.bioPageId, page.id));
-    await tx.delete(bioPage).where(eq(bioPage.id, page.id));
+    await tx.bioBlock.deleteMany({ where: { bioPageId: page.id } });
+    await tx.bioPageView.deleteMany({ where: { bioPageId: page.id } });
+    await tx.uniqueBioPageView.deleteMany({ where: { bioPageId: page.id } });
+    await tx.bioPageViewDailySummary.deleteMany({ where: { bioPageId: page.id } });
+    await tx.bioPage.delete({ where: { id: page.id } });
   });
 
   for (const l of backingLinks) {
     if (l.alias) purgeTrackingLinkCache(l.domain, l.alias);
   }
 
-  // Remove the page's images from R2 (no-op for non-R2/base64 values).
   await Promise.all(
     [page.avatarUrl, page.socialImageUrl]
       .filter((url): url is string => !!url)
@@ -392,11 +375,11 @@ export async function addBlock(ctx: WorkspaceTRPCContext, input: AddBioBlockInpu
   requirePermission(ctx.workspace, "bio.edit", "edit bio pages");
   assertSchedulingAllowed(ctx, input.scheduledAt, input.scheduledUntil);
 
-  const [row] = await ctx.db
-    .select({ maxPos: sql<number>`COALESCE(MAX(${bioBlock.position}), -1)` })
-    .from(bioBlock)
-    .where(eq(bioBlock.bioPageId, page.id));
-  const position = Number(row?.maxPos ?? -1) + 1;
+  const maxPosRow = await ctx.prisma.bioBlock.aggregate({
+    where: { bioPageId: page.id },
+    _max: { position: true },
+  });
+  const position = (maxPosRow._max.position ?? -1) + 1;
 
   const content =
     input.type === "social"
@@ -413,36 +396,40 @@ export async function addBlock(ctx: WorkspaceTRPCContext, input: AddBioBlockInpu
       name: input.title || page.title || "Bio link",
       kind: "bio",
     });
-    const id = await ctx.db.transaction(async (tx) => {
+    const id = await ctx.prisma.$transaction(async (tx) => {
       const linkId = await insertHiddenTrackingLink(tx, ctx, prepared);
-      const [res] = await tx.insert(bioBlock).values({
-        bioPageId: page.id,
-        type: "link",
-        title: input.title ?? null,
-        url: destination,
-        linkId,
-        position,
-        scheduledAt: input.scheduledAt ?? null,
-        scheduledUntil: input.scheduledUntil ?? null,
+      const res = await tx.bioBlock.create({
+        data: {
+          bioPageId: page.id,
+          type: "link",
+          title: input.title ?? null,
+          url: destination,
+          linkId,
+          position,
+          scheduledAt: input.scheduledAt ?? null,
+          scheduledUntil: input.scheduledUntil ?? null,
+        },
       });
-      return Number(res.insertId);
+      return res.id;
     });
     revalidateBioPath(page.slug);
     return { id };
   }
 
-  const [res] = await ctx.db.insert(bioBlock).values({
-    bioPageId: page.id,
-    type: input.type,
-    title: input.title ?? null,
-    content,
-    url: input.url ?? null,
-    position,
-    scheduledAt: input.scheduledAt ?? null,
-    scheduledUntil: input.scheduledUntil ?? null,
+  const res = await ctx.prisma.bioBlock.create({
+    data: {
+      bioPageId: page.id,
+      type: input.type,
+      title: input.title ?? null,
+      content,
+      url: input.url ?? null,
+      position,
+      scheduledAt: input.scheduledAt ?? null,
+      scheduledUntil: input.scheduledUntil ?? null,
+    },
   });
   revalidateBioPath(page.slug);
-  return { id: Number(res.insertId) };
+  return { id: res.id };
 }
 
 export async function updateBlock(ctx: WorkspaceTRPCContext, input: UpdateBioBlockInput) {
@@ -450,7 +437,7 @@ export async function updateBlock(ctx: WorkspaceTRPCContext, input: UpdateBioBlo
   requirePermission(ctx.workspace, "bio.edit", "edit bio pages");
   assertSchedulingAllowed(ctx, input.scheduledAt, input.scheduledUntil);
 
-  const updates: Partial<typeof bioBlock.$inferInsert> = {};
+  const updates: any = {};
   if (input.title !== undefined) updates.title = input.title;
   if (input.isVisible !== undefined) updates.isVisible = input.isVisible;
   if (input.scheduledAt !== undefined) updates.scheduledAt = input.scheduledAt;
@@ -473,7 +460,10 @@ export async function updateBlock(ctx: WorkspaceTRPCContext, input: UpdateBioBlo
   }
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.update(bioBlock).set(updates).where(eq(bioBlock.id, block.id));
+    await ctx.prisma.bioBlock.update({
+      where: { id: block.id },
+      data: updates,
+    });
   }
   revalidateBioPath(block.bioPage.slug);
   return { success: true };
@@ -485,14 +475,14 @@ export async function deleteBlock(ctx: WorkspaceTRPCContext, id: number) {
 
   if (block.type === "link" && block.linkId) {
     const linkId = block.linkId;
-    const backing = await ctx.db.query.link.findFirst({ where: eq(link.id, linkId) });
-    await ctx.db.transaction(async (tx) => {
+    const backing = await ctx.prisma.link.findFirst({ where: { id: linkId } });
+    await ctx.prisma.$transaction(async (tx) => {
       await deleteHiddenTrackingLink(tx, linkId);
-      await tx.delete(bioBlock).where(eq(bioBlock.id, id));
+      await tx.bioBlock.delete({ where: { id } });
     });
     if (backing?.alias) purgeTrackingLinkCache(backing.domain, backing.alias);
   } else {
-    await ctx.db.delete(bioBlock).where(eq(bioBlock.id, id));
+    await ctx.prisma.bioBlock.delete({ where: { id } });
   }
   revalidateBioPath(block.bioPage.slug);
   return { success: true };
@@ -501,17 +491,15 @@ export async function deleteBlock(ctx: WorkspaceTRPCContext, id: number) {
 export async function reorderBlocks(ctx: WorkspaceTRPCContext, input: ReorderBlocksInput) {
   const page = await fetchBioPageForWorkspace(ctx, input.bioPageId);
   requirePermission(ctx.workspace, "bio.edit", "edit bio pages");
-  const blocks = await ctx.db.query.bioBlock.findMany({
-    where: eq(bioBlock.bioPageId, page.id),
-    columns: { id: true },
+  const blocks = await ctx.prisma.bioBlock.findMany({
+    where: { bioPageId: page.id },
+    select: { id: true },
   });
   const validIds = new Set(blocks.map((b) => b.id));
   const seen = new Set<number>();
   const ordered = input.blockIds.filter(
     (id) => validIds.has(id) && !seen.has(id) && (seen.add(id), true),
   );
-  // The client always sends the full ordering; a partial or duplicated payload
-  // would leave some blocks with stale positions, so reject it outright.
   if (ordered.length !== validIds.size) {
     throw new TRPCError({
       code: "BAD_REQUEST",
@@ -519,9 +507,12 @@ export async function reorderBlocks(ctx: WorkspaceTRPCContext, input: ReorderBlo
     });
   }
 
-  await ctx.db.transaction(async (tx) => {
+  await ctx.prisma.$transaction(async (tx) => {
     for (let i = 0; i < ordered.length; i++) {
-      await tx.update(bioBlock).set({ position: i }).where(eq(bioBlock.id, ordered[i]!));
+      await tx.bioBlock.update({
+        where: { id: ordered[i]! },
+        data: { position: i },
+      });
     }
   });
   revalidateBioPath(page.slug);
@@ -567,12 +558,12 @@ function isBlockLive(block: BioBlock, now: number): boolean {
 }
 
 async function assemblePublicBioPage(
-  db: PublicTRPCContext["db"],
-  page: typeof bioPage.$inferSelect,
+  prisma: PublicTRPCContext["prisma"],
+  page: BioPage,
 ): Promise<PublicBioPage> {
-  const blocks = await db.query.bioBlock.findMany({
-    where: eq(bioBlock.bioPageId, page.id),
-    orderBy: (t, { asc }) => [asc(t.position)],
+  const blocks = await prisma.bioBlock.findMany({
+    where: { bioPageId: page.id },
+    orderBy: { position: "asc" },
   });
 
   const now = Date.now();
@@ -580,7 +571,7 @@ async function assemblePublicBioPage(
 
   const linkIds = live.map((b) => b.linkId).filter((x): x is number => !!x);
   const links = linkIds.length
-    ? await db.query.link.findMany({ where: inArray(link.id, linkIds) })
+    ? await prisma.link.findMany({ where: { id: { in: linkIds } } })
     : [];
   const linkMap = new Map(links.map((l) => [l.id, l]));
 
@@ -588,7 +579,6 @@ async function assemblePublicBioPage(
     .map((b): PublicBioBlock | null => {
       if (b.type === "link") {
         const l = b.linkId ? linkMap.get(b.linkId) : undefined;
-        // A blocked/disabled or missing backing link hides the block entirely.
         if (!l || l.blocked || l.disabled || !l.alias) return null;
         return { id: b.id, type: "link", title: b.title, href: `https://${l.domain}/${l.alias}` };
       }
@@ -598,7 +588,7 @@ async function assemblePublicBioPage(
       if (b.type === "email") {
         return { id: b.id, type: "email", title: b.title, href: b.url ? `mailto:${b.url}` : null };
       }
-      return { id: b.id, type: b.type, title: b.title, content: b.content };
+      return { id: b.id, type: b.type as any, title: b.title, content: b.content };
     })
     .filter((b): b is PublicBioBlock => b !== null);
 
@@ -608,7 +598,7 @@ async function assemblePublicBioPage(
     title: page.title,
     description: page.description,
     avatarUrl: page.avatarUrl,
-    theme: page.theme,
+    theme: page.theme as any,
     removeBranding: page.removeBranding ?? false,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
@@ -623,11 +613,11 @@ export async function getPublicBioPageBySlug(
   ctx: PublicTRPCContext,
   slug: string,
 ): Promise<PublicBioPage | null> {
-  const page = await ctx.db.query.bioPage.findFirst({
-    where: and(eq(bioPage.slug, slug), eq(bioPage.isPublished, true)),
+  const page = await ctx.prisma.bioPage.findFirst({
+    where: { slug, isPublished: true },
   });
   if (!page) return null;
-  return assemblePublicBioPage(ctx.db, page);
+  return assemblePublicBioPage(ctx.prisma, page);
 }
 
 export async function getPublicBioPageByDomain(
@@ -635,11 +625,11 @@ export async function getPublicBioPageByDomain(
   domain: string,
 ): Promise<PublicBioPage | null> {
   const normalized = domain.trim().toLowerCase().replace(/^www\./, "");
-  const page = await ctx.db.query.bioPage.findFirst({
-    where: and(eq(bioPage.customDomain, normalized), eq(bioPage.isPublished, true)),
+  const page = await ctx.prisma.bioPage.findFirst({
+    where: { customDomain: normalized, isPublished: true },
   });
   if (!page) return null;
-  return assemblePublicBioPage(ctx.db, page);
+  return assemblePublicBioPage(ctx.prisma, page);
 }
 
 // ---------------------------------------------------------------------------
@@ -667,40 +657,38 @@ export async function getBioPageAnalytics(
   const rangeDays = resolveRangeDays(input.range, caps.analyticsRangeLimitDays);
   const start = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
 
-  // Page views + unique views (grouped aggregates, not row loads).
-  const viewFilter = and(eq(bioPageView.bioPageId, page.id), gte(bioPageView.createdAt, start));
-  const [viewsAgg, uniqueAgg, viewsByDay] = await Promise.all([
-    ctx.db.select({ count: count() }).from(bioPageView).where(viewFilter),
-    ctx.db
-      .select({ count: count() })
-      .from(uniqueBioPageView)
-      .where(and(eq(uniqueBioPageView.bioPageId, page.id), gte(uniqueBioPageView.createdAt, start))),
-    ctx.db
-      .select({
-        date: sql<string>`DATE(${bioPageView.createdAt})`,
-        count: count(),
-      })
-      .from(bioPageView)
-      .where(viewFilter)
-      .groupBy(sql`DATE(${bioPageView.createdAt})`),
-  ]);
+  const viewsAgg = await ctx.prisma.bioPageView.count({
+    where: { bioPageId: page.id, createdAt: { gte: start } },
+  });
+  const uniqueAgg = await ctx.prisma.uniqueBioPageView.count({
+    where: { bioPageId: page.id, createdAt: { gte: start } },
+  });
 
-  // Per-block clicks: one grouped query over all backing links for this page.
-  const blocks = await ctx.db.query.bioBlock.findMany({
-    where: eq(bioBlock.bioPageId, page.id),
-    orderBy: (t, { asc }) => [asc(t.position)],
+  const viewsByDayRaw = await ctx.prisma.$queryRaw<{ date: string; count: bigint }[]>`
+    SELECT DATE(createdAt) as date, COUNT(*) as count 
+    FROM BioPageView 
+    WHERE bioPageId = ${page.id} AND createdAt >= ${start}
+    GROUP BY DATE(createdAt)
+  `;
+
+  const blocks = await ctx.prisma.bioBlock.findMany({
+    where: { bioPageId: page.id },
+    orderBy: { position: "asc" },
   });
   const linkBlocks = blocks.filter((b) => b.type === "link" && b.linkId);
   const linkIds = linkBlocks.map((b) => b.linkId!);
 
   const clickRows = linkIds.length
-    ? await ctx.db
-        .select({ linkId: linkVisit.linkId, count: count() })
-        .from(linkVisit)
-        .where(and(inArray(linkVisit.linkId, linkIds), gte(linkVisit.createdAt, start)))
-        .groupBy(linkVisit.linkId)
+    ? await ctx.prisma.linkVisit.groupBy({
+        by: ["linkId"],
+        where: {
+          linkId: { in: linkIds },
+          createdAt: { gte: start },
+        },
+        _count: { linkId: true },
+      })
     : [];
-  const clickMap = new Map(clickRows.map((r) => [r.linkId, Number(r.count)]));
+  const clickMap = new Map(clickRows.map((r) => [r.linkId, Number(r._count.linkId)]));
 
   const perBlock = linkBlocks
     .map((b) => ({
@@ -711,11 +699,13 @@ export async function getBioPageAnalytics(
     .sort((a, b) => b.clicks - a.clicks);
 
   const totalClicks = perBlock.reduce((sum, b) => sum + b.clicks, 0);
-  const views = Number(viewsAgg[0]?.count ?? 0);
-  const uniqueViews = Number(uniqueAgg[0]?.count ?? 0);
+  const views = Number(viewsAgg ?? 0);
+  const uniqueViews = Number(uniqueAgg ?? 0);
 
   const viewsPerDay: Record<string, number> = {};
-  for (const row of viewsByDay) viewsPerDay[row.date] = Number(row.count);
+  for (const row of viewsByDayRaw) {
+    viewsPerDay[String(row.date)] = Number(row.count);
+  }
 
   return {
     views,

@@ -1,8 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
-
 import { canUseMilestones, getMilestonesPerLinkLimit } from "@/lib/billing/plans";
-import { linkMilestone } from "@/server/db/schema";
 
 import { checkWorkspaceLinkLimit, verifyLinkOwnership } from "../link/utils";
 
@@ -42,32 +39,32 @@ export async function upsertMilestones(
   // Replace-all approach: delete existing milestones and re-insert.
   // Preserve notifiedAt for thresholds that haven't changed.
   // Wrapped in a transaction so a failure mid-way doesn't lose data.
-  const existing = await ctx.db
-    .select({
-      threshold: linkMilestone.threshold,
-      notifiedAt: linkMilestone.notifiedAt,
-    })
-    .from(linkMilestone)
-    .where(eq(linkMilestone.linkId, input.linkId));
+  const existing = await ctx.prisma.linkMilestone.findMany({
+    where: { linkId: input.linkId },
+    select: {
+      threshold: true,
+      notifiedAt: true,
+    },
+  });
 
   const existingMap = new Map(
     existing.map((m) => [m.threshold, m.notifiedAt]),
   );
 
-  await ctx.db.transaction(async (tx) => {
-    await tx
-      .delete(linkMilestone)
-      .where(eq(linkMilestone.linkId, input.linkId));
+  await ctx.prisma.$transaction(async (tx) => {
+    await tx.linkMilestone.deleteMany({
+      where: { linkId: input.linkId },
+    });
 
     if (input.thresholds.length > 0) {
-      await tx.insert(linkMilestone).values(
-        input.thresholds.map((threshold) => ({
+      await tx.linkMilestone.createMany({
+        data: input.thresholds.map((threshold) => ({
           linkId: input.linkId,
           userId: ctx.workspace.userId,
           threshold,
           notifiedAt: existingMap.get(threshold) ?? null,
         })),
-      );
+      });
     }
   });
 
@@ -80,16 +77,16 @@ export async function getLinkMilestones(
 ) {
   await verifyLinkOwnership(ctx, input.linkId);
 
-  return ctx.db
-    .select({
-      id: linkMilestone.id,
-      threshold: linkMilestone.threshold,
-      notifiedAt: linkMilestone.notifiedAt,
-      createdAt: linkMilestone.createdAt,
-    })
-    .from(linkMilestone)
-    .where(eq(linkMilestone.linkId, input.linkId))
-    .orderBy(linkMilestone.threshold);
+  return ctx.prisma.linkMilestone.findMany({
+    where: { linkId: input.linkId },
+    select: {
+      id: true,
+      threshold: true,
+      notifiedAt: true,
+      createdAt: true,
+    },
+    orderBy: { threshold: "asc" },
+  });
 }
 
 export async function resetMilestoneNotifications(
@@ -98,10 +95,10 @@ export async function resetMilestoneNotifications(
 ) {
   await verifyLinkOwnership(ctx, input.linkId);
 
-  await ctx.db
-    .update(linkMilestone)
-    .set({ notifiedAt: null })
-    .where(eq(linkMilestone.linkId, input.linkId));
+  await ctx.prisma.linkMilestone.updateMany({
+    where: { linkId: input.linkId },
+    data: { notifiedAt: null },
+  });
 
   return { success: true };
 }
