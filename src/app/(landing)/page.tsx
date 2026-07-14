@@ -4,9 +4,10 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { landingPageCopy } from "@/lib/copy/landing-page";
 import {
   createFaqSchema,
-  organizationSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
   softwareApplicationSchema,
-  websiteSchema,
 } from "@/lib/seo/structured-data";
 
 import { CTA } from "./_components/cta";
@@ -22,11 +23,11 @@ import { Testimonials } from "./_components/testimonials";
 
 export const metadata: Metadata = {
   title: {
-    absolute:
-      "iShortn — Links, made lovely. Free URL shortener with analytics",
+    absolute: resolveTitle("ClickPath — Open-Source URL Shortener & Analytics"),
   },
-  description:
-    "Shorten URLs for free with iShortn. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+  description: resolveDescription(
+    "Shorten URLs for free with ClickPath. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+  ),
   keywords: [
     "url shortener",
     "free url shortener",
@@ -37,31 +38,33 @@ export const metadata: Metadata = {
     "click tracking",
     "qr code generator",
     "branded links",
-    "url shortener free",
+    "clickpath",
   ],
+  alternates: {
+    canonical: resolveCanonical(""),
+  },
   openGraph: {
-    title:
-      "iShortn — Links, made lovely. Free URL shortener with analytics",
-    description:
-      "Shorten URLs for free with iShortn. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+    title: resolveTitle("ClickPath — Open-Source URL Shortener & Analytics"),
+    description: resolveDescription(
+      "Shorten URLs for free with ClickPath. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+    ),
     type: "website",
+    url: resolveCanonical(""),
   },
   twitter: {
     card: "summary_large_image",
-    title:
-      "iShortn — Links, made lovely. Free URL shortener with analytics",
-    description:
-      "Shorten URLs for free with iShortn. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+    title: resolveTitle("ClickPath — Open-Source URL Shortener & Analytics"),
+    description: resolveDescription(
+      "Shorten URLs for free with ClickPath. Create branded short links, track clicks and engagement, generate QR codes, and use custom domains.",
+    ),
   },
 };
 
 export default function HomePage() {
   return (
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
-      <JsonLd data={organizationSchema} />
       <JsonLd data={softwareApplicationSchema} />
       <JsonLd data={createFaqSchema(landingPageCopy.faq)} />
-      <JsonLd data={websiteSchema} />
       <Header />
       <Hero />
       <DashboardPreview />

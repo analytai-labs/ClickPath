@@ -1,5 +1,5 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
+import { Prisma } from "@prisma/client";
 
 const FREE_RETENTION_DAYS = 30;
 const PRO_RETENTION_DAYS = 365;
@@ -21,15 +21,15 @@ const USER_FREE_TIER = {
   OR: [
     { subscription: null },
     { subscription: { status: { not: "active" } } },
-    { subscription: { plan: "free" } }
-  ]
+    { subscription: { plan: "free" } },
+  ],
 } as any;
 
 const USER_PRO_TIER = {
   subscription: {
     status: "active",
-    plan: "pro"
-  }
+    plan: "pro",
+  },
 } as any;
 
 export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
@@ -49,12 +49,9 @@ export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
   const proCutoffDate = new Date();
   proCutoffDate.setDate(proCutoffDate.getDate() - PRO_RETENTION_DAYS);
 
-  await processLinkBatch(
-    result,
-    "free",
-    freeCutoffDate,
-    (lastId) =>
-      prisma.link.findMany({
+  await processLinkBatch(result, "free", freeCutoffDate, (lastId) =>
+    prisma.link
+      .findMany({
         where: {
           id: { gt: lastId },
           teamId: null,
@@ -63,15 +60,13 @@ export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
         select: { id: true },
         orderBy: { id: "asc" },
         take: QUERY_BATCH_SIZE,
-      }).then(res => res.map(l => ({ linkId: l.id }))),
+      })
+      .then((res) => res.map((l) => ({ linkId: l.id }))),
   );
 
-  await processLinkBatch(
-    result,
-    "free",
-    freeCutoffDate,
-    (lastId) =>
-      prisma.link.findMany({
+  await processLinkBatch(result, "free", freeCutoffDate, (lastId) =>
+    prisma.link
+      .findMany({
         where: {
           id: { gt: lastId },
           teamId: { not: null },
@@ -80,15 +75,13 @@ export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
         select: { id: true },
         orderBy: { id: "asc" },
         take: QUERY_BATCH_SIZE,
-      }).then(res => res.map(l => ({ linkId: l.id }))),
+      })
+      .then((res) => res.map((l) => ({ linkId: l.id }))),
   );
 
-  await processLinkBatch(
-    result,
-    "pro",
-    proCutoffDate,
-    (lastId) =>
-      prisma.link.findMany({
+  await processLinkBatch(result, "pro", proCutoffDate, (lastId) =>
+    prisma.link
+      .findMany({
         where: {
           id: { gt: lastId },
           teamId: null,
@@ -97,15 +90,13 @@ export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
         select: { id: true },
         orderBy: { id: "asc" },
         take: QUERY_BATCH_SIZE,
-      }).then(res => res.map(l => ({ linkId: l.id }))),
+      })
+      .then((res) => res.map((l) => ({ linkId: l.id }))),
   );
 
-  await processLinkBatch(
-    result,
-    "pro",
-    proCutoffDate,
-    (lastId) =>
-      prisma.link.findMany({
+  await processLinkBatch(result, "pro", proCutoffDate, (lastId) =>
+    prisma.link
+      .findMany({
         where: {
           id: { gt: lastId },
           teamId: { not: null },
@@ -114,7 +105,8 @@ export async function cleanupAnalyticsData(): Promise<AnalyticsCleanupResult> {
         select: { id: true },
         orderBy: { id: "asc" },
         take: QUERY_BATCH_SIZE,
-      }).then(res => res.map(l => ({ linkId: l.id }))),
+      })
+      .then((res) => res.map((l) => ({ linkId: l.id }))),
   );
 
   await cleanupBioPageViews(result, freeCutoffDate, proCutoffDate);
@@ -128,52 +120,60 @@ async function cleanupBioPageViews(
   proCutoffDate: Date,
 ): Promise<void> {
   await processBioPageBatch(result, freeCutoffDate, (lastId) =>
-    prisma.bioPage.findMany({
-      where: {
-        id: { gt: lastId },
-        teamId: null,
-        user: USER_FREE_TIER,
-      },
-      select: { id: true },
-      orderBy: { id: "asc" },
-      take: QUERY_BATCH_SIZE,
-    }).then(res => res.map(p => ({ bioPageId: p.id })))
+    prisma.bioPage
+      .findMany({
+        where: {
+          id: { gt: lastId },
+          teamId: null,
+          user: USER_FREE_TIER,
+        },
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: QUERY_BATCH_SIZE,
+      })
+      .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, freeCutoffDate, (lastId) =>
-    prisma.bioPage.findMany({
-      where: {
-        id: { gt: lastId },
-        teamId: { not: null },
-        team: { owner: USER_FREE_TIER },
-      },
-      select: { id: true },
-      orderBy: { id: "asc" },
-      take: QUERY_BATCH_SIZE,
-    }).then(res => res.map(p => ({ bioPageId: p.id })))
+    prisma.bioPage
+      .findMany({
+        where: {
+          id: { gt: lastId },
+          teamId: { not: null },
+          team: { owner: USER_FREE_TIER },
+        },
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: QUERY_BATCH_SIZE,
+      })
+      .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, proCutoffDate, (lastId) =>
-    prisma.bioPage.findMany({
-      where: {
-        id: { gt: lastId },
-        teamId: null,
-        user: USER_PRO_TIER,
-      },
-      select: { id: true },
-      orderBy: { id: "asc" },
-      take: QUERY_BATCH_SIZE,
-    }).then(res => res.map(p => ({ bioPageId: p.id })))
+    prisma.bioPage
+      .findMany({
+        where: {
+          id: { gt: lastId },
+          teamId: null,
+          user: USER_PRO_TIER,
+        },
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: QUERY_BATCH_SIZE,
+      })
+      .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, proCutoffDate, (lastId) =>
-    prisma.bioPage.findMany({
-      where: {
-        id: { gt: lastId },
-        teamId: { not: null },
-        team: { owner: USER_PRO_TIER },
-      },
-      select: { id: true },
-      orderBy: { id: "asc" },
-      take: QUERY_BATCH_SIZE,
-    }).then(res => res.map(p => ({ bioPageId: p.id })))
+    prisma.bioPage
+      .findMany({
+        where: {
+          id: { gt: lastId },
+          teamId: { not: null },
+          team: { owner: USER_PRO_TIER },
+        },
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: QUERY_BATCH_SIZE,
+      })
+      .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
 }
 
@@ -218,19 +218,16 @@ async function processBioPageBatch(
   }
 }
 
-async function aggregateBioDailySummaries(
-  bioPageIds: number[],
-  cutoffDate: Date,
-): Promise<number> {
+async function aggregateBioDailySummaries(bioPageIds: number[], cutoffDate: Date): Promise<number> {
   const [viewAgg, uniqueAgg] = await Promise.all([
-    prisma.$queryRaw<{bioPageId: number, date: string, views: number}[]>`
+    prisma.$queryRaw<{ bioPageId: number; date: string; views: number }[]>`
       SELECT "bioPageId", DATE("createdAt") as date, COUNT(*)::int as views
       FROM "BioPageView"
       WHERE "bioPageId" IN (${Prisma.join(bioPageIds)})
         AND "createdAt" < ${cutoffDate}
       GROUP BY "bioPageId", DATE("createdAt")
     `,
-    prisma.$queryRaw<{bioPageId: number, date: string, uniqueViews: number}[]>`
+    prisma.$queryRaw<{ bioPageId: number; date: string; uniqueViews: number }[]>`
       SELECT "bioPageId", DATE("createdAt") as date, COUNT(*)::int as "uniqueViews"
       FROM "UniqueBioPageView"
       WHERE "bioPageId" IN (${Prisma.join(bioPageIds)})
@@ -300,9 +297,7 @@ async function processLinkBatch(
   result: AnalyticsCleanupResult,
   tier: "free" | "pro",
   cutoffDate: Date,
-  queryFn: (
-    lastId: number,
-  ) => Promise<{ linkId: number }[]>,
+  queryFn: (lastId: number) => Promise<{ linkId: number }[]>,
 ): Promise<void> {
   let lastId = 0;
 
@@ -322,10 +317,7 @@ async function processLinkBatch(
     for (let i = 0; i < linkIds.length; i += DELETE_BATCH_SIZE) {
       const batch = linkIds.slice(i, i + DELETE_BATCH_SIZE);
 
-      result.dailySummariesCreated += await aggregateDailySummaries(
-        batch,
-        cutoffDate,
-      );
+      result.dailySummariesCreated += await aggregateDailySummaries(batch, cutoffDate);
 
       const [linkVisitResult, uniqueVisitResult] = await Promise.all([
         prisma.linkVisit.deleteMany({
@@ -349,19 +341,16 @@ async function processLinkBatch(
   }
 }
 
-async function aggregateDailySummaries(
-  linkIds: number[],
-  cutoffDate: Date,
-): Promise<number> {
+async function aggregateDailySummaries(linkIds: number[], cutoffDate: Date): Promise<number> {
   const [clickAgg, uniqueAgg] = await Promise.all([
-    prisma.$queryRaw<{linkId: number, date: string, clicks: number}[]>`
+    prisma.$queryRaw<{ linkId: number; date: string; clicks: number }[]>`
       SELECT "linkId", DATE("createdAt") as date, COUNT(*)::int as clicks
       FROM "LinkVisit"
       WHERE "linkId" IN (${Prisma.join(linkIds)})
         AND "createdAt" < ${cutoffDate}
       GROUP BY "linkId", DATE("createdAt")
     `,
-    prisma.$queryRaw<{linkId: number, date: string, uniqueClicks: number}[]>`
+    prisma.$queryRaw<{ linkId: number; date: string; uniqueClicks: number }[]>`
       SELECT "linkId", DATE("createdAt") as date, COUNT(*)::int as "uniqueClicks"
       FROM "UniqueLinkVisit"
       WHERE "linkId" IN (${Prisma.join(linkIds)})
@@ -441,45 +430,44 @@ export async function getAnalyticsCleanupStats() {
   const proCutoffDate = new Date();
   proCutoffDate.setDate(proCutoffDate.getDate() - PRO_RETENTION_DAYS);
 
-  const [oldFreeVisits, oldProVisits, oldFreeTeamVisits, oldProTeamVisits] =
-    await Promise.all([
-      prisma.linkVisit.count({
-        where: {
-          createdAt: { lt: freeCutoffDate },
-          link: {
-            teamId: null,
-            user: USER_FREE_TIER,
-          }
+  const [oldFreeVisits, oldProVisits, oldFreeTeamVisits, oldProTeamVisits] = await Promise.all([
+    prisma.linkVisit.count({
+      where: {
+        createdAt: { lt: freeCutoffDate },
+        link: {
+          teamId: null,
+          user: USER_FREE_TIER,
         },
-      }),
-      prisma.linkVisit.count({
-        where: {
-          createdAt: { lt: proCutoffDate },
-          link: {
-            teamId: null,
-            user: USER_PRO_TIER,
-          }
+      },
+    }),
+    prisma.linkVisit.count({
+      where: {
+        createdAt: { lt: proCutoffDate },
+        link: {
+          teamId: null,
+          user: USER_PRO_TIER,
         },
-      }),
-      prisma.linkVisit.count({
-        where: {
-          createdAt: { lt: freeCutoffDate },
-          link: {
-            teamId: { not: null },
-            team: { owner: USER_FREE_TIER },
-          }
+      },
+    }),
+    prisma.linkVisit.count({
+      where: {
+        createdAt: { lt: freeCutoffDate },
+        link: {
+          teamId: { not: null },
+          team: { owner: USER_FREE_TIER },
         },
-      }),
-      prisma.linkVisit.count({
-        where: {
-          createdAt: { lt: proCutoffDate },
-          link: {
-            teamId: { not: null },
-            team: { owner: USER_PRO_TIER },
-          }
+      },
+    }),
+    prisma.linkVisit.count({
+      where: {
+        createdAt: { lt: proCutoffDate },
+        link: {
+          teamId: { not: null },
+          team: { owner: USER_PRO_TIER },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return {
     freeUserVisitsPendingCleanup: oldFreeVisits + oldFreeTeamVisits,

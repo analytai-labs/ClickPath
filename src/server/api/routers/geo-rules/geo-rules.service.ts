@@ -1,10 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
-import {
-  canUseGeoRules,
-  getGeoRulesLimit,
-  isUnlimitedGeoRules,
-} from "@/lib/billing/plans";
+import { canUseGeoRules, getGeoRulesLimit, isUnlimitedGeoRules } from "@/lib/billing/plans";
 import { deleteGeoRulesFromCache } from "@/lib/core/cache";
 
 import { checkWorkspaceLinkLimit, verifyLinkOwnership } from "../link/utils";
@@ -24,7 +20,7 @@ import type {
 async function checkGeoRulesLimit(
   ctx: WorkspaceTRPCContext,
   linkId: number,
-  excludeRuleId?: number
+  excludeRuleId?: number,
 ) {
   const { plan } = await checkWorkspaceLinkLimit(ctx);
 
@@ -63,7 +59,7 @@ async function checkGeoRulesLimit(
  */
 export async function getGeoRulesByLinkId(
   ctx: WorkspaceTRPCContext,
-  input: GetGeoRulesByLinkInput
+  input: GetGeoRulesByLinkInput,
 ) {
   await verifyLinkOwnership(ctx, input.linkId);
 
@@ -76,10 +72,7 @@ export async function getGeoRulesByLinkId(
 /**
  * Create a new geo rule for a link
  */
-export async function createGeoRule(
-  ctx: WorkspaceTRPCContext,
-  input: CreateGeoRuleInput
-) {
+export async function createGeoRule(ctx: WorkspaceTRPCContext, input: CreateGeoRuleInput) {
   const linkRecord = await verifyLinkOwnership(ctx, input.linkId);
   await checkGeoRulesLimit(ctx, input.linkId);
 
@@ -89,9 +82,8 @@ export async function createGeoRule(
     orderBy: { priority: "asc" },
   });
 
-  const maxPriority = existingRules.length > 0
-    ? Math.max(...existingRules.map((r) => r.priority))
-    : -1;
+  const maxPriority =
+    existingRules.length > 0 ? Math.max(...existingRules.map((r) => r.priority)) : -1;
 
   const result = await ctx.prisma.geoRule.create({
     data: {
@@ -120,10 +112,7 @@ export async function createGeoRule(
 /**
  * Update an existing geo rule
  */
-export async function updateGeoRule(
-  ctx: WorkspaceTRPCContext,
-  input: UpdateGeoRuleInput
-) {
+export async function updateGeoRule(ctx: WorkspaceTRPCContext, input: UpdateGeoRuleInput) {
   // First, get the rule to find its linkId
   const existingRule = await ctx.prisma.geoRule.findFirst({
     where: { id: input.ruleId },
@@ -166,10 +155,7 @@ export async function updateGeoRule(
 /**
  * Delete a geo rule
  */
-export async function deleteGeoRule(
-  ctx: WorkspaceTRPCContext,
-  input: DeleteGeoRuleInput
-) {
+export async function deleteGeoRule(ctx: WorkspaceTRPCContext, input: DeleteGeoRuleInput) {
   // First, get the rule to find its linkId
   const existingRule = await ctx.prisma.geoRule.findFirst({
     where: { id: input.ruleId },
@@ -197,10 +183,7 @@ export async function deleteGeoRule(
 /**
  * Reorder geo rules by updating their priorities
  */
-export async function reorderGeoRules(
-  ctx: WorkspaceTRPCContext,
-  input: ReorderGeoRulesInput
-) {
+export async function reorderGeoRules(ctx: WorkspaceTRPCContext, input: ReorderGeoRulesInput) {
   await verifyLinkOwnership(ctx, input.linkId);
 
   // Verify all rule IDs belong to this link
@@ -224,8 +207,8 @@ export async function reorderGeoRules(
       ctx.prisma.geoRule.update({
         where: { id: ruleId },
         data: { priority: index },
-      })
-    )
+      }),
+    ),
   );
 
   // Invalidate cache

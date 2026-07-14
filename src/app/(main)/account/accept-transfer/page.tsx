@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import {
   AlertCircle,
   ArrowRight,
@@ -17,6 +16,7 @@ import {
   User,
   XCircle,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { toast } from "sonner";
@@ -51,16 +51,14 @@ function StateCard({
           <div
             className={cn(
               "inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5",
-              iconBg
+              iconBg,
             )}
           >
             {icon}
           </div>
 
           <h1 className="font-semibold text-xl text-neutral-900 mb-2">{title}</h1>
-          <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
-            {description}
-          </p>
+          <p className="text-sm text-neutral-500 mb-6 leading-relaxed">{description}</p>
 
           {children}
         </div>
@@ -83,14 +81,16 @@ function LoadingSpinner() {
 function AcceptTransferContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { data: session, status } = useSession();
+  const isLoaded = status !== "loading";
+  const isSignedIn = status === "authenticated";
   const token = searchParams.get("token");
 
   const transferDetails = api.accountTransfer.getByToken.useQuery(
     { token: token! },
     {
       enabled: !!token && isSignedIn,
-    }
+    },
   );
 
   const acceptMutation = api.accountTransfer.accept.useMutation({
@@ -134,11 +134,7 @@ function AcceptTransferContent() {
         title="Invalid transfer link"
         description="This transfer link is incomplete or malformed."
       >
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard")}
-          className="w-full"
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
           Go to Dashboard
         </Button>
       </StateCard>
@@ -161,9 +157,7 @@ function AcceptTransferContent() {
       >
         <Button
           onClick={() =>
-            router.push(
-              `/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`
-            )
+            router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`)
           }
           className="w-full bg-blue-600 hover:bg-blue-700"
         >
@@ -188,11 +182,7 @@ function AcceptTransferContent() {
         title="Transfer not found"
         description="This transfer request may have been cancelled or doesn't exist."
       >
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard")}
-          className="w-full"
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
           Go to Dashboard
         </Button>
       </StateCard>
@@ -210,11 +200,7 @@ function AcceptTransferContent() {
         title="Transfer expired"
         description={`This transfer request from ${transfer.fromUser.name || transfer.fromUser.email} has expired. Ask them to initiate a new transfer.`}
       >
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard")}
-          className="w-full"
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
           Go to Dashboard
         </Button>
       </StateCard>
@@ -250,11 +236,7 @@ function AcceptTransferContent() {
         title="Transfer cancelled"
         description="This transfer request has been cancelled by the sender."
       >
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard")}
-          className="w-full"
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
           Go to Dashboard
         </Button>
       </StateCard>
@@ -270,11 +252,7 @@ function AcceptTransferContent() {
         title="Transfer declined"
         description="You have declined this transfer request."
       >
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard")}
-          className="w-full"
-        >
+        <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full">
           Go to Dashboard
         </Button>
       </StateCard>
@@ -293,11 +271,26 @@ function AcceptTransferContent() {
 
   const resourceItems = [
     { icon: Link2, count: transfer.resourceCounts.links, label: "link", labelPlural: "links" },
-    { icon: Globe, count: transfer.resourceCounts.customDomains, label: "domain", labelPlural: "domains" },
-    { icon: QrCode, count: transfer.resourceCounts.qrCodes, label: "QR code", labelPlural: "QR codes" },
-    { icon: FolderOpen, count: transfer.resourceCounts.folders, label: "folder", labelPlural: "folders" },
+    {
+      icon: Globe,
+      count: transfer.resourceCounts.customDomains,
+      label: "domain",
+      labelPlural: "domains",
+    },
+    {
+      icon: QrCode,
+      count: transfer.resourceCounts.qrCodes,
+      label: "QR code",
+      labelPlural: "QR codes",
+    },
+    {
+      icon: FolderOpen,
+      count: transfer.resourceCounts.folders,
+      label: "folder",
+      labelPlural: "folders",
+    },
     { icon: Tag, count: transfer.resourceCounts.tags, label: "tag", labelPlural: "tags" },
-  ].filter(item => item.count > 0);
+  ].filter((item) => item.count > 0);
 
   return (
     <div
@@ -331,9 +324,7 @@ function AcceptTransferContent() {
               </span>{" "}
               wants to transfer their resources to you
             </p>
-            <p className="text-xs text-neutral-400 mt-1">
-              {transfer.fromUser.email}
-            </p>
+            <p className="text-xs text-neutral-400 mt-1">{transfer.fromUser.email}</p>
           </div>
 
           {/* Resource counts */}
@@ -342,9 +333,7 @@ function AcceptTransferContent() {
             style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-neutral-700">
-                Resources to receive
-              </p>
+              <p className="text-sm font-medium text-neutral-700">Resources to receive</p>
               <Badge variant="secondary" className="text-xs">
                 {totalResources} total
               </Badge>
@@ -362,10 +351,12 @@ function AcceptTransferContent() {
                   </span>
                 </div>
               ))}
-              {(transfer.resourceCounts.utmTemplates > 0 || transfer.resourceCounts.qrPresets > 0) && (
+              {(transfer.resourceCounts.utmTemplates > 0 ||
+                transfer.resourceCounts.qrPresets > 0) && (
                 <div className="col-span-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-neutral-100 text-sm text-neutral-500">
                   <span>
-                    + {transfer.resourceCounts.utmTemplates} UTM templates, {transfer.resourceCounts.qrPresets} QR presets
+                    + {transfer.resourceCounts.utmTemplates} UTM templates,{" "}
+                    {transfer.resourceCounts.qrPresets} QR presets
                   </span>
                 </div>
               )}
@@ -403,7 +394,8 @@ function AcceptTransferContent() {
           >
             <Clock className="h-3.5 w-3.5" />
             <span>
-              Expires {new Date(transfer.expiresAt).toLocaleDateString(undefined, {
+              Expires{" "}
+              {new Date(transfer.expiresAt).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
@@ -489,9 +481,7 @@ export default function AcceptTransferPage() {
           className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500"
           style={{ animationFillMode: "backwards" }}
         >
-          <span className="text-3xl font-bold text-neutral-900 tracking-tight">
-            iShortn
-          </span>
+          <span className="text-3xl font-bold text-neutral-900 tracking-tight">ClickPath</span>
         </div>
 
         {/* Main content */}

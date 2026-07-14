@@ -3,9 +3,9 @@ import { endOfMonth, endOfYear, startOfMonth, startOfYear, subDays, subMonths } 
 
 import { getCampaignLimit } from "@/lib/billing/plans";
 
-import type { RangeEnum } from "../link/link.input";
 import type { Campaign } from "@prisma/client";
 import type { WorkspaceTRPCContext } from "../../trpc";
+import type { RangeEnum } from "../link/link.input";
 
 export type UtmParams = {
   utm_source?: string;
@@ -47,7 +47,10 @@ export function mergeCampaignUtm(
 
 export function rethrowCampaignDuplicate(error: unknown): never {
   const message = String((error as { message?: string })?.message ?? "");
-  if (/campaign_slug_workspace_unique/.test(message) || /Unique constraint failed on the fields: \(`slug`,`userId`,`teamId`\)/.test(message)) {
+  if (
+    /campaign_slug_workspace_unique/.test(message) ||
+    /Unique constraint failed on the fields: \(`slug`,`userId`,`teamId`\)/.test(message)
+  ) {
     throw new TRPCError({
       code: "CONFLICT",
       message:
@@ -57,13 +60,7 @@ export function rethrowCampaignDuplicate(error: unknown): never {
   throw error;
 }
 
-const UTM_KEYS = [
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_term",
-  "utm_content",
-] as const;
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
 
 export function utmParamsEqual(a?: UtmParams | null, b?: UtmParams | null): boolean {
   return UTM_KEYS.every((key) => (a?.[key] ?? "") === (b?.[key] ?? ""));
@@ -79,9 +76,9 @@ export function getCampaignDisplayState(
   return "active";
 }
 
-const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) => 
-  workspace.type === "team" 
-    ? { teamId: workspace.teamId } 
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) =>
+  workspace.type === "team"
+    ? { teamId: workspace.teamId }
     : { userId: workspace.userId, teamId: null };
 
 export async function checkCampaignLimit(ctx: WorkspaceTRPCContext): Promise<void> {

@@ -1,6 +1,6 @@
-import type { NextRequest } from "next/server";
 import { verifyVerifiedClickToken } from "@/lib/utils/verified-click-token";
 import { prisma } from "@/server/db";
+import type { NextRequest } from "next/server";
 
 // Retry covers the race where the beacon lands before `recordClick` (running
 // in waitUntil) has inserted the row. Missed verifications are acceptable
@@ -16,7 +16,7 @@ async function markVerified(visitId: string): Promise<boolean> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const result = await prisma.linkVisit.updateMany({
       where: { visitId, verifiedAt: null },
-      data: { verifiedAt: new Date() }
+      data: { verifiedAt: new Date() },
     });
 
     if (result.count > 0) return true;

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
-import { clientLogger } from "@/lib/logger/client";
 import { Button } from "@/components/ui/button";
+import { clientLogger } from "@/lib/logger/client";
 
 const log = clientLogger.child({ component: "qr-modal" });
 import {
@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { generateQRCode, defaultGeneratorState } from "@/lib/qr-generator";
+import { defaultGeneratorState, generateQRCode } from "@/lib/qr-generator";
 
 type QRCodeModalProps = {
   open: boolean;
@@ -24,11 +24,7 @@ type QRCodeModalProps = {
   destinationUrl: string;
 };
 
-export function QRCodeModal({
-  open,
-  setOpen,
-  destinationUrl,
-}: QRCodeModalProps) {
+export function QRCodeModal({ open, setOpen, destinationUrl }: QRCodeModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderQRCode = useCallback(async () => {
@@ -87,9 +83,7 @@ export function QRCodeModal({
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>QR Code</DialogTitle>
-          <DialogDescription>
-            Scan or download your link&apos;s QR code
-          </DialogDescription>
+          <DialogDescription>Scan or download your link&apos;s QR code</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="flex justify-center">
@@ -109,12 +103,7 @@ export function QRCodeModal({
         </DialogBody>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setOpen(false)}
-            className="h-9"
-          >
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-9">
             Close
           </Button>
           <Button onClick={handleQRCodeDownload} className="h-9">

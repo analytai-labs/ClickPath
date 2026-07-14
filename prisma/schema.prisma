@@ -130,7 +130,7 @@ model Team {
   name          String    @db.VarChar(255)
   slug          String    @unique @db.VarChar(100)
   avatarUrl     String?   @db.Text
-  defaultDomain String?   @default("ishortn.ink") @db.VarChar(255)
+  defaultDomain String?   @default("clickpath.analytai.in") @db.VarChar(255)
   ownerId       String    @db.VarChar(32)
   createdAt     DateTime? @default(now())
   updatedAt     DateTime? @updatedAt
@@ -188,11 +188,14 @@ model TeamInvite {
 }
 
 model User {
-  id                      String    @id @db.VarChar(32)
+  id                      String    @id @default(cuid()) @db.VarChar(32)
   name                    String?   @db.VarChar(255)
   email                   String?   @unique @db.VarChar(255)
+  emailVerified           DateTime?
+  password                String?   @db.VarChar(255)
+  image                   String?   @map("imageUrl") @db.Text
   createdAt               DateTime? @default(now())
-  imageUrl                String?   @db.Text
+  updatedAt               DateTime? @updatedAt
   qrCodeCount             Int?      @default(0)
   monthlyLinkCount        Int?      @default(0)
   lastLinkCountReset      DateTime? @default(now())
@@ -229,28 +232,72 @@ model User {
   campaigns         Campaign[]
   bioPages          BioPage[]
 
+  accounts          Account[]
+  sessions          Session[]
+
   @@index([deletedAt])
   @@index([createdAt])
 }
 
-model Subscription {
-  id              Int               @id @default(autoincrement())
-  userId          String            @unique @db.VarChar(32)
-  orderId         Int?              @default(0)
-  subscriptionId  Int?              @default(0)
-  customerId      Int?              @default(0)
-  renewsAt        DateTime?         
-  createdAt       DateTime?
-  endsAt          DateTime?         
-  status          String?           @default("") @db.VarChar(255)
-  plan            SubscriptionPlan? @default(free)
-  billingInterval BillingInterval?  @default(monthly)
-  variantId       Int?              @default(0)
-  productId       Int?              @default(0)
-  cardBrand       String?           @default("") @db.VarChar(255)
-  cardLastFour    String?           @default("") @db.VarChar(4)
+model Account {
+  userId            String  @db.VarChar(32)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
+  expires_at               Int?
+  refresh_token_expires_in Int?
+  token_type               String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
-  user            User              @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String   @db.VarChar(32)
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Subscription {
+  id               Int               @id @default(autoincrement())
+  userId           String            @unique @db.VarChar(32)
+  stripeCustomerId String?           @db.VarChar(255)
+  stripeSubscriptionId String?       @db.VarChar(255)
+  stripePriceId    String?           @db.VarChar(255)
+  renewsAt         DateTime?         
+  createdAt        DateTime?
+  endsAt           DateTime?         
+  status           String?           @default("") @db.VarChar(255)
+  plan             SubscriptionPlan? @default(free)
+  billingInterval  BillingInterval?  @default(monthly)
+  cardBrand        String?           @default("") @db.VarChar(255)
+  cardLastFour     String?           @default("") @db.VarChar(4)
+
+  user             User              @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -260,7 +307,7 @@ model Link {
   name                   String?   @db.VarChar(255)
   url                    String?   @db.Text
   alias                  String?   @db.VarChar(20)
-  domain                 String    @default("ishortn.ink") @db.VarChar(255)
+  domain                 String    @default("clickpath.analytai.in") @db.VarChar(255)
   createdAt              DateTime? @default(now())
   disableLinkAfterClicks Int?
   disableLinkAfterDate   DateTime? 
@@ -462,7 +509,7 @@ model SiteSettings {
   id            Int       @id @default(autoincrement())
   userId        String    @unique @db.VarChar(32)
   teamId        Int?
-  defaultDomain String?   @default("ishortn.ink") @db.VarChar(255)
+  defaultDomain String?   @default("clickpath.analytai.in") @db.VarChar(255)
   createdAt     DateTime? @default(now())
   updatedAt     DateTime? @updatedAt
 

@@ -53,11 +53,8 @@ export function AddToCampaignModal({
   const isProUser = (subscription?.plan ?? "free") !== "free";
 
   const isMove = currentCampaignId != null;
-  const currentCampaign = campaigns?.find(
-    (campaign) => campaign.id === currentCampaignId,
-  );
-  const options =
-    campaigns?.filter((campaign) => campaign.id !== currentCampaignId) ?? [];
+  const currentCampaign = campaigns?.find((campaign) => campaign.id === currentCampaignId);
+  const options = campaigns?.filter((campaign) => campaign.id !== currentCampaignId) ?? [];
   const selectedCampaign = options.find(
     (campaign) => campaign.id.toString() === selectedCampaignId,
   );
@@ -105,18 +102,12 @@ export function AddToCampaignModal({
             </Label>
             {!isLoading && options.length === 0 ? (
               <p className="rounded-lg border border-neutral-200 dark:border-border p-3 text-[13px] text-neutral-400 dark:text-neutral-500">
-                No active campaigns to pick from. Create one from the Campaigns page
-                first.
+                No active campaigns to pick from. Create one from the Campaigns page first.
               </p>
             ) : (
-              <Select
-                value={selectedCampaignId}
-                onValueChange={setSelectedCampaignId}
-              >
+              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
                 <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
-                  <SelectValue
-                    placeholder={isLoading ? "Loading..." : "Select a campaign"}
-                  />
+                  <SelectValue placeholder={isLoading ? "Loading..." : "Select a campaign"} />
                 </SelectTrigger>
                 <SelectContent>
                   {options.map((campaign) => (
@@ -137,17 +128,13 @@ export function AddToCampaignModal({
                 className="mt-0.5"
               />
               <span>
-                <Label className="cursor-pointer text-[13px]">
-                  Apply campaign UTM defaults
-                </Label>
+                <Label className="cursor-pointer text-[13px]">Apply campaign UTM defaults</Label>
                 <p className="mt-0.5 text-[12px] text-neutral-400 dark:text-neutral-500">
                   Stamps utm_campaign={selectedCampaign.slug}
-                  {selectedCampaign.utmSource &&
-                    `, utm_source=${selectedCampaign.utmSource}`}
-                  {selectedCampaign.utmMedium &&
-                    `, utm_medium=${selectedCampaign.utmMedium}`}{" "}
-                  onto this link. Source/medium values the link already has are kept;
-                  utm_campaign is always updated.
+                  {selectedCampaign.utmSource && `, utm_source=${selectedCampaign.utmSource}`}
+                  {selectedCampaign.utmMedium && `, utm_medium=${selectedCampaign.utmMedium}`} onto
+                  this link. Source/medium values the link already has are kept; utm_campaign is
+                  always updated.
                 </p>
               </span>
             </label>
@@ -177,11 +164,7 @@ export function AddToCampaignModal({
           >
             {addLinksMutation.isLoading ? (
               <>
-                <IconLoader2
-                  size={14}
-                  stroke={1.5}
-                  className="mr-1.5 animate-spin"
-                />
+                <IconLoader2 size={14} stroke={1.5} className="mr-1.5 animate-spin" />
                 {isMove ? "Moving..." : "Adding..."}
               </>
             ) : isMove ? (

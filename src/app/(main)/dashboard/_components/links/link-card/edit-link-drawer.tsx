@@ -1,14 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { IconCalendar, IconClick, IconLoader2, IconX } from "@tabler/icons-react";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  IconCalendar,
-  IconClick,
-  IconLoader2,
-  IconX,
-} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -16,11 +11,8 @@ import { toast } from "sonner";
 
 // Lazy load GeoRulesForm to reduce initial bundle size (includes framer-motion)
 const GeoRulesForm = dynamic(
-  () =>
-    import("@/app/(main)/dashboard/_components/geo-rules-form").then(
-      (mod) => mod.GeoRulesForm
-    ),
-  { ssr: false }
+  () => import("@/app/(main)/dashboard/_components/geo-rules-form").then((mod) => mod.GeoRulesForm),
+  { ssr: false },
 );
 import { MilestoneEditor } from "@/app/(main)/dashboard/_components/milestone-form";
 import type { MilestoneEntry } from "@/app/(main)/dashboard/_components/milestone-form";
@@ -94,11 +86,11 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
   const userSubscription = api.subscriptions.get.useQuery();
   const { data: existingGeoRules } = api.geoRules.getByLinkId.useQuery(
     { linkId: link.id },
-    { enabled: open }
+    { enabled: open },
   );
   const { data: existingMilestones } = api.linkMilestone.getByLinkId.useQuery(
     { linkId: link.id },
-    { enabled: open }
+    { enabled: open },
   );
 
   const formUpdateMutation = api.link.update.useMutation({
@@ -134,14 +126,15 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
         }) ?? undefined,
       cloaking: linkData.cloaking ?? false,
       verifiedClicksEnabled: linkData.verifiedClicksEnabled ?? false,
-      geoRules: geoRules?.map((rule) => ({
-        type: rule.type,
-        condition: rule.condition,
-        values: rule.values as string[],
-        action: rule.action,
-        destination: rule.destination ?? undefined,
-        blockMessage: rule.blockMessage ?? undefined,
-      })) ?? [],
+      geoRules:
+        geoRules?.map((rule) => ({
+          type: rule.type,
+          condition: rule.condition,
+          values: rule.values as string[],
+          action: rule.action,
+          destination: rule.destination ?? undefined,
+          blockMessage: rule.blockMessage ?? undefined,
+        })) ?? [],
     };
   };
 
@@ -281,10 +274,7 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
-        log.error(
-          { err: error, linkId: link.id },
-          "failed to check iframe compatibility",
-        );
+        log.error({ err: error, linkId: link.id }, "failed to check iframe compatibility");
         setIframeableResult(false);
         form.setValue("cloaking", false);
         toast.error("Failed to verify if URL can be cloaked. Please try again.");
@@ -328,13 +318,19 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
             <div className="border-b border-neutral-200 dark:border-border px-6 py-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-foreground">Edit Link</h2>
+                  <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-foreground">
+                    Edit Link
+                  </h2>
                   <p className="mt-0.5 text-[13px] text-neutral-500 dark:text-neutral-400">
                     {link.domain}/{link.alias}
                   </p>
                   <div className="mt-2 flex items-center gap-3 text-[12px] text-neutral-400">
                     <span className="flex items-center gap-1">
-                      <IconClick size={14} stroke={1.5} className="text-blue-600 dark:text-blue-400" />
+                      <IconClick
+                        size={14}
+                        stroke={1.5}
+                        className="text-blue-600 dark:text-blue-400"
+                      />
                       {link.totalClicks} clicks
                     </span>
                     <span>
@@ -364,7 +360,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="url"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Destination URL</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Destination URL
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -382,7 +380,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Link Name</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Link Name
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -403,12 +403,16 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="alias"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Link Alias</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Link Alias
+                          </FormLabel>
                           <FormControl>
                             <div className="flex h-9 w-full items-center overflow-hidden rounded-md border border-neutral-200 dark:border-border bg-white dark:bg-card transition-colors focus-within:ring-2 focus-within:ring-neutral-300">
                               <Select>
                                 <SelectTrigger className="h-full w-max shrink-0 gap-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-500 shadow-none ring-0 hover:text-neutral-900 focus:ring-0">
-                                  <SelectValue placeholder={link.domain || DEFAULT_PLATFORM_DOMAIN} />
+                                  <SelectValue
+                                    placeholder={link.domain || DEFAULT_PLATFORM_DOMAIN}
+                                  />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectGroup>
@@ -438,7 +442,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="note"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Note</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Note
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -457,7 +463,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="tags"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Tags</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Tags
+                          </FormLabel>
                           <FormControl>
                             <div className="relative">
                               {tags.length > 0 && (
@@ -537,7 +545,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="metadata.title"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Custom Title</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Custom Title
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
@@ -555,7 +565,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="metadata.description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Custom Description</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Custom Description
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
@@ -573,13 +585,12 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="metadata.image"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Custom Image</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Custom Image
+                          </FormLabel>
                           <FormControl>
                             {isProOrUltraUser ? (
-                              <OgImageUploader
-                                value={field.value}
-                                onChange={field.onChange}
-                              />
+                              <OgImageUploader value={field.value} onChange={field.onChange} />
                             ) : (
                               <Input
                                 className="h-9 border-neutral-200 bg-white text-[13px] placeholder:text-neutral-400"
@@ -608,7 +619,10 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                           onSelect={(params) => {
                             form.setValue("utmParams.utm_source", params.utm_source ?? undefined);
                             form.setValue("utmParams.utm_medium", params.utm_medium ?? undefined);
-                            form.setValue("utmParams.utm_campaign", params.utm_campaign ?? undefined);
+                            form.setValue(
+                              "utmParams.utm_campaign",
+                              params.utm_campaign ?? undefined,
+                            );
                             form.setValue("utmParams.utm_term", params.utm_term ?? undefined);
                             form.setValue("utmParams.utm_content", params.utm_content ?? undefined);
                           }}
@@ -643,7 +657,11 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                           <FormControl>
                             <div className="flex items-center gap-2">
                               {isCheckingIframeable && (
-                                <IconLoader2 size={14} stroke={1.5} className="animate-spin text-neutral-400" />
+                                <IconLoader2
+                                  size={14}
+                                  stroke={1.5}
+                                  className="animate-spin text-neutral-400"
+                                />
                               )}
                               <Switch
                                 checked={field.value ?? false}
@@ -700,7 +718,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                               Enable Verified Clicks
                             </FormLabel>
                             <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                              With this on, your analytics shows which clicks came from real visitors, not automated traffic — so you can tell real engagement apart from noise.
+                              With this on, your analytics shows which clicks came from real
+                              visitors, not automated traffic — so you can tell real engagement
+                              apart from noise.
                             </FormDescription>
                           </div>
                           <FormControl>
@@ -760,7 +780,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="disableLinkAfterClicks"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Disable after clicks</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Disable after clicks
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
@@ -769,7 +791,8 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                             />
                           </FormControl>
                           <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                            Deactivate after a certain number of clicks. Leave empty to never disable.
+                            Deactivate after a certain number of clicks. Leave empty to never
+                            disable.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -781,7 +804,9 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                       name="disableLinkAfterDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Disable after date</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Disable after date
+                          </FormLabel>
                           <FormControl>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -792,7 +817,11 @@ export function EditLinkDrawer({ link, open, onClose }: EditLinkDrawerProps) {
                                     !field.value && "text-neutral-400",
                                   )}
                                 >
-                                  <IconCalendar size={14} stroke={1.5} className="mr-2 text-neutral-400" />
+                                  <IconCalendar
+                                    size={14}
+                                    stroke={1.5}
+                                    className="mr-2 text-neutral-400"
+                                  />
                                   {field.value ? (
                                     format(new Date(field.value), "PPP")
                                   ) : (

@@ -2,7 +2,7 @@
 title: "How to Create Custom Short Links for Your Brand"
 description: "Learn how to create branded short links with custom domains. Boost click-through rates and brand recognition with personalized URLs."
 date: "2026-03-04"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["custom links", "branding", "custom domains", "tutorial"]
 published: true
 ---
@@ -56,10 +56,10 @@ For example, to use `go.yourcompany.com` as your short link domain, you would ad
 ```
 Type:  CNAME
 Name:  go
-Value: cname.ishortn.ink
+Value: cname.clickpath.analytai.in
 ```
 
-This tells the DNS system that requests to `go.yourcompany.com` should be routed to iShortn's servers. Once the DNS change propagates (usually within a few minutes to a few hours), iShortn recognizes the incoming request, looks up the alias, and redirects the visitor to the correct destination.
+This tells the DNS system that requests to `go.yourcompany.com` should be routed to ClickPath's servers. Once the DNS change propagates (usually within a few minutes to a few hours), ClickPath recognizes the incoming request, looks up the alias, and redirects the visitor to the correct destination.
 
 ### SSL and Security
 
@@ -81,7 +81,7 @@ The shorter the domain, the cleaner your links will look. If you already own a s
 
 ### 2. Configure Your DNS Records
 
-Log in to your domain registrar or DNS provider and add a CNAME record pointing your chosen subdomain to the shortening service. If you are using iShortn, point the CNAME to the value provided in your dashboard settings and allow time for DNS propagation.
+Log in to your domain registrar or DNS provider and add a CNAME record pointing your chosen subdomain to the shortening service. If you are using ClickPath, point the CNAME to the value provided in your dashboard settings and allow time for DNS propagation.
 
 ### 3. Verify the Domain in Your Shortener Dashboard
 
@@ -137,14 +137,14 @@ One of the underrated advantages of custom short links is the consistency they b
 
 This consistency compounds over time. People begin to associate your short link domain with your brand, just as they associate your website domain with your company. Centralize link creation through a single platform, establish naming conventions, and ensure that everyone on your team uses the branded domain rather than falling back to generic shorteners.
 
-## Getting Started with Custom Domains on iShortn
+## Getting Started with Custom Domains on ClickPath
 
-iShortn makes it straightforward to set up and manage custom domains for your branded links. Here is how to get started:
+ClickPath makes it straightforward to set up and manage custom domains for your branded links. Here is how to get started:
 
-1. **Sign up or log in** at [ishortn.ink](https://ishortn.ink) and navigate to your dashboard.
+1. **Sign up or log in** at [clickpath.analytai.in](https://clickpath.analytai.in) and navigate to your dashboard.
 2. **Go to the custom domains section** in your settings and add the domain or subdomain you want to use.
-3. **Configure your DNS** by adding the CNAME record provided by iShortn to your domain's DNS settings.
-4. **Verify the domain** in your iShortn dashboard once DNS propagation is complete.
+3. **Configure your DNS** by adding the CNAME record provided by ClickPath to your domain's DNS settings.
+4. **Verify the domain** in your ClickPath dashboard once DNS propagation is complete.
 5. **Create your first branded link** by selecting your custom domain and entering a memorable alias.
 
 From there, every link you create carries your brand. The analytics dashboard tracks performance across all your domains, so you can monitor clicks, geographic data, device types, and referral sources in one place.

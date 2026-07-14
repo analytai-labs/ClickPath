@@ -80,14 +80,14 @@ const FEEDBACK_TYPE_COLORS: Record<string, number> = {
   question: DISCORD_COLORS.warning,
 };
 
-export async function sendFeedbackNotification(params: {
+export async function sendFeedbackNotification(feedback: {
   userEmail: string;
   userName?: string | null;
   feedbackType: string;
   message: string;
   imageUrls?: string[];
 }): Promise<boolean> {
-  const { userEmail, userName, feedbackType, message, imageUrls } = params;
+  const { userEmail, userName, feedbackType, message, imageUrls } = feedback;
 
   const embed: DiscordEmbed = {
     title: FEEDBACK_TYPE_LABELS[feedbackType] ?? "Feedback",
@@ -111,7 +111,7 @@ export async function sendFeedbackNotification(params: {
     ],
     timestamp: new Date().toISOString(),
     footer: {
-      text: "iShortn Feedback",
+      text: "ClickPath Feedback",
     },
   };
 
@@ -158,7 +158,7 @@ export async function sendDowngradeFeedbackNotification(params: {
     ],
     timestamp: new Date().toISOString(),
     footer: {
-      text: "iShortn Feedback",
+      text: "ClickPath Feedback",
     },
   };
 
@@ -213,7 +213,7 @@ export async function sendAbuseReportNotification(params: {
     ],
     timestamp: new Date().toISOString(),
     footer: {
-      text: "iShortn Abuse Report",
+      text: "ClickPath Abuse Report",
     },
   };
 
@@ -292,7 +292,7 @@ export async function sendAudienceFeedbackNotification(params: {
     ],
     timestamp: new Date().toISOString(),
     footer: {
-      text: "iShortn Audience Feedback",
+      text: "ClickPath Audience Feedback",
     },
   };
 

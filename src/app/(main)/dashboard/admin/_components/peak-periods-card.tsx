@@ -90,7 +90,9 @@ export function PeakPeriodsCard({ data, isLoading }: PeakPeriodsCardProps) {
       </div>
       {!hasAnyData ? (
         <div className="flex items-center justify-center px-5 py-12">
-          <p className="text-[13px] text-neutral-400 dark:text-neutral-500">No data for this period</p>
+          <p className="text-[13px] text-neutral-400 dark:text-neutral-500">
+            No data for this period
+          </p>
         </div>
       ) : (
         <div className="divide-y divide-neutral-100 dark:divide-border/50">

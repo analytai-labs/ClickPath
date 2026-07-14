@@ -1,25 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { IconCalendar, IconClick, IconQrcode, IconX } from "@tabler/icons-react";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  IconCalendar,
-  IconClick,
-  IconQrcode,
-  IconX,
-} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 const GeoRulesForm = dynamic(
-  () =>
-    import("@/app/(main)/dashboard/_components/geo-rules-form").then(
-      (mod) => mod.GeoRulesForm
-    ),
-  { ssr: false }
+  () => import("@/app/(main)/dashboard/_components/geo-rules-form").then((mod) => mod.GeoRulesForm),
+  { ssr: false },
 );
 import { PlanBadge, SectionToggle } from "@/app/(main)/dashboard/_components/section-toggle";
 import { UtmParamsForm } from "@/app/(main)/dashboard/_components/utm-params-form";
@@ -56,10 +48,7 @@ type EditQRCodeDrawerProps = {
 type QRCodeData = RouterOutputs["qrCode"]["list"][number];
 type GeoRulesData = RouterOutputs["geoRules"]["getByLinkId"];
 
-function getFormDefaults(
-  qrData: QRCodeData,
-  geoRules?: GeoRulesData,
-): EditQRCodeFormValues {
+function getFormDefaults(qrData: QRCodeData, geoRules?: GeoRulesData): EditQRCodeFormValues {
   return {
     id: qrData.id,
     title: qrData.title ?? "",
@@ -99,7 +88,7 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
   const userSubscription = api.subscriptions.get.useQuery(undefined, { enabled: open });
   const { data: existingGeoRules } = api.geoRules.getByLinkId.useQuery(
     { linkId: qr.link?.id ?? 0 },
-    { enabled: open && !!qr.link?.id }
+    { enabled: open && !!qr.link?.id },
   );
 
   const updateMutation = api.qrCode.update.useMutation({
@@ -207,14 +196,24 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
             <div className="border-b border-neutral-200 dark:border-border px-6 py-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-foreground">Edit QR Code</h2>
+                  <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-foreground">
+                    Edit QR Code
+                  </h2>
                   <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-neutral-500 dark:text-neutral-400">
-                    <IconQrcode size={14} stroke={1.5} className="text-neutral-400 dark:text-neutral-500" />
+                    <IconQrcode
+                      size={14}
+                      stroke={1.5}
+                      className="text-neutral-400 dark:text-neutral-500"
+                    />
                     {qr.title || "Untitled QR Code"}
                   </p>
                   <div className="mt-2 flex items-center gap-3 text-[12px] text-neutral-400 dark:text-neutral-500">
                     <span className="flex items-center gap-1">
-                      <IconClick size={14} stroke={1.5} className="text-blue-600 dark:text-blue-400" />
+                      <IconClick
+                        size={14}
+                        stroke={1.5}
+                        className="text-blue-600 dark:text-blue-400"
+                      />
                       {scans} scans
                     </span>
                     <span>
@@ -244,7 +243,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="url"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Destination URL</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Destination URL
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -265,7 +266,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="title"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">QR Code Title</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            QR Code Title
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -286,7 +289,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="note"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Note</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Note
+                          </FormLabel>
                           <FormControl>
                             <Input
                               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400 focus-visible:ring-neutral-300"
@@ -305,7 +310,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="tags"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Tags</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Tags
+                          </FormLabel>
                           <FormControl>
                             <div className="relative">
                               {tags.length > 0 && (
@@ -386,7 +393,10 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                           onSelect={(params) => {
                             form.setValue("utmParams.utm_source", params.utm_source ?? undefined);
                             form.setValue("utmParams.utm_medium", params.utm_medium ?? undefined);
-                            form.setValue("utmParams.utm_campaign", params.utm_campaign ?? undefined);
+                            form.setValue(
+                              "utmParams.utm_campaign",
+                              params.utm_campaign ?? undefined,
+                            );
                             form.setValue("utmParams.utm_term", params.utm_term ?? undefined);
                             form.setValue("utmParams.utm_content", params.utm_content ?? undefined);
                           }}
@@ -416,7 +426,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="disableLinkAfterClicks"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Disable after scans</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Disable after scans
+                          </FormLabel>
                           <FormControl>
                             <Input
                               {...field}
@@ -425,7 +437,8 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                             />
                           </FormControl>
                           <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                            Deactivate after a certain number of scans. Leave empty to never disable.
+                            Deactivate after a certain number of scans. Leave empty to never
+                            disable.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -437,7 +450,9 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                       name="disableLinkAfterDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Disable after date</FormLabel>
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Disable after date
+                          </FormLabel>
                           <FormControl>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -448,7 +463,11 @@ export function EditQRCodeDrawer({ qr, open, onClose }: EditQRCodeDrawerProps) {
                                     !field.value && "text-neutral-400 dark:text-neutral-500",
                                   )}
                                 >
-                                  <IconCalendar size={14} stroke={1.5} className="mr-2 text-neutral-400 dark:text-neutral-500" />
+                                  <IconCalendar
+                                    size={14}
+                                    stroke={1.5}
+                                    className="mr-2 text-neutral-400 dark:text-neutral-500"
+                                  />
                                   {field.value ? (
                                     format(new Date(field.value), "PPP")
                                   ) : (

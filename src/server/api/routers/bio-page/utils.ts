@@ -1,20 +1,60 @@
-import { TRPCError } from "@trpc/server";
 import { getBioPageLimit } from "@/lib/billing/plans";
-import type { BioPage } from "@prisma/client";
-import type { WorkspaceTRPCContext } from "../../trpc";
 import { workspaceFilter } from "@/server/lib/workspace";
+import type { BioPage } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
+import type { WorkspaceTRPCContext } from "../../trpc";
 
 // Handles live at /p/<slug>, but we still exclude every top-level app route name
 // defensively (in case bio pages are ever lifted to the root namespace) plus
 // common brand/impersonation terms. Uniqueness is also enforced at the DB level.
 export const RESERVED_BIO_SLUGS = new Set([
-  "p", "api", "trpc", "dashboard", "auth", "account", "teams", "team",
-  "blocked", "expired", "cloaked", "verified-redirect", "verify-password",
-  "blog", "changelog", "privacy", "terms", "abuse", "features", "pricing",
-  "compare", "admin", "settings", "login", "logout", "signup", "sign-up",
-  "sign-in", "signin", "new", "opengraph-image", "favicon", "robots",
-  "sitemap", "www", "app", "mail", "support", "help", "status", "about",
-  "contact", "ishortn", "null", "undefined",
+  "p",
+  "api",
+  "trpc",
+  "dashboard",
+  "auth",
+  "account",
+  "teams",
+  "team",
+  "blocked",
+  "expired",
+  "cloaked",
+  "verified-redirect",
+  "verify-password",
+  "blog",
+  "changelog",
+  "privacy",
+  "terms",
+  "abuse",
+  "features",
+  "pricing",
+  "compare",
+  "admin",
+  "settings",
+  "login",
+  "logout",
+  "signup",
+  "sign-up",
+  "sign-in",
+  "signin",
+  "new",
+  "opengraph-image",
+  "favicon",
+  "robots",
+  "sitemap",
+  "www",
+  "app",
+  "mail",
+  "support",
+  "help",
+  "status",
+  "about",
+  "contact",
+  "ishortn",
+  "clickpath",
+  "analytai",
+  "null",
+  "undefined",
 ]);
 
 export function assertSlugAllowed(slug: string): void {
@@ -32,7 +72,7 @@ export async function checkBioPageLimit(ctx: WorkspaceTRPCContext): Promise<void
   if (limit === undefined) return; // unlimited (Ultra / team workspaces)
 
   const current = await ctx.prisma.bioPage.count({
-    where: workspaceFilter(ctx.workspace)
+    where: workspaceFilter(ctx.workspace),
   });
   if (current >= limit) {
     throw new TRPCError({

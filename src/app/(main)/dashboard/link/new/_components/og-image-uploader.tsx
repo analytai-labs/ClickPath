@@ -1,8 +1,8 @@
 "use client";
 
+import { IconPhotoPlus, IconX } from "@tabler/icons-react";
 import type React from "react";
 import { useRef, useState } from "react";
-import { IconPhotoPlus, IconX } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -41,9 +41,7 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
     reader.readAsDataURL(file);
   };
 
-  const handleFileInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       handleFileUpload(file);
@@ -71,11 +69,7 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
     return (
       <div className="space-y-2">
         <div className="group relative overflow-hidden rounded-lg border border-neutral-200 dark:border-border bg-neutral-50 dark:bg-accent/50">
-          <img
-            src={value}
-            alt="OG Preview"
-            className="aspect-video w-full object-cover"
-          />
+          <img src={value} alt="OG Preview" className="aspect-video w-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/40">
             <Button
               type="button"

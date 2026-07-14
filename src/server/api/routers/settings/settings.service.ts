@@ -15,7 +15,7 @@ export async function getSiteSettings(ctx: ProtectedTRPCContext) {
       data: {
         userId: ctx.auth.userId,
         defaultDomain: DEFAULT_PLATFORM_DOMAIN,
-      }
+      },
     });
 
     return newSettings;
@@ -38,7 +38,7 @@ export async function updateSiteSettings(
         userId: ctx.auth.userId,
         domain: input.defaultDomain,
         status: "active",
-      }
+      },
     });
 
     if (!domain) {
@@ -58,7 +58,7 @@ export async function updateSiteSettings(
       data: {
         userId: ctx.auth.userId,
         ...input,
-      }
+      },
     });
   }
 

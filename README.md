@@ -205,7 +205,9 @@ Contributions are welcome. If you find a bug or want to propose a feature:
 4. Run `bun run typecheck` and `bun run lint` before pushing.
 5. Open a pull request against `main`.
 
-Code style is enforced by [Biome](https://biomejs.dev) via `bun run lint`.
+## Acknowledgments & Attribution
+
+ClickPath is built as an enterprise-grade hard fork of [iShortn](https://github.com/AmoabaKelvin/iShortn), created by [Amoaba Kelvin](https://github.com/AmoabaKelvin). We are deeply grateful to Kelvin and the original contributors for building such a clean, well-architected foundation. ClickPath builds upon this open-source heritage with enterprise-grade SEO architecture, advanced analytics, and enhanced platform integrations.
 
 ## License
 

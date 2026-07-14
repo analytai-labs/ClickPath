@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { remark } from "remark";
-import html from "remark-html";
 import gfm from "remark-gfm";
+import html from "remark-html";
 
 const blogDirectory = path.join(process.cwd(), "content/blog");
 
@@ -54,9 +54,7 @@ export async function getAllPosts(): Promise<BlogPost[]> {
   }
 
   const fileNames = fs.readdirSync(blogDirectory);
-  const markdownFiles = fileNames.filter(
-    (name) => name.endsWith(".md") || name.endsWith(".mdx"),
-  );
+  const markdownFiles = fileNames.filter((name) => name.endsWith(".md") || name.endsWith(".mdx"));
 
   const posts = await Promise.all(
     markdownFiles.map(async (fileName) => {
@@ -101,7 +99,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
     description: String(data.description),
     date: parseDateString(data.date),
     updated: parseOptionalDate(data.updated),
-    author: data.author ? String(data.author) : "Kelvin Amoaba",
+    author: data.author ? String(data.author) : "Shlok Zanwar",
     tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
     image: data.image ? String(data.image) : undefined,
     published: data.published !== false,
@@ -109,10 +107,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   };
 }
 
-export async function getRelatedPosts(
-  slug: string,
-  limit = 3,
-): Promise<BlogPost[]> {
+export async function getRelatedPosts(slug: string, limit = 3): Promise<BlogPost[]> {
   const allPosts = await getAllPosts();
   const currentPost = allPosts.find((post) => post.slug === slug);
 

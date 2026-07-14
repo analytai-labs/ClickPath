@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { generateText, Output } from "ai";
+import { Output, generateText } from "ai";
 import { z } from "zod";
 
 import { logger } from "@/lib/logger";
@@ -164,8 +164,6 @@ export async function detectPhishingLink(
     `,
   });
 
-  const output = result.output as
-    | z.infer<typeof phishingDetectionSchema>
-    | undefined;
+  const output = result.output as z.infer<typeof phishingDetectionSchema> | undefined;
   return output?.response ?? { url, phishing: false };
 }

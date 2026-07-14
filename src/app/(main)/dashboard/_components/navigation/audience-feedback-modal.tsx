@@ -3,7 +3,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Controller, useForm, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import {
+  type Control,
+  Controller,
+  type FieldErrors,
+  type UseFormRegister,
+  useForm,
+} from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,8 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import type { Plan } from "@/lib/billing/plans";
+import { cn } from "@/lib/utils";
 import type { SubmitAudienceFeedbackInput } from "@/server/api/routers/audience-feedback/audience-feedback.input";
 import { api } from "@/trpc/react";
 
@@ -122,11 +128,7 @@ const stepVariants = {
   }),
 };
 
-export function AudienceFeedbackModal({
-  open,
-  onOpenChange,
-  plan,
-}: AudienceFeedbackModalProps) {
+export function AudienceFeedbackModal({ open, onOpenChange, plan }: AudienceFeedbackModalProps) {
   const isPaidPlan = plan !== "free";
   const utils = api.useUtils();
   const [step, setStep] = useState(1);
@@ -170,9 +172,7 @@ export function AudienceFeedbackModal({
   const stepFields: Array<Array<keyof FormData>> = [
     ["role", "useCase", "monthlyVolume"],
     ["acquisitionChannel", "priorTool"],
-    isPaidPlan
-      ? ["magicFeature", "upgradeReason"]
-      : ["magicFeature", "upgradeBlocker"],
+    isPaidPlan ? ["magicFeature", "upgradeReason"] : ["magicFeature", "upgradeBlocker"],
   ];
 
   const goNext = async () => {
@@ -204,8 +204,8 @@ export function AudienceFeedbackModal({
   const onSubmit = (data: FormData) => {
     submitMutation.mutate({
       ...data,
-      upgradeReason: isPaidPlan ? data.upgradeReason ?? null : null,
-      upgradeBlocker: isPaidPlan ? null : data.upgradeBlocker ?? null,
+      upgradeReason: isPaidPlan ? (data.upgradeReason ?? null) : null,
+      upgradeBlocker: isPaidPlan ? null : (data.upgradeBlocker ?? null),
     });
   };
 
@@ -215,7 +215,7 @@ export function AudienceFeedbackModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader className="pb-3">
-          <DialogTitle>Help shape iShortn</DialogTitle>
+          <DialogTitle>Help shape ClickPath</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -245,11 +245,7 @@ export function AudienceFeedbackModal({
               transition={{ duration: 0.28, ease: STEP_EASE }}
               className="overflow-hidden"
             >
-              <AnimatePresence
-                mode="popLayout"
-                custom={direction}
-                initial={false}
-              >
+              <AnimatePresence mode="popLayout" custom={direction} initial={false}>
                 <motion.div
                   key={step}
                   custom={direction}
@@ -259,15 +255,9 @@ export function AudienceFeedbackModal({
                   exit="exit"
                   transition={{ duration: 0.22, ease: STEP_EASE }}
                 >
-                  {step === 1 && (
-                    <StepAboutYou control={control} errors={errors} />
-                  )}
+                  {step === 1 && <StepAboutYou control={control} errors={errors} />}
                   {step === 2 && (
-                    <StepDiscovery
-                      control={control}
-                      register={register}
-                      errors={errors}
-                    />
+                    <StepDiscovery control={control} register={register} errors={errors} />
                   )}
                   {step === 3 && (
                     <StepWhatMatters
@@ -304,12 +294,7 @@ export function AudienceFeedbackModal({
               </Button>
             )}
             {step < TOTAL_STEPS ? (
-              <Button
-                type="button"
-                onClick={goNext}
-                disabled={isBusy}
-                className="h-9"
-              >
+              <Button type="button" onClick={goNext} disabled={isBusy} className="h-9">
                 Next
               </Button>
             ) : (
@@ -363,14 +348,8 @@ function SelectField({
         control={control}
         rules={{ required }}
         render={({ field }) => (
-          <Select
-            onValueChange={field.onChange}
-            value={(field.value as string | undefined) ?? ""}
-          >
-            <SelectTrigger
-              id={name}
-              className={cn("h-10", error && "border-destructive")}
-            >
+          <Select onValueChange={field.onChange} value={(field.value as string | undefined) ?? ""}>
+            <SelectTrigger id={name} className={cn("h-10", error && "border-destructive")}>
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -383,9 +362,7 @@ function SelectField({
           </Select>
         )}
       />
-      {error?.message && (
-        <p className="text-xs text-destructive">{String(error.message)}</p>
-      )}
+      {error?.message && <p className="text-xs text-destructive">{String(error.message)}</p>}
     </div>
   );
 }
@@ -418,19 +395,14 @@ function TextareaField({
       >
         <span>{label}</span>
         {!required && (
-          <span className="text-[11px] font-normal text-muted-foreground/70">
-            optional
-          </span>
+          <span className="text-[11px] font-normal text-muted-foreground/70">optional</span>
         )}
       </Label>
       <Textarea
         id={name}
         placeholder={placeholder}
         rows={rows}
-        className={cn(
-          "resize-none text-sm",
-          error && "border-destructive",
-        )}
+        className={cn("resize-none text-sm", error && "border-destructive")}
         {...register(name, {
           required,
           maxLength: {
@@ -439,9 +411,7 @@ function TextareaField({
           },
         })}
       />
-      {error?.message && (
-        <p className="text-xs text-destructive">{String(error.message)}</p>
-      )}
+      {error?.message && <p className="text-xs text-destructive">{String(error.message)}</p>}
     </div>
   );
 }
@@ -465,7 +435,7 @@ function StepAboutYou({
       />
       <SelectField
         name="useCase"
-        label="What do you mainly use iShortn for?"
+        label="What do you mainly use ClickPath for?"
         placeholder="Pick a use case..."
         options={USE_CASE_OPTIONS}
         control={control}
@@ -496,7 +466,7 @@ function StepDiscovery({
     <div className="space-y-5">
       <SelectField
         name="acquisitionChannel"
-        label="How did you hear about iShortn?"
+        label="How did you hear about ClickPath?"
         placeholder="Pick a channel..."
         options={ACQUISITION_CHANNEL_OPTIONS}
         control={control}
@@ -512,7 +482,7 @@ function StepDiscovery({
       />
       <SelectField
         name="priorTool"
-        label="What were you using before iShortn?"
+        label="What were you using before ClickPath?"
         placeholder="Pick a tool..."
         options={PRIOR_TOOL_OPTIONS}
         control={control}
@@ -573,7 +543,7 @@ function StepWhatMatters({
       )}
       <TextareaField
         name="improvementWish"
-        label="One thing that would make iShortn dramatically more useful?"
+        label="One thing that would make ClickPath dramatically more useful?"
         placeholder="Anything goes — features, fixes, integrations."
         register={register}
         errors={errors}

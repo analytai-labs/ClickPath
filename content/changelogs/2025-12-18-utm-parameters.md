@@ -6,7 +6,7 @@ shortDesc: Track your marketing campaigns with built-in UTM parameter support
 category: new
 ---
 
-We're excited to introduce UTM parameter support on the Ultra plan, making it easier than ever to track the performance of your marketing campaigns directly within iShortn.
+We're excited to introduce UTM parameter support on the Ultra plan, making it easier than ever to track the performance of your marketing campaigns directly within ClickPath.
 
 ## What are UTM parameters?
 
@@ -33,7 +33,7 @@ When you shorten a link with UTM parameters, they're automatically appended to y
 
 ## Why this matters
 
-With UTM parameters built directly into iShortn, you no longer need to manually construct tracking URLs or use separate UTM builders. Everything is integrated into your link management workflow, making campaign tracking seamless and error-free.
+With UTM parameters built directly into ClickPath, you no longer need to manually construct tracking URLs or use separate UTM builders. Everything is integrated into your link management workflow, making campaign tracking seamless and error-free.
 
 Combined with our existing analytics, you'll have a complete picture of how your shortened links perform across different marketing channels.
 

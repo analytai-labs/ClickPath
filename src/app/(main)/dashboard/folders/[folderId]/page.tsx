@@ -12,9 +12,7 @@ type FolderDetailPageProps = {
   params: Promise<{ folderId: string }>;
 };
 
-export default async function FolderDetailPage({
-  params,
-}: FolderDetailPageProps) {
+export default async function FolderDetailPage({ params }: FolderDetailPageProps) {
   const { folderId } = await params;
   const id = Number.parseInt(folderId);
 
@@ -49,17 +47,12 @@ export default async function FolderDetailPage({
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-              {folder.name}
-            </h2>
+            <h2 className="text-xl font-semibold tracking-tight text-neutral-900">{folder.name}</h2>
             {folder.description ? (
-              <p className="mt-1 text-[13px] text-neutral-400">
-                {folder.description}
-              </p>
+              <p className="mt-1 text-[13px] text-neutral-400">{folder.description}</p>
             ) : (
               <p className="mt-1 text-[13px] text-neutral-400">
-                {folder.links.length}{" "}
-                {folder.links.length === 1 ? "link" : "links"}
+                {folder.links.length} {folder.links.length === 1 ? "link" : "links"}
               </p>
             )}
           </div>

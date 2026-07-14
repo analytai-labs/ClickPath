@@ -10,7 +10,7 @@ Team workspaces are here. Ultra plan users can now create teams, invite members,
 
 ## What are team workspaces?
 
-A team workspace is a separate environment where multiple users can collaborate on the same set of links, folders, QR codes, and custom domains. Each team gets its own subdomain (e.g., `your-team.ishortn.ink`) and operates independently from your personal workspace.
+A team workspace is a separate environment where multiple users can collaborate on the same set of links, folders, QR codes, and custom domains. Each team gets its own subdomain (e.g., `your-team.clickpath.analytai.in`) and operates independently from your personal workspace.
 
 ## Creating a team
 

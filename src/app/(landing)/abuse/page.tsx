@@ -1,24 +1,44 @@
 import type { Metadata } from "next";
 
+import { JsonLd } from "@/components/seo/json-ld";
+import {
+  createBreadcrumbSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
+} from "@/lib/seo/structured-data";
+
 import { Footer } from "../_components/footer";
 import { Header } from "../_components/header";
 import { AbuseReportForm } from "./abuse-report-form";
 
 export const metadata: Metadata = {
-  title: "Report Abuse - iShortn",
-  description:
-    "Report a short link that is being used for phishing, malware, spam, or other abuse. iShortn reviews every report and acts on links that violate our policies.",
+  title: resolveTitle("Report Abuse — ClickPath"),
+  description: resolveDescription(
+    "Report a short link that is being used for phishing, malware, spam, or other abuse. ClickPath reviews every report and acts on links that violate our policies.",
+  ),
+  alternates: {
+    canonical: resolveCanonical("/abuse"),
+  },
   openGraph: {
-    title: "Report Abuse - iShortn",
-    description:
+    title: resolveTitle("Report Abuse — ClickPath"),
+    description: resolveDescription(
       "Report a short link that is being used for phishing, malware, spam, or other abuse.",
+    ),
     type: "website",
+    url: resolveCanonical("/abuse"),
   },
 };
 
 export default function AbusePage() {
   return (
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
+      <JsonLd
+        data={createBreadcrumbSchema([
+          { name: "Home", url: resolveCanonical("/") },
+          { name: "Report Abuse", url: resolveCanonical("/abuse") },
+        ])}
+      />
       <Header />
 
       <section className="warm-subhero">
@@ -58,14 +78,14 @@ export default function AbusePage() {
           >
             For urgent legal matters, you can also reach us at{" "}
             <a
-              href="mailto:support@ishortn.ink"
+              href="mailto:support@clickpath.analytai.in"
               style={{
                 color: "var(--warm-ink-soft)",
                 textDecoration: "underline",
                 textUnderlineOffset: 2,
               }}
             >
-              support@ishortn.ink
+              support@clickpath.analytai.in
             </a>
             .
           </p>

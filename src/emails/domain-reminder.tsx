@@ -33,7 +33,7 @@ export const DomainReminderEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>{domain} needs configuration on iShortn</Preview>
+      <Preview>{domain} needs configuration on ClickPath</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={section}>
@@ -96,8 +96,8 @@ export const DomainReminderEmail = ({
               If you need help configuring your DNS, reply to this email and we&apos;ll assist you.
             </Text>
 
-            <Text style={text}>Thanks for using iShortn!</Text>
-            <Text style={{ ...text, fontWeight: 500 }}>Kelvin & the iShortn team</Text>
+            <Text style={text}>Thanks for using ClickPath!</Text>
+            <Text style={{ ...text, fontWeight: 500 }}>The ClickPath team</Text>
           </Section>
         </Container>
       </Body>

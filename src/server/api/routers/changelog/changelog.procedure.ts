@@ -1,10 +1,6 @@
+import { getChangelogEntries, getChangelogEntriesSince, getLatestChangelog } from "@/lib/changelog";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../../trpc";
-import {
-  getChangelogEntries,
-  getChangelogEntriesSince,
-  getLatestChangelog,
-} from "@/lib/changelog";
 
 export const changelogRouter = createTRPCRouter({
   list: publicProcedure.query(async () => {
@@ -34,9 +30,7 @@ export const changelogRouter = createTRPCRouter({
       },
     });
 
-    const newEntries = await getChangelogEntriesSince(
-      userData?.lastViewedChangelogSlug ?? null
-    );
+    const newEntries = await getChangelogEntriesSince(userData?.lastViewedChangelogSlug ?? null);
 
     return newEntries.length;
   }),

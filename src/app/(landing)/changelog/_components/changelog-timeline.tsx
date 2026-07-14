@@ -61,11 +61,7 @@ export function ChangelogTimeline({ entries }: ChangelogTimelineProps) {
       <aside className="cl-rail">
         <div className="cl-rail-label">Releases</div>
         {entries.map((e) => (
-          <a
-            key={e.slug}
-            href={`#${e.slug}`}
-            className={active === e.slug ? "cl-rail-active" : ""}
-          >
+          <a key={e.slug} href={`#${e.slug}`} className={active === e.slug ? "cl-rail-active" : ""}>
             <div style={{ fontWeight: 500 }}>v{e.version}</div>
             <div
               style={{
@@ -90,10 +86,10 @@ export function ChangelogTimeline({ entries }: ChangelogTimelineProps) {
             RSS feed →
           </a>
           <a
-            href="https://twitter.com/kelamoaba"
+            href="https://github.com/Shlok-Zanwar/ClickPath"
             style={{ color: "var(--warm-ink-soft)" }}
           >
-            @ishortn on X →
+            ClickPath on GitHub →
           </a>
         </div>
       </aside>
@@ -121,15 +117,8 @@ export function ChangelogTimeline({ entries }: ChangelogTimelineProps) {
               One email per release. No marketing. Unsubscribe instantly.
             </div>
           </div>
-          <form
-            className="cl-subscribe-form"
-            onSubmit={(event) => event.preventDefault()}
-          >
-            <input
-              type="email"
-              placeholder="you@studio.co"
-              aria-label="Email address"
-            />
+          <form className="cl-subscribe-form" onSubmit={(event) => event.preventDefault()}>
+            <input type="email" placeholder="you@studio.co" aria-label="Email address" />
             <button
               type="submit"
               className="warm-btn warm-btn-accent"

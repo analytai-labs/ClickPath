@@ -2,25 +2,24 @@ import { Link } from "next-view-transitions";
 
 import { api } from "@/trpc/server";
 
+import { SettingsNav } from "./_components/settings-nav";
 import Billing from "./billing/billing";
 import { SettingsForm } from "./general/settings-form";
 import { ProfileForm } from "./profile/profile-form";
 import GenerateTokenTrigger from "./tokens/_components/create-token";
 import TokenCard from "./tokens/_components/token-card";
 import { AccountTransferSection } from "./transfer/account-transfer-section";
-import { SettingsNav } from "./_components/settings-nav";
 
 export const dynamic = "force-dynamic";
 
 async function SettingsPage() {
-  const [userSettings, userDomains, subscriptions, tokens, userProfile] =
-    await Promise.all([
-      api.siteSettings.get.query(),
-      api.customDomain.list.query(),
-      api.subscriptions.get.query(),
-      api.token.list.query(),
-      api.user.getProfile.query(),
-    ]);
+  const [userSettings, userDomains, subscriptions, tokens, userProfile] = await Promise.all([
+    api.siteSettings.get.query(),
+    api.customDomain.list.query(),
+    api.subscriptions.get.query(),
+    api.token.list.query(),
+    api.user.getProfile.query(),
+  ]);
 
   return (
     <div>
@@ -59,10 +58,7 @@ async function SettingsPage() {
               Default settings and preferences
             </p>
             <div className="mt-4">
-              <SettingsForm
-                userSettings={userSettings}
-                availableDomains={userDomains}
-              />
+              <SettingsForm userSettings={userSettings} availableDomains={userDomains} />
             </div>
           </section>
 
@@ -86,7 +82,7 @@ async function SettingsPage() {
                 API Keys
               </h2>
               <Link
-                href="https://ishortn.mintlify.app/introduction"
+                href="https://clickpath.analytai.in/docs"
                 target="_blank"
                 className="text-[12px] text-blue-600 dark:text-blue-400 hover:text-blue-700"
               >

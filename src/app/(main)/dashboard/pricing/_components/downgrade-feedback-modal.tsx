@@ -4,7 +4,6 @@ import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { POSTHOG_EVENTS, trackEvent } from "@/lib/analytics/events";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { POSTHOG_EVENTS, trackEvent } from "@/lib/analytics/events";
 import { api } from "@/trpc/react";
 
 import type { Plan } from "@/lib/billing/plans";
@@ -68,7 +68,7 @@ export function DowngradeFeedbackModal({
     formState: { errors },
   } = useForm<DowngradeFormData>();
 
-  const downgradeMutation = api.lemonsqueezy.downgradeWithFeedback.useMutation({
+  const downgradeMutation = api.stripe.cancelSubscription.useMutation({
     onSuccess: (data) => {
       trackEvent(POSTHOG_EVENTS.SUBSCRIPTION_DOWNGRADED, {
         from_plan: currentPlanName.toLowerCase(),
@@ -85,11 +85,7 @@ export function DowngradeFeedbackModal({
   });
 
   const onSubmit = (data: DowngradeFormData) => {
-    downgradeMutation.mutate({
-      targetPlan: targetPlan as "pro" | "free",
-      reason: data.reason,
-      additionalFeedback: data.additionalFeedback,
-    });
+    downgradeMutation.mutate();
   };
 
   return (
@@ -97,9 +93,7 @@ export function DowngradeFeedbackModal({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Downgrade to {targetPlanName}</DialogTitle>
-          <DialogDescription>
-            Before you go, we&apos;d love to know why.
-          </DialogDescription>
+          <DialogDescription>Before you go, we&apos;d love to know why.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -117,9 +111,7 @@ export function DowngradeFeedbackModal({
                 rules={{ required: "Please select a reason" }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger
-                      className={`h-10 ${errors.reason ? "border-destructive" : ""}`}
-                    >
+                    <SelectTrigger className={`h-10 ${errors.reason ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Select a reason..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -132,9 +124,7 @@ export function DowngradeFeedbackModal({
                   </Select>
                 )}
               />
-              {errors.reason && (
-                <p className="text-xs text-destructive">{errors.reason.message}</p>
-              )}
+              {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -160,9 +150,7 @@ export function DowngradeFeedbackModal({
                 })}
               />
               {errors.additionalFeedback && (
-                <p className="text-xs text-destructive">
-                  {errors.additionalFeedback.message}
-                </p>
+                <p className="text-xs text-destructive">{errors.additionalFeedback.message}</p>
               )}
             </div>
 

@@ -100,10 +100,7 @@ export default function AdminFeedbackPage() {
       {isLoading && (
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-20 animate-pulse rounded-lg bg-neutral-100 dark:bg-muted"
-            />
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-neutral-100 dark:bg-muted" />
           ))}
         </div>
       )}
@@ -116,9 +113,7 @@ export default function AdminFeedbackPage() {
             className="mx-auto mb-3 text-neutral-300 dark:text-neutral-600"
           />
           <p className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400">
-            {statusFilter === "open"
-              ? "No open feedback"
-              : "No feedback found"}
+            {statusFilter === "open" ? "No open feedback" : "No feedback found"}
           </p>
           {statusFilter === "open" && (
             <p className="mt-1 text-[12px] text-neutral-400 dark:text-neutral-500">
@@ -167,49 +162,48 @@ export default function AdminFeedbackPage() {
                       </p>
 
                       {/* Image thumbnails */}
-                      {(item.imageUrls as string[]) && (item.imageUrls as string[]).length > 0 && (
-                        <div className="mt-3 flex gap-2">
-                          {(item.imageUrls as string[]).map((url, i) => (
-                            <a
-                              key={i}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-neutral-200 dark:border-border transition-colors hover:border-neutral-300 dark:hover:border-border"
-                            >
-                              <img
-                                src={url}
-                                alt={`Attachment ${i + 1}`}
-                                className="h-full w-full object-cover"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                                <IconExternalLink
-                                  size={12}
-                                  className="text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      {item.imageUrls &&
+                        Array.isArray(item.imageUrls) &&
+                        item.imageUrls.length > 0 && (
+                          <div className="mt-4 flex gap-3">
+                            {(item.imageUrls as string[]).map((url, i) => (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-neutral-200 dark:border-border transition-colors hover:border-neutral-300 dark:hover:border-border"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Attachment ${i + 1}`}
+                                  className="h-full w-full object-cover"
                                 />
-                              </div>
-                            </a>
-                          ))}
-                        </div>
-                      )}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                                  <IconExternalLink
+                                    size={12}
+                                    className="text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                  />
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        )}
 
                       <div className="mt-2 flex items-center gap-2 text-[11px] text-neutral-400 dark:text-neutral-500">
                         <span>
                           {item.user?.name && item.user?.email
                             ? `${item.user.name} (${item.user.email})`
-                            : item.user?.email ?? item.user?.name ?? "Unknown user"}
+                            : (item.user?.email ?? item.user?.name ?? "Unknown user")}
                         </span>
                         <span>·</span>
                         <span>
                           {item.createdAt
-                            ? new Date(item.createdAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )
+                            ? new Date(item.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
                             : "N/A"}
                         </span>
                       </div>
@@ -217,14 +211,9 @@ export default function AdminFeedbackPage() {
 
                     <div className="flex shrink-0 gap-2">
                       {item.user?.email && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-[12px]"
-                          asChild
-                        >
+                        <Button variant="outline" size="sm" className="h-8 text-[12px]" asChild>
                           <a
-                            href={`mailto:${item.user.email}?subject=${encodeURIComponent(`Re: Your ${config.label.toLowerCase()} on iShortn`)}&body=${encodeURIComponent(`Hi ${item.user.name ?? "there"},\n\nRegarding your feedback:\n"${item.message.slice(0, 200)}${item.message.length > 200 ? "..." : ""}"\n\n`)}`}
+                            href={`mailto:${item.user.email}?subject=${encodeURIComponent(`Re: Your ${config.label.toLowerCase()} on ClickPath`)}&body=${encodeURIComponent(`Hi ${item.user.name ?? "there"},\n\nRegarding your feedback:\n"${item.message.slice(0, 200)}${item.message.length > 200 ? "..." : ""}"\n\n`)}`}
                           >
                             <IconMail size={14} />
                             Reply

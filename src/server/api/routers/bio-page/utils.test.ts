@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { assertSlugAllowed, RESERVED_BIO_SLUGS } from "./utils";
+import { RESERVED_BIO_SLUGS, assertSlugAllowed } from "./utils";
 
 describe("reserved bio slugs", () => {
   test("excludes the /p route prefix and core app routes", () => {

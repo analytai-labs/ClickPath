@@ -1,7 +1,7 @@
-import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { PAID_PLANS, PLAN_PRICES_USD, type PaidPlan } from "@/lib/constants/plan-pricing";
+import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
+import type { SubscriptionPlan } from "@prisma/client";
 import type { ProtectedTRPCContext } from "../../trpc";
-import { type SubscriptionPlan } from "@prisma/client";
 
 /** Discriminator used to identify links auto-blocked by a user ban */
 const BAN_CASCADE_REASON = "Owner account banned" as const;
@@ -78,8 +78,14 @@ export async function getDailyStats(ctx: ProtectedTRPCContext) {
   `;
 
   const [dailyLinks, dailyUsers] = await Promise.all([
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), fourteenDaysAgo),
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "User"), fourteenDaysAgo),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      query.replace("__TABLE__", "Link"),
+      fourteenDaysAgo,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      query.replace("__TABLE__", "User"),
+      fourteenDaysAgo,
+    ),
   ]);
 
   const linksByDate = new Map(dailyLinks.map((l) => [l.date, Number(l.count)]));
@@ -106,7 +112,7 @@ export async function getRecentUsers(ctx: ProtectedTRPCContext) {
       id: true,
       name: true,
       email: true,
-      imageUrl: true,
+      image: true,
       createdAt: true,
       banned: true,
       _count: { select: { links: true } },
@@ -165,7 +171,7 @@ export async function getRecentActivity(ctx: ProtectedTRPCContext) {
 
 export async function searchLinks(ctx: ProtectedTRPCContext, input: SearchLinksInput) {
   const offset = (input.page - 1) * input.pageSize;
-  
+
   const searchCondition = {
     OR: [
       { url: { contains: input.query } },
@@ -259,10 +265,7 @@ export async function searchUsers(ctx: ProtectedTRPCContext, input: SearchUsersI
   const offset = (input.page - 1) * input.pageSize;
 
   const searchCondition = {
-    OR: [
-      { email: { contains: input.query } },
-      { name: { contains: input.query } },
-    ],
+    OR: [{ email: { contains: input.query } }, { name: { contains: input.query } }],
   };
 
   const [results, total] = await Promise.all([
@@ -330,7 +333,9 @@ export async function banUser(ctx: ProtectedTRPCContext, input: BanUserInput) {
 
   if (userLinks.length > 0) {
     await Promise.all(
-      userLinks.map((l) => (l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve())),
+      userLinks.map((l) =>
+        l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve(),
+      ),
     );
   }
 }
@@ -371,7 +376,9 @@ export async function unbanUser(ctx: ProtectedTRPCContext, input: UnbanUserInput
 
   if (bannedLinks.length > 0) {
     await Promise.all(
-      bannedLinks.map((l) => (l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve())),
+      bannedLinks.map((l) =>
+        l.alias ? deleteFromCache(buildCacheKey(l.domain, l.alias)) : Promise.resolve(),
+      ),
     );
   }
 }
@@ -400,7 +407,10 @@ export async function addBlockedDomain(ctx: ProtectedTRPCContext, input: AddBloc
   });
 }
 
-export async function removeBlockedDomain(ctx: ProtectedTRPCContext, input: RemoveBlockedDomainInput) {
+export async function removeBlockedDomain(
+  ctx: ProtectedTRPCContext,
+  input: RemoveBlockedDomainInput,
+) {
   await ctx.prisma.blockedDomain.delete({
     where: { id: input.id },
   });
@@ -438,7 +448,10 @@ export async function getFlaggedLinks(ctx: ProtectedTRPCContext, input: GetFlagg
   };
 }
 
-export async function resolveFlaggedLink(ctx: ProtectedTRPCContext, input: ResolveFlaggedLinkInput) {
+export async function resolveFlaggedLink(
+  ctx: ProtectedTRPCContext,
+  input: ResolveFlaggedLinkInput,
+) {
   const flagged = await ctx.prisma.flaggedLink.findFirst({
     where: { id: input.id },
   });
@@ -492,21 +505,15 @@ export async function getAnalytics(ctx: ProtectedTRPCContext, input: GetAnalytic
   const { from, to } = input;
   const { prevFrom, prevTo } = getPreviousPeriod(from, to);
 
-  const [
-    currentLinks,
-    currentUsers,
-    clicksInRange,
-    previousLinks,
-    previousUsers,
-    clicksPrev,
-  ] = await Promise.all([
-    ctx.prisma.link.count({ where: { createdAt: { gte: from, lte: to } } }),
-    ctx.prisma.user.count({ where: { createdAt: { gte: from, lte: to } } }),
-    countClicks(ctx, from, to),
-    ctx.prisma.link.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
-    ctx.prisma.user.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
-    countClicks(ctx, prevFrom, prevTo),
-  ]);
+  const [currentLinks, currentUsers, clicksInRange, previousLinks, previousUsers, clicksPrev] =
+    await Promise.all([
+      ctx.prisma.link.count({ where: { createdAt: { gte: from, lte: to } } }),
+      ctx.prisma.user.count({ where: { createdAt: { gte: from, lte: to } } }),
+      countClicks(ctx, from, to),
+      ctx.prisma.link.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
+      ctx.prisma.user.count({ where: { createdAt: { gte: prevFrom, lte: prevTo } } }),
+      countClicks(ctx, prevFrom, prevTo),
+    ]);
 
   return {
     links: currentLinks,
@@ -532,9 +539,24 @@ export async function getActivityChart(ctx: ProtectedTRPCContext, input: GetActi
   `;
 
   const [dailyLinks, dailyUsers, dailyClicks] = await Promise.all([
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), pgFormat, from, to),
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "User"), pgFormat, from, to),
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(query.replace("__TABLE__", "LinkVisit"), pgFormat, from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      query.replace("__TABLE__", "Link"),
+      pgFormat,
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      query.replace("__TABLE__", "User"),
+      pgFormat,
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      query.replace("__TABLE__", "LinkVisit"),
+      pgFormat,
+      from,
+      to,
+    ),
   ]);
 
   const linksByDate = new Map(dailyLinks.map((l) => [l.date, Number(l.count)]));
@@ -579,16 +601,18 @@ export async function getTopUsers(ctx: ProtectedTRPCContext, input: GetTopUsersI
   const { from, to, sortBy, limit: lim } = input;
 
   if (sortBy === "clicks") {
-    const rows = await ctx.prisma.$queryRawUnsafe<{
-      id: string;
-      name: string | null;
-      email: string | null;
-      imageUrl: string | null;
-      createdAt: Date | null;
-      linkCount: bigint;
-      clickCount: bigint;
-    }[]>(
-      `SELECT u.id, u.name, u.email, u."imageUrl", u."createdAt",
+    const rows = await ctx.prisma.$queryRawUnsafe<
+      {
+        id: string;
+        name: string | null;
+        email: string | null;
+        image: string | null;
+        createdAt: Date | null;
+        linkCount: bigint;
+        clickCount: bigint;
+      }[]
+    >(
+      `SELECT u.id, u.name, u.email, u."image", u."createdAt",
               COUNT(DISTINCT l.id) as "linkCount",
               COUNT(v.id) as "clickCount"
        FROM "User" u
@@ -600,21 +624,27 @@ export async function getTopUsers(ctx: ProtectedTRPCContext, input: GetTopUsersI
        LIMIT $3`,
       from,
       to,
-      lim
+      lim,
     );
-    return rows.map((r) => ({ ...r, linkCount: Number(r.linkCount), clickCount: Number(r.clickCount) }));
+    return rows.map((r) => ({
+      ...r,
+      linkCount: Number(r.linkCount),
+      clickCount: Number(r.clickCount),
+    }));
   }
 
-  const rows = await ctx.prisma.$queryRawUnsafe<{
-    id: string;
-    name: string | null;
-    email: string | null;
-    imageUrl: string | null;
-    createdAt: Date | null;
-    linkCount: bigint;
-    clickCount: bigint;
-  }[]>(
-    `SELECT u.id, u.name, u.email, u."imageUrl", u."createdAt",
+  const rows = await ctx.prisma.$queryRawUnsafe<
+    {
+      id: string;
+      name: string | null;
+      email: string | null;
+      image: string | null;
+      createdAt: Date | null;
+      linkCount: bigint;
+      clickCount: bigint;
+    }[]
+  >(
+    `SELECT u.id, u.name, u.email, u."image", u."createdAt",
             COUNT(DISTINCT l.id) as "linkCount",
             SUM(CASE WHEN v."createdAt" >= $1 AND v."createdAt" <= $2 THEN 1 ELSE 0 END) as "clickCount"
      FROM "User" u
@@ -626,23 +656,29 @@ export async function getTopUsers(ctx: ProtectedTRPCContext, input: GetTopUsersI
      LIMIT $3`,
     from,
     to,
-    lim
+    lim,
   );
-  return rows.map((r) => ({ ...r, linkCount: Number(r.linkCount), clickCount: Number(r.clickCount) }));
+  return rows.map((r) => ({
+    ...r,
+    linkCount: Number(r.linkCount),
+    clickCount: Number(r.clickCount),
+  }));
 }
 
 export async function getTopLinks(ctx: ProtectedTRPCContext, input: GetTopLinksInput) {
   const { from, to, limit: lim } = input;
 
-  const rows = await ctx.prisma.$queryRawUnsafe<{
-    id: number;
-    url: string | null;
-    alias: string | null;
-    domain: string;
-    createdAt: Date | null;
-    userEmail: string | null;
-    clicks: bigint;
-  }[]>(
+  const rows = await ctx.prisma.$queryRawUnsafe<
+    {
+      id: number;
+      url: string | null;
+      alias: string | null;
+      domain: string;
+      createdAt: Date | null;
+      userEmail: string | null;
+      clicks: bigint;
+    }[]
+  >(
     `SELECT l.id, l.url, l.alias, l.domain, l."createdAt", u.email as "userEmail", COUNT(v.id) as clicks
      FROM "LinkVisit" v
      INNER JOIN "Link" l ON v."linkId" = l.id
@@ -653,7 +689,7 @@ export async function getTopLinks(ctx: ProtectedTRPCContext, input: GetTopLinksI
      LIMIT $3`,
     from,
     to,
-    lim
+    lim,
   );
 
   return rows.map((r) => ({ ...r, clicks: Number(r.clicks) }));
@@ -680,23 +716,56 @@ export async function getPeakPeriods(ctx: ProtectedTRPCContext, input: GetPeakPe
   `;
 
   const [peakLinkDay, peakUserDay, peakClickDay, peakLinkMonth, peakUserMonth] = await Promise.all([
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "Link"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "User"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(queryDay.replace("__TABLE__", "LinkVisit"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(queryMonth.replace("__TABLE__", "Link"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(queryMonth.replace("__TABLE__", "User"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      queryDay.replace("__TABLE__", "Link"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      queryDay.replace("__TABLE__", "User"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ date: string; count: bigint }[]>(
+      queryDay.replace("__TABLE__", "LinkVisit"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(
+      queryMonth.replace("__TABLE__", "Link"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(
+      queryMonth.replace("__TABLE__", "User"),
+      from,
+      to,
+    ),
   ]);
 
   return {
-    peakLinkDay: peakLinkDay[0] ? { date: peakLinkDay[0].date, count: Number(peakLinkDay[0].count) } : null,
-    peakUserDay: peakUserDay[0] ? { date: peakUserDay[0].date, count: Number(peakUserDay[0].count) } : null,
-    peakClickDay: peakClickDay[0] ? { date: peakClickDay[0].date, count: Number(peakClickDay[0].count) } : null,
-    peakLinkMonth: peakLinkMonth[0] ? { month: peakLinkMonth[0].month, count: Number(peakLinkMonth[0].count) } : null,
-    peakUserMonth: peakUserMonth[0] ? { month: peakUserMonth[0].month, count: Number(peakUserMonth[0].count) } : null,
+    peakLinkDay: peakLinkDay[0]
+      ? { date: peakLinkDay[0].date, count: Number(peakLinkDay[0].count) }
+      : null,
+    peakUserDay: peakUserDay[0]
+      ? { date: peakUserDay[0].date, count: Number(peakUserDay[0].count) }
+      : null,
+    peakClickDay: peakClickDay[0]
+      ? { date: peakClickDay[0].date, count: Number(peakClickDay[0].count) }
+      : null,
+    peakLinkMonth: peakLinkMonth[0]
+      ? { month: peakLinkMonth[0].month, count: Number(peakLinkMonth[0].count) }
+      : null,
+    peakUserMonth: peakUserMonth[0]
+      ? { month: peakUserMonth[0].month, count: Number(peakUserMonth[0].count) }
+      : null,
   };
 }
 
-export async function getMonthlyBreakdown(ctx: ProtectedTRPCContext, input: GetMonthlyBreakdownInput) {
+export async function getMonthlyBreakdown(
+  ctx: ProtectedTRPCContext,
+  input: GetMonthlyBreakdownInput,
+) {
   const { from, to } = input;
 
   const query = `
@@ -708,9 +777,21 @@ export async function getMonthlyBreakdown(ctx: ProtectedTRPCContext, input: GetM
   `;
 
   const [monthlyLinks, monthlyUsers, monthlyClicks] = await Promise.all([
-    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "Link"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "User"), from, to),
-    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(query.replace("__TABLE__", "LinkVisit"), from, to),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(
+      query.replace("__TABLE__", "Link"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(
+      query.replace("__TABLE__", "User"),
+      from,
+      to,
+    ),
+    ctx.prisma.$queryRawUnsafe<{ month: string; count: bigint }[]>(
+      query.replace("__TABLE__", "LinkVisit"),
+      from,
+      to,
+    ),
   ]);
 
   const linksByMonth = new Map(monthlyLinks.map((l) => [l.month, Number(l.count)]));
@@ -790,7 +871,10 @@ function sharePct(part: number, total: number): number {
   return Math.round((part / total) * 1000) / 10;
 }
 
-export async function getUserBaseSummary(ctx: ProtectedTRPCContext, input: GetUserBaseSummaryInput) {
+export async function getUserBaseSummary(
+  ctx: ProtectedTRPCContext,
+  input: GetUserBaseSummaryInput,
+) {
   const { from, to } = input;
   const { prevFrom, prevTo } = getPreviousPeriod(from, to);
 
@@ -857,13 +941,24 @@ export async function getUserBaseSummary(ctx: ProtectedTRPCContext, input: GetUs
     paidGrowth: pctChange(paidUsers, paidPrevCount),
     tiers: {
       free: { count: freeUsers, share: sharePct(freeUsers, totalUsers), mrr: 0 },
-      pro: { count: proCount, share: sharePct(proCount, totalUsers), mrr: proCount * PLAN_PRICES_USD.pro },
-      ultra: { count: ultraCount, share: sharePct(ultraCount, totalUsers), mrr: ultraCount * PLAN_PRICES_USD.ultra },
+      pro: {
+        count: proCount,
+        share: sharePct(proCount, totalUsers),
+        mrr: proCount * PLAN_PRICES_USD.pro,
+      },
+      ultra: {
+        count: ultraCount,
+        share: sharePct(ultraCount, totalUsers),
+        mrr: ultraCount * PLAN_PRICES_USD.ultra,
+      },
     },
   };
 }
 
-export async function getSubscriptionTimeline(ctx: ProtectedTRPCContext, input: GetSubscriptionTimelineInput) {
+export async function getSubscriptionTimeline(
+  ctx: ProtectedTRPCContext,
+  input: GetSubscriptionTimelineInput,
+) {
   const { from, to } = input;
 
   const rows = await ctx.prisma.$queryRawUnsafe<{ date: string; plan: string; total: bigint }[]>(
@@ -872,7 +967,10 @@ export async function getSubscriptionTimeline(ctx: ProtectedTRPCContext, input: 
      WHERE plan IN ($1, $2) AND "createdAt" >= $3 AND "createdAt" <= $4
      GROUP BY 1, plan
      ORDER BY 1`,
-    "pro", "ultra", from, to
+    "pro",
+    "ultra",
+    from,
+    to,
   );
 
   const byDate = new Map<string, { pro: number; ultra: number }>();
@@ -898,7 +996,10 @@ export async function getSubscriptionTimeline(ctx: ProtectedTRPCContext, input: 
   return result;
 }
 
-export async function getRecentSubscriptions(ctx: ProtectedTRPCContext, input: GetRecentSubscriptionsInput) {
+export async function getRecentSubscriptions(
+  ctx: ProtectedTRPCContext,
+  input: GetRecentSubscriptionsInput,
+) {
   const rows = await ctx.prisma.subscription.findMany({
     where: { plan: { in: PAID_PLANS as SubscriptionPlan[] } },
     select: {
@@ -909,7 +1010,7 @@ export async function getRecentSubscriptions(ctx: ProtectedTRPCContext, input: G
       createdAt: true,
       renewsAt: true,
       endsAt: true,
-      user: { select: { name: true, email: true, imageUrl: true } },
+      user: { select: { name: true, email: true, image: true } },
     },
     orderBy: { createdAt: "desc" },
     take: input.limit,
@@ -921,7 +1022,7 @@ export async function getRecentSubscriptions(ctx: ProtectedTRPCContext, input: G
       ...rest,
       userName: user?.name ?? null,
       userEmail: user?.email ?? null,
-      userImage: user?.imageUrl ?? null,
+      userImage: user?.image ?? null,
     };
   });
 }

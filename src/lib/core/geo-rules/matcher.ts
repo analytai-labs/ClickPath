@@ -1,19 +1,15 @@
 import { getCountryContinentCode } from "@/lib/countries";
 import { logger } from "@/lib/logger";
 
-import type { GeoRule as DbGeoRule } from "@prisma/client";
 import type { GeoRuleMatchResult } from "@/lib/types/geo-rules";
+import type { GeoRule as DbGeoRule } from "@prisma/client";
 
 const log = logger.child({ component: "geo-rules" });
 
 /**
  * Check if a single rule matches the visitor's location
  */
-function ruleMatches(
-  rule: DbGeoRule,
-  countryCode: string,
-  continentCode: string | null
-): boolean {
+function ruleMatches(rule: DbGeoRule, countryCode: string, continentCode: string | null): boolean {
   const normalizedValues = (rule.values as string[])?.map((v) => v.toUpperCase()) ?? [];
 
   let matches = false;
@@ -60,7 +56,7 @@ function sortRules(rules: DbGeoRule[]): DbGeoRule[] {
  */
 export function matchGeoRules(
   rules: DbGeoRule[] | null | undefined,
-  countryCode: string | null | undefined
+  countryCode: string | null | undefined,
 ): GeoRuleMatchResult {
   // No rules or no country code means no match - fall through to default URL
   if (!rules || rules.length === 0 || !countryCode) {

@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import type { TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
 
@@ -35,7 +35,7 @@ const CLIENT_ERROR_CODES = new Set<TRPC_ERROR_CODE_KEY>([
  */
 const createContext = async (req: NextRequest) => {
   return createTRPCContext({
-    auth: await auth(),
+    auth: (await auth()) || null,
     headers: req.headers,
   });
 };

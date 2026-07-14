@@ -1,0 +1,714 @@
+src/app/(main)/blocked/[linkId]/page.tsx(7,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/(main)/dashboard/_components/links/link-card/add-to-campaign-modal.tsx(57,6): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/add-to-campaign-modal.tsx(60,24): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/add-to-campaign-modal.tsx(62,6): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/add-to-campaign-modal.tsx(122,33): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/edit-link-drawer.tsx(137,32): error TS7006: Parameter 'rule' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/edit-link-drawer.tsx(157,39): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/edit-link-drawer.tsx(192,12): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/edit-link-drawer.tsx(196,15): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/edit-link-drawer.tsx(501,56): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/update-modal.tsx(141,12): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/update-modal.tsx(146,15): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/link-card/update-modal.tsx(386,62): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/_components/links/links.tsx(304,32): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/_components/top-links-card.tsx(41,22): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/_components/top-links-card.tsx(41,25): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/_components/top-users-card.tsx(64,22): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/_components/top-users-card.tsx(64,25): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/audience-feedback/page.tsx(149,30): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/domains/page.tsx(115,29): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/feedback/page.tsx(134,30): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/feedback/page.tsx(135,30): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ bug: { icon: ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>; label: string; className: string; }; feature: { ...; }; question: { ...; }; }'.
+src/app/(main)/dashboard/admin/feedback/page.tsx(172,48): error TS7006: Parameter 'url' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/feedback/page.tsx(172,53): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/flagged/page.tsx(117,37): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/links/page.tsx(155,34): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/page.tsx(150,33): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/page.tsx(215,42): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/page.tsx(268,44): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/admin/users/_components/recent-subscriptions-card.tsx(16,50): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaidPlan, string>'.
+src/app/(main)/dashboard/admin/users/page.tsx(211,34): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/[alias]/page.tsx(127,41): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/[alias]/page.tsx(154,43): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/overview/_components/analytics-filter.tsx(80,37): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/overview/_components/analytics-filter.tsx(144,25): error TS7006: Parameter 'folder' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/overview/_components/analytics-filter.tsx(159,24): error TS7006: Parameter 'domain' implicitly has an 'any' type.
+src/app/(main)/dashboard/analytics/overview/_components/analytics-filter.tsx(268,47): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/analytics-panel.tsx(193,41): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/analytics-panel.tsx(205,26): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/bio-page-builder.tsx(147,33): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/block-form-dialog.tsx(80,30): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/block-list.tsx(121,48): error TS7006: Parameter 'old' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/block-list.tsx(181,16): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<"link" | "email" | "text" | "heading" | "social" | "divider", ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>>'.
+src/app/(main)/dashboard/bio-pages/[id]/_components/settings-panel.tsx(73,14): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/settings-panel.tsx(74,11): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/[id]/_components/settings-panel.tsx(300,39): error TS7006: Parameter 'domain' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/_components/bio-pages-list.tsx(83,23): error TS7006: Parameter 'page' implicitly has an 'any' type.
+src/app/(main)/dashboard/bio-pages/_components/bio-pages-list.tsx(83,29): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/add-links-dialog.tsx(42,39): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/add-links-dialog.tsx(53,16): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/add-links-dialog.tsx(54,13): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/add-links-dialog.tsx(64,8): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/add-links-dialog.tsx(136,31): error TS7006: Parameter 'candidate' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-links.tsx(70,32): error TS7006: Parameter 'memberLink' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-links.tsx(70,44): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(249,38): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(260,19): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(266,21): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(383,27): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(391,39): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/[slug]/_components/campaign-overview.tsx(397,16): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/(main)/dashboard/campaigns/_components/campaigns-list.tsx(63,45): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/_components/campaigns-list.tsx(64,47): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/_components/campaigns-list.tsx(137,25): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/campaigns/_components/campaigns-list.tsx(137,35): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/domains/page.tsx(38,31): error TS7006: Parameter 'domain' implicitly has an 'any' type.
+src/app/(main)/dashboard/domains/page.tsx(38,39): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/[folderId]/_components/folder-links.tsx(37,23): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/[folderId]/_components/folder-links.tsx(37,29): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/_components/folder-settings-modal.tsx(82,54): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/_components/folders-view.tsx(82,27): error TS7006: Parameter 'folder' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/_components/folders-view.tsx(82,35): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/_components/move-to-folder-modal.tsx(153,44): error TS7006: Parameter 'folder' implicitly has an 'any' type.
+src/app/(main)/dashboard/folders/_components/move-to-folder-modal.tsx(356,46): error TS7006: Parameter 'folder' implicitly has an 'any' type.
+src/app/(main)/dashboard/layout.tsx(7,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/(main)/dashboard/link/new/page.tsx(261,12): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/link/new/page.tsx(265,15): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/link/new/page.tsx(439,45): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/link/new/page.tsx(664,50): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/link/new/page.tsx(710,42): error TS7006: Parameter 'campaign' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/[id]/page.tsx(130,41): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/[id]/page.tsx(157,43): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/edit-qrcode-drawer.tsx(78,22): error TS7006: Parameter 'rule' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/edit-qrcode-drawer.tsx(159,16): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/edit-qrcode-drawer.tsx(163,19): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/edit-qrcode-drawer.tsx(349,56): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/qrcode-list.tsx(17,21): error TS7006: Parameter 'qr' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/_components/qrcode-list.tsx(17,25): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/create/page.tsx(149,37): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/create/page.tsx(177,34): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/create/page.tsx(398,41): error TS7006: Parameter 'domain' implicitly has an 'any' type.
+src/app/(main)/dashboard/qrcodes/create/page.tsx(527,41): error TS7006: Parameter 'preset' implicitly has an 'any' type.
+src/app/(main)/dashboard/settings/general/settings-form.tsx(73,33): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/(main)/expired/[linkId]/page.tsx(7,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/(main)/p-host/[host]/opengraph-image.tsx(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/(main)/p/[slug]/opengraph-image.tsx(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/bio/view/route.ts(9,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/v1/analytics/[alias]/route.ts(2,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/v1/analytics/[alias]/route.ts(27,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/app/api/v1/analytics/[alias]/route.ts(27,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/app/api/v1/analytics/[alias]/route.ts(27,26): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/app/api/v1/clicks/verify/route.ts(5,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/v1/links/[alias]/route.ts(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/v1/links/route.ts(6,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/v1/utils.ts(5,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/webhooks/clerk/route.ts(9,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/webhooks/lemonsqueezy/route.ts(10,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/app/api/webhooks/lemonsqueezy/route.ts(78,17): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/app/api/webhooks/lemonsqueezy/route.ts(78,26): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/lib/core/analytics/index.ts(103,19): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/lib/core/analytics/index.ts(138,25): error TS7006: Parameter 'uniqueVisit' implicitly has an 'any' type.
+src/middlewares/record-bio-page-view.ts(7,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/middlewares/record-click.ts(8,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/middlewares/record-click.ts(24,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/middlewares/record-click.ts(24,22): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/middlewares/record-click.ts(24,27): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/middlewares/resolve-link.ts(15,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/api/routers/abuse/abuse.procedure.ts(38,36): error TS2339: Property 'prisma' does not exist on type '{ auth: SessionAuthWithRedirect; headers: Headers; db: any; }'.
+src/server/api/routers/abuse/abuse.procedure.ts(57,15): error TS2339: Property 'prisma' does not exist on type '{ auth: SessionAuthWithRedirect; headers: Headers; db: any; }'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(124,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(157,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(206,38): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(240,72): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(243,75): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(277,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(281,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(288,26): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(291,8): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(310,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(313,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(334,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(337,11): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(388,28): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(407,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(412,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(445,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(488,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(526,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(538,33): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(558,15): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(602,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(656,13): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(656,40): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(693,26): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(704,67): error TS2339: Property 'id' does not exist on type '{}'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(738,23): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(749,58): error TS2339: Property 'id' does not exist on type '{}'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(777,40): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(906,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(907,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(908,71): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(911,31): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/account-transfer/account-transfer.service.ts(976,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(1001,13): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(1017,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(1029,33): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(1048,13): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/account-transfer/account-transfer.service.ts(1054,32): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/admin/admin.service.ts(116,21): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(119,21): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(130,7): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(131,7): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(157,45): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(160,44): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(161,22): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(370,35): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(395,22): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(416,35): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(446,24): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(693,21): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(696,21): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(699,22): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(718,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(719,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(720,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(731,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(732,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(733,9): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(926,50): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(927,50): error TS7006: Parameter 'u' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(928,52): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/admin/admin.service.ts(943,7): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(944,7): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/admin/admin.service.ts(945,7): error TS2322: Type '{}' is not assignable to type 'number'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(61,11): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(78,19): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(95,11): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(112,19): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(135,9): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(147,17): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(159,9): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(171,17): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(451,13): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(460,13): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(469,21): error TS2322: Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ OR: ({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'OR' are incompatible.
+          Type '({ subscription: null; } | { subscription: { status: { not: string; }; plan?: undefined; }; } | { subscription: { plan: string; status?: undefined; }; })[]' is not assignable to type 'undefined'.
+src/server/api/routers/analytics/analytics-cleanup.service.ts(478,21): error TS2322: Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter) | undefined'.
+  Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type '(Without<UserScalarRelationFilter, UserWhereInput> & UserWhereInput) | (Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter)'.
+    Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter> & UserScalarRelationFilter'.
+      Type '{ subscription: { status: string; plan: string; }; }' is not assignable to type 'Without<UserWhereInput, UserScalarRelationFilter>'.
+        Types of property 'subscription' are incompatible.
+          Type '{ status: string; plan: string; }' is not assignable to type 'undefined'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(34,27): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(70,40): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(82,17): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(92,15): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(108,36): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(152,42): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(157,19): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(162,19): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(212,31): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/audience-feedback/audience-feedback.procedure.ts(232,28): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/bio-page/bio-page.service.ts(154,26): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(162,40): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(164,21): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(197,31): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(197,55): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(202,16): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(205,41): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(205,64): error TS2345: Argument of type 'Map<unknown, unknown>' is not assignable to parameter of type 'Map<number, { domain: string; alias: string | null; blocked: boolean | null; }>'.
+  Type 'unknown' is not assignable to type 'number'.
+src/server/api/routers/bio-page/bio-page.service.ts(339,31): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(339,55): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(344,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(399,49): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(479,38): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(498,40): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(510,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(570,31): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(572,29): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(572,53): error TS7006: Parameter 'x' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(576,38): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(579,11): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(582,21): error TS2339: Property 'blocked' does not exist on type '{}'.
+src/server/api/routers/bio-page/bio-page.service.ts(582,34): error TS2339: Property 'disabled' does not exist on type '{}'.
+src/server/api/routers/bio-page/bio-page.service.ts(582,49): error TS2339: Property 'alias' does not exist on type '{}'.
+src/server/api/routers/bio-page/bio-page.service.ts(583,77): error TS2339: Property 'domain' does not exist on type '{}'.
+src/server/api/routers/bio-page/bio-page.service.ts(583,89): error TS2339: Property 'alias' does not exist on type '{}'.
+src/server/api/routers/bio-page/bio-page.service.ts(593,14): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(678,37): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(679,35): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(691,43): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(694,11): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(699,12): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(699,15): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(701,40): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/server/api/routers/bio-page/bio-page.service.ts(701,45): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(83,25): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(98,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(103,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(105,21): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(137,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(151,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(175,26): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(181,25): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(192,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(197,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(203,20): error TS7006: Parameter 'visits' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(204,35): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(205,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(211,34): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(228,22): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(231,20): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(241,14): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(267,26): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(290,25): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(304,29): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(320,34): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(322,17): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(328,43): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(334,25): error TS7006: Parameter 'member' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(357,30): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(416,15): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(442,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(443,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(447,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(480,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(488,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(489,40): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(495,29): error TS7006: Parameter 'candidate' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(498,19): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(523,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(546,29): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(581,34): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(595,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(601,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(608,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(613,9): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/campaign/campaign.service.ts(656,47): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(658,11): error TS7006: Parameter 'member' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(668,34): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/server/api/routers/campaign/campaign.service.ts(671,12): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(671,15): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/server/api/routers/campaign/campaign.service.ts(678,21): error TS2365: Operator '+' cannot be applied to types 'number' and '{}'.
+src/server/api/routers/campaign/utils.ts(91,29): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/changelog/changelog.procedure.ts(19,32): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/changelog/changelog.procedure.ts(30,32): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/changelog/changelog.procedure.ts(47,17): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/domains/domains.procedure.ts(16,30): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; workspace: WorkspaceContext; }'.
+src/server/api/routers/domains/domains.procedure.ts(25,39): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; workspace: WorkspaceContext; }'.
+src/server/api/routers/domains/domains.procedure.ts(145,21): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; workspace: WorkspaceContext; }'.
+src/server/api/routers/domains/domains.procedure.ts(165,19): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; workspace: WorkspaceContext; }'.
+src/server/api/routers/domains/domains.service.ts(24,38): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(37,37): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(54,47): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(103,17): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(151,15): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(171,35): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(184,28): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(199,20): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(199,47): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/domains/domains.service.ts(209,40): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/server/api/routers/domains/domains.service.ts(252,33): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(263,36): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/domains/domains.service.ts(273,11): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(276,11): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/domains/domains.service.ts(287,27): error TS7006: Parameter 'latest' implicitly has an 'any' type.
+src/server/api/routers/domains/domains.service.ts(287,35): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(52,43): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(120,39): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(126,44): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(132,46): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(138,34): error TS7006: Parameter 'folderItem' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(200,31): error TS7006: Parameter 'linkItem' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(203,62): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(203,67): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(209,31): error TS7006: Parameter 'tagRecord' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(300,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(475,38): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(527,52): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/api/routers/folder/folder.service.ts(538,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/geo-rules/geo-rules.service.ts(40,35): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(46,29): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/geo-rules/geo-rules.service.ts(70,14): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(87,35): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(93,38): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/geo-rules/geo-rules.service.ts(96,28): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(128,34): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(143,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(174,34): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(189,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(207,35): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/geo-rules/geo-rules.service.ts(211,54): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/geo-rules/geo-rules.service.ts(224,11): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(42,30): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(46,42): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(79,21): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(138,40): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(155,17): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(178,40): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(225,36): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(230,42): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(271,19): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/lemonsqueezy/lemonsqueezy.procedure.ts(306,17): error TS2339: Property 'prisma' does not exist on type '{ auth: Omit<NonNullable<SessionAuthWithRedirect>, "userId"> & { userId: string; }; isAdmin: boolean; headers: Headers; db: any; }'.
+src/server/api/routers/link-milestone/link-milestone.service.ts(51,19): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/api/routers/link-milestone/link-milestone.service.ts(54,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(383,5): error TS2322: Type '{ name: string; alias: string; userId: string; teamId: number | null; createdByUserId: string; passwordHash: string | undefined; domain: string; note: string | undefined; metadata: any; cloaking: boolean; ... 7 more ...; campaignId?: number | ... 1 more ... | undefined; }' is not assignable to type '(Without<LinkCreateInput, LinkUncheckedCreateInput> & LinkUncheckedCreateInput) | (Without<...> & LinkCreateInput)'.
+  Type '{ name: string; alias: string; userId: string; teamId: number | null; createdByUserId: string; passwordHash: string | undefined; domain: string; note: string | undefined; metadata: any; cloaking: boolean; ... 7 more ...; campaignId?: number | ... 1 more ... | undefined; }' is not assignable to type 'Without<LinkCreateInput, LinkUncheckedCreateInput> & LinkUncheckedCreateInput'.
+    Types of property 'geoRules' are incompatible.
+      Type '{ type: "country" | "continent"; condition: "in" | "not_in"; values: string[]; action: "redirect" | "block"; destination?: string | undefined; blockMessage?: string | undefined; }[] | undefined' is not assignable to type 'GeoRuleUncheckedCreateNestedManyWithoutLinkInput | undefined'.
+        Type '{ type: "country" | "continent"; condition: "in" | "not_in"; values: string[]; action: "redirect" | "block"; destination?: string | undefined; blockMessage?: string | undefined; }[]' has no properties in common with type 'GeoRuleUncheckedCreateNestedManyWithoutLinkInput'.
+src/server/api/routers/link/link.service.ts(660,27): error TS7006: Parameter 'tagRecord' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(675,5): error TS2345: Argument of type '{ tags: any; createdAt: Date | null; campaignId: number | null; archived: boolean | null; name: string | null; id: number; url: string | null; alias: string | null; domain: string; disableLinkAfterClicks: number | null; ... 17 more ...; blockedReason: string | null; }' is not assignable to parameter of type '{ createdAt: Date | null; campaignId: number | null; archived: boolean | null; name: string | null; id: number; url: string | null; alias: string | null; domain: string; disableLinkAfterClicks: number | null; ... 18 more ...; blockedReason: string | null; }'.
+  Types of property 'utmParams' are incompatible.
+    Type 'JsonValue' is not assignable to type '{ utm_source?: string | undefined; utm_medium?: string | undefined; utm_campaign?: string | undefined; utm_term?: string | undefined; utm_content?: string | undefined; } | null'.
+      Type 'string' has no properties in common with type '{ utm_source?: string | undefined; utm_medium?: string | undefined; utm_campaign?: string | undefined; utm_term?: string | undefined; utm_content?: string | undefined; }'.
+src/server/api/routers/link/link.service.ts(684,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(685,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(685,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(686,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(686,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(712,23): error TS2304: Cannot find name 'linkMilestone'.
+src/server/api/routers/link/link.service.ts(712,44): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(712,47): error TS2304: Cannot find name 'linkMilestone'.
+src/server/api/routers/link/link.service.ts(719,15): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(721,9): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(722,11): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(722,14): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(723,42): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(723,55): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(739,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(740,7): error TS2552: Cannot find name 'inArray'. Did you mean 'Array'?
+src/server/api/routers/link/link.service.ts(740,15): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(741,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(741,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(754,17): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(755,20): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(760,63): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'number[]'.
+  Type 'unknown' is not assignable to type 'number'.
+src/server/api/routers/link/link.service.ts(763,8): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(771,43): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(789,35): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(791,21): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(791,38): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(791,46): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(795,15): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(796,14): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(796,22): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(799,21): error TS2304: Cannot find name 'linkTag'.
+src/server/api/routers/link/link.service.ts(799,36): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(799,44): error TS2304: Cannot find name 'linkTag'.
+src/server/api/routers/link/link.service.ts(802,21): error TS2304: Cannot find name 'qrcode'.
+src/server/api/routers/link/link.service.ts(802,35): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(802,43): error TS2304: Cannot find name 'qrcode'.
+src/server/api/routers/link/link.service.ts(805,21): error TS2304: Cannot find name 'linkMilestone'.
+src/server/api/routers/link/link.service.ts(805,42): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(805,50): error TS2304: Cannot find name 'linkMilestone'.
+src/server/api/routers/link/link.service.ts(808,21): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(808,33): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(808,41): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(815,26): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(839,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(840,7): error TS2552: Cannot find name 'inArray'. Did you mean 'Array'?
+src/server/api/routers/link/link.service.ts(840,15): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(841,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(841,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(854,17): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(855,20): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(860,63): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'number[]'.
+  Type 'unknown' is not assignable to type 'number'.
+src/server/api/routers/link/link.service.ts(863,8): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(871,43): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(874,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(876,12): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(876,20): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(893,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(894,7): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(894,15): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(895,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(895,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(908,17): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(909,20): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(914,63): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'number[]'.
+  Type 'unknown' is not assignable to type 'number'.
+src/server/api/routers/link/link.service.ts(917,8): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(925,43): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(928,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(930,12): error TS2304: Cannot find name 'inArray'.
+src/server/api/routers/link/link.service.ts(930,20): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(935,16): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(936,13): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(953,15): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(953,24): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(953,28): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(953,33): error TS7031: Binding element 'sql' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(987,40): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1026,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1027,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1027,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1028,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1028,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1029,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1029,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1099,15): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1099,24): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1099,28): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1099,33): error TS7031: Binding element 'gte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1099,38): error TS7031: Binding element 'lte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1107,15): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1107,24): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1107,28): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1107,33): error TS7031: Binding element 'gte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1107,38): error TS7031: Binding element 'lte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1115,15): error TS7006: Parameter 'rule' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1115,23): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1125,22): error TS2304: Cannot find name 'count'.
+src/server/api/routers/link/link.service.ts(1126,25): error TS2304: Cannot find name 'sql'.
+src/server/api/routers/link/link.service.ts(1126,53): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1128,19): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1130,15): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1131,17): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1131,20): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1132,17): error TS2304: Cannot find name 'gte'.
+src/server/api/routers/link/link.service.ts(1132,21): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1133,17): error TS2304: Cannot find name 'lt'.
+src/server/api/routers/link/link.service.ts(1133,20): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1137,30): error TS2304: Cannot find name 'count'.
+src/server/api/routers/link/link.service.ts(1138,19): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(1140,15): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1141,17): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1141,20): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(1142,17): error TS2304: Cannot find name 'gte'.
+src/server/api/routers/link/link.service.ts(1142,21): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(1143,17): error TS2304: Cannot find name 'lt'.
+src/server/api/routers/link/link.service.ts(1143,20): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(1172,6): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1172,11): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1182,16): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1182,23): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1187,6): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1187,11): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1197,16): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1197,23): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1227,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1227,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1227,26): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1227,31): error TS7031: Binding element 'isNull' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1309,34): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1314,15): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1314,24): error TS7031: Binding element 'inArray' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1314,33): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1314,38): error TS7031: Binding element 'gte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1314,43): error TS7031: Binding element 'lte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1322,15): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1322,24): error TS7031: Binding element 'inArray' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1322,33): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1322,38): error TS7031: Binding element 'gte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1322,43): error TS7031: Binding element 'lte' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1348,20): error TS7006: Parameter 'link' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1354,24): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1357,29): error TS2339: Property 'shortLink' does not exist on type '{}'.
+src/server/api/routers/link/link.service.ts(1358,32): error TS2339: Property 'shortLink' does not exist on type '{}'.
+src/server/api/routers/link/link.service.ts(1359,20): error TS2339: Property 'destination' does not exist on type '{}'.
+src/server/api/routers/link/link.service.ts(1360,38): error TS2339: Property 'destination' does not exist on type '{}'.
+src/server/api/routers/link/link.service.ts(1361,41): error TS2339: Property 'destination' does not exist on type '{}'.
+src/server/api/routers/link/link.service.ts(1368,6): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1368,11): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1378,57): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1378,64): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1383,6): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1383,11): error TS7006: Parameter 'visit' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1393,11): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1393,18): error TS2571: Object is of type 'unknown'.
+src/server/api/routers/link/link.service.ts(1414,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1415,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1415,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1416,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1416,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1425,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1430,7): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1431,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1431,12): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1432,40): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1432,53): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1442,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1443,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1443,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1444,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1444,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1453,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1458,7): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1459,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1459,12): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1460,40): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1460,53): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1479,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1480,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1480,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1481,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1481,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1489,23): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1489,40): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1489,43): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1499,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1499,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1526,23): error TS2304: Cannot find name 'linkVisit'.
+src/server/api/routers/link/link.service.ts(1533,13): error TS2304: Cannot find name 'uniqueLinkVisit'.
+src/server/api/routers/link/link.service.ts(1535,44): error TS2304: Cannot find name 'sql'.
+src/server/api/routers/link/link.service.ts(1554,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1559,7): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1560,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1560,12): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1561,40): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1561,53): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1566,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1567,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1567,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1568,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1568,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1584,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1584,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1584,26): error TS7031: Binding element 'and' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1618,27): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1655,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/api/routers/link/link.service.ts(1656,7): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1658,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1659,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1677,12): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1678,7): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1678,10): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1679,38): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1679,51): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1693,13): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1696,7): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1697,9): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1697,12): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1698,40): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1698,53): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1711,22): error TS2304: Cannot find name 'and'.
+src/server/api/routers/link/link.service.ts(1712,36): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1712,49): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1713,5): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1713,8): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1714,5): error TS2304: Cannot find name 'eq'.
+src/server/api/routers/link/link.service.ts(1714,8): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1719,19): error TS2304: Cannot find name 'count'.
+src/server/api/routers/link/link.service.ts(1720,20): error TS2304: Cannot find name 'count'.
+src/server/api/routers/link/link.service.ts(1720,26): error TS2304: Cannot find name 'sql'.
+src/server/api/routers/link/link.service.ts(1720,42): error TS2304: Cannot find name 'link'.
+src/server/api/routers/link/link.service.ts(1722,11): error TS2304: Cannot find name 'link'.
+src/server/api/routers/qrcode/qrcode.service.ts(59,16): error TS2367: This comparison appears to be unintentional because the types '"personal"' and '"team"' have no overlap.
+src/server/api/routers/qrcode/qrcode.service.ts(60,37): error TS2339: Property 'teamId' does not exist on type 'never'.
+src/server/api/routers/qrcode/qrcode.service.ts(99,67): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/qrcode/qrcode.service.ts(212,34): error TS7006: Parameter 'qr' implicitly has an 'any' type.
+src/server/api/routers/qrcode/qrcode.service.ts(212,60): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/server/api/routers/qrcode/qrcode.service.ts(229,47): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/server/api/routers/qrcode/qrcode.service.ts(231,32): error TS2365: Operator '+' cannot be applied to types '{}' and 'number'.
+src/server/api/routers/qrcode/qrcode.service.ts(234,25): error TS7006: Parameter 'qr' implicitly has an 'any' type.
+src/server/api/routers/qrcode/qrcode.service.ts(276,38): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/settings/settings.service.ts(8,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/settings/settings.service.ts(14,35): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/settings/settings.service.ts(31,38): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/settings/settings.service.ts(36,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/settings/settings.service.ts(52,15): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/settings/settings.service.ts(57,15): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(23,35): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(38,36): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(50,38): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(69,14): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(69,41): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/server/api/routers/tag/tag.service.ts(98,14): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(111,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(124,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(135,35): error TS7006: Parameter 'tag' implicitly has an 'any' type.
+src/server/api/routers/tag/tag.service.ts(140,13): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(152,32): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(164,28): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(169,22): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/tag/tag.service.ts(180,31): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(191,28): error TS2339: Property 'prisma' does not exist on type 'WorkspaceTRPCContext'.
+src/server/api/routers/tag/tag.service.ts(196,22): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/api/routers/token/token.service.ts(20,20): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/token/token.service.ts(28,30): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/routers/token/token.service.ts(40,20): error TS2339: Property 'prisma' does not exist on type 'ProtectedTRPCContext'.
+src/server/api/trpc.ts(7,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/api/trpc.ts(78,31): error TS2345: Argument of type 'Promise<{ banned: boolean | null; isAdmin: boolean | null; } | undefined> | undefined' is not assignable to parameter of type 'Promise<{ banned: boolean | null; isAdmin: boolean | null; } | undefined>'.
+  Type 'undefined' is not assignable to type 'Promise<{ banned: boolean | null; isAdmin: boolean | null; } | undefined>'.
+src/server/db/migrate.ts(5,10): error TS2305: Module '"./index"' has no exported member 'connection'.
+src/server/db/migrate.ts(5,22): error TS2305: Module '"./index"' has no exported member 'db'.
+src/server/lib/event-usage.ts(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/milestone-check.ts(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/milestone-check.ts(41,8): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/lib/phishing/blocklist.ts(3,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/phishing/blocklist.ts(37,35): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/server/lib/total-clicks.ts(3,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/tracking-link/index.ts(18,15): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/user-plan.ts(4,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/user-plan.ts(48,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/lib/user-plan.ts(48,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/lib/workspace/resource-permissions.ts(9,15): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/workspace/resource-permissions.ts(95,28): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/server/lib/workspace/resource-permissions.ts(157,47): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/lib/workspace/resource-permissions.ts(157,74): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(6,10): error TS2305: Module '"@/server/db"' has no exported member 'db'.
+src/server/lib/workspace/workspace.service.ts(88,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(88,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(216,13): error TS7006: Parameter 'table' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(216,22): error TS7031: Binding element 'eq' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(246,14): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/server/lib/workspace/workspace.service.ts(247,11): error TS7006: Parameter 'm' implicitly has an 'any' type.

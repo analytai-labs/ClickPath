@@ -15,39 +15,30 @@ type PlanCaps = {
   campaignLimit?: number; // Max ACTIVE campaigns (archived don't count; undefined => unlimited)
 };
 
-// Lemon Squeezy variant IDs per plan + billing interval.
-// NOTE: these are hardcoded live IDs. The recommended hardening is to move them
-// to env vars so Live/Test never drift (see billing follow-up).
-const PRO_MONTHLY_VARIANT_ID = 1811616; // $8/mo — new signups
-const PRO_LEGACY_MONTHLY_VARIANT_ID = 441105; // $5/mo — grandfathered subscribers
-const PRO_ANNUAL_VARIANT_ID = 1809620;
-const ULTRA_MONTHLY_VARIANT_ID = 1108002;
-const ULTRA_ANNUAL_VARIANT_ID = 1809627;
+// Stripe Price IDs per plan + billing interval.
+// In a real app, these should be env vars.
+const PRO_MONTHLY_PRICE_ID = "price_pro_monthly";
+const PRO_ANNUAL_PRICE_ID = "price_pro_annual";
+const ULTRA_MONTHLY_PRICE_ID = "price_ultra_monthly";
+const ULTRA_ANNUAL_PRICE_ID = "price_ultra_annual";
 
-// Recognition sets for getPlanFromIds (include legacy/test-mode variant ids).
-const PRO_VARIANT_IDS = new Set([
-  PRO_MONTHLY_VARIANT_ID,
-  PRO_LEGACY_MONTHLY_VARIANT_ID,
-  PRO_ANNUAL_VARIANT_ID,
-  415248,
-]);
-const PRO_PRODUCT_IDS = new Set([441105, 306137]); // include known sample payload product_id
-const ULTRA_VARIANT_IDS = new Set([ULTRA_MONTHLY_VARIANT_ID, ULTRA_ANNUAL_VARIANT_ID, 1134595]);
-const ULTRA_PRODUCT_IDS = new Set([1108002]);
+// Recognition sets for getPlanFromIds.
+const PRO_PRICE_IDS = new Set([PRO_MONTHLY_PRICE_ID, PRO_ANNUAL_PRICE_ID]);
+const ULTRA_PRICE_IDS = new Set([ULTRA_MONTHLY_PRICE_ID, ULTRA_ANNUAL_PRICE_ID]);
 
-const ANNUAL_VARIANT_IDS = new Set([PRO_ANNUAL_VARIANT_ID, ULTRA_ANNUAL_VARIANT_ID]);
+const ANNUAL_PRICE_IDS = new Set([PRO_ANNUAL_PRICE_ID, ULTRA_ANNUAL_PRICE_ID]);
 
-export const PLAN_VARIANT_IDS: Record<Exclude<Plan, "free">, Record<BillingInterval, number>> = {
-  pro: { monthly: PRO_MONTHLY_VARIANT_ID, annual: PRO_ANNUAL_VARIANT_ID },
-  ultra: { monthly: ULTRA_MONTHLY_VARIANT_ID, annual: ULTRA_ANNUAL_VARIANT_ID },
+export const PLAN_PRICE_IDS: Record<Exclude<Plan, "free">, Record<BillingInterval, string>> = {
+  pro: { monthly: PRO_MONTHLY_PRICE_ID, annual: PRO_ANNUAL_PRICE_ID },
+  ultra: { monthly: ULTRA_MONTHLY_PRICE_ID, annual: ULTRA_ANNUAL_PRICE_ID },
 };
 
-export function getVariantId(plan: Exclude<Plan, "free">, interval: BillingInterval): number {
-  return PLAN_VARIANT_IDS[plan][interval];
+export function getStripePriceId(plan: Exclude<Plan, "free">, interval: BillingInterval): string {
+  return PLAN_PRICE_IDS[plan][interval];
 }
 
-export function getIntervalFromVariantId(variantId?: number | null): BillingInterval {
-  return variantId && ANNUAL_VARIANT_IDS.has(variantId) ? "annual" : "monthly";
+export function getIntervalFromPriceId(priceId?: string | null): BillingInterval {
+  return priceId && ANNUAL_PRICE_IDS.has(priceId) ? "annual" : "monthly";
 }
 
 export const PLAN_CAPS: Record<Plan, PlanCaps> = {
@@ -76,11 +67,9 @@ export const PLAN_CAPS: Record<Plan, PlanCaps> = {
   },
 };
 
-export function getPlanFromIds(variantId?: number | null, productId?: number | null): Plan | null {
-  if (variantId && ULTRA_VARIANT_IDS.has(variantId)) return "ultra";
-  if (productId && ULTRA_PRODUCT_IDS.has(productId)) return "ultra";
-  if (variantId && PRO_VARIANT_IDS.has(variantId)) return "pro";
-  if (productId && PRO_PRODUCT_IDS.has(productId)) return "pro";
+export function getPlanFromPriceId(priceId?: string | null): Plan | null {
+  if (priceId && ULTRA_PRICE_IDS.has(priceId)) return "ultra";
+  if (priceId && PRO_PRICE_IDS.has(priceId)) return "pro";
   return null;
 }
 
@@ -112,7 +101,7 @@ export function resolvePlan(subscription?: Subscription | null): Plan {
   }
 
   const mappedPlan =
-    getPlanFromIds(subscription.variantId, subscription.productId) ?? subscription.plan;
+    getPlanFromPriceId(subscription.stripePriceId) ?? subscription.plan;
 
   if (mappedPlan === "ultra" || mappedPlan === "pro") {
     return mappedPlan;
@@ -171,7 +160,7 @@ export function getBioPageLimit(plan: Plan): number | undefined {
   return PLAN_CAPS[plan].bioPageLimit;
 }
 
-/** Pro+ may remove the "Made with iShortn" badge from their bio page. */
+/** Pro+ may remove the "Made with ClickPath" badge from their bio page. */
 export function canRemoveBioBranding(plan: Plan): boolean {
   return plan !== "free";
 }

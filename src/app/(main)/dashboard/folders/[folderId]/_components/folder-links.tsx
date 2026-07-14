@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import { IconLink } from "@tabler/icons-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import Link from "@/app/(main)/dashboard/_components/links/link-card/card";
 import { SelectionProvider } from "@/app/(main)/dashboard/_components/links/selection-context";

@@ -5,11 +5,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface ColorSwatchProps {
@@ -57,7 +53,7 @@ export function ColorSwatch({
       }
       setOpen(isOpen);
     },
-    [color]
+    [color],
   );
 
   const handleHexInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,14 +79,16 @@ export function ColorSwatch({
       onChange(presetColor);
       setHexInput(presetColor);
     },
-    [onChange]
+    [onChange],
   );
 
   const isCustomColor = !presetColors.includes(color);
 
   return (
     <div className="space-y-2">
-      {label && <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">{label}</Label>}
+      {label && (
+        <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">{label}</Label>
+      )}
       <div className="flex flex-wrap items-center gap-1.5">
         {/* Preset color swatches */}
         {presetColors.map((presetColor) => (
@@ -101,14 +99,14 @@ export function ColorSwatch({
               "group relative rounded-lg p-0.5 transition-all duration-150",
               color === presetColor
                 ? "ring-2 ring-blue-500 ring-offset-1"
-                : "hover:ring-2 hover:ring-neutral-300 hover:ring-offset-1"
+                : "hover:ring-2 hover:ring-neutral-300 hover:ring-offset-1",
             )}
             onClick={() => handlePresetSelect(presetColor)}
           >
             <div
               className={cn(
                 "size-7 rounded-md transition-transform group-hover:scale-105",
-                showBorder && "border border-neutral-200 dark:border-border"
+                showBorder && "border border-neutral-200 dark:border-border",
               )}
               style={{ backgroundColor: presetColor }}
             />
@@ -124,13 +122,13 @@ export function ColorSwatch({
                 "group relative rounded-lg p-0.5 transition-all duration-150",
                 isCustomColor
                   ? "ring-2 ring-blue-500 ring-offset-1"
-                  : "hover:ring-2 hover:ring-neutral-300 hover:ring-offset-1"
+                  : "hover:ring-2 hover:ring-neutral-300 hover:ring-offset-1",
               )}
             >
               <div
                 className={cn(
                   "flex size-7 items-center justify-center rounded-md transition-transform group-hover:scale-105",
-                  showBorder && "border border-neutral-200 dark:border-border"
+                  showBorder && "border border-neutral-200 dark:border-border",
                 )}
                 style={{
                   backgroundColor: isCustomColor ? color : "#f5f5f5",
@@ -141,17 +139,15 @@ export function ColorSwatch({
                   stroke={1.5}
                   className={cn(
                     "transition-colors",
-                    isCustomColor ? "text-white drop-shadow-sm" : "text-neutral-500 dark:text-neutral-400"
+                    isCustomColor
+                      ? "text-white drop-shadow-sm"
+                      : "text-neutral-500 dark:text-neutral-400",
                   )}
                 />
               </div>
             </button>
           </PopoverTrigger>
-          <PopoverContent
-            className="w-60 p-3"
-            align="start"
-            sideOffset={8}
-          >
+          <PopoverContent className="w-60 p-3" align="start" sideOffset={8}>
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
@@ -220,7 +216,7 @@ export function ColorSwatch({
                         "h-6 w-6 rounded border transition-all hover:scale-110",
                         color === quickColor
                           ? "border-blue-500 ring-1 ring-blue-500"
-                          : "border-neutral-200 dark:border-border"
+                          : "border-neutral-200 dark:border-border",
                       )}
                       style={{ backgroundColor: quickColor }}
                       onClick={() => {

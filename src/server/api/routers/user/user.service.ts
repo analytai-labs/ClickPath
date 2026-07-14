@@ -10,7 +10,7 @@ export async function getUserProfile(ctx: ProtectedTRPCContext) {
       id: true,
       name: true,
       email: true,
-      imageUrl: true,
+      image: true,
       isAdmin: true,
     },
   });
@@ -25,10 +25,7 @@ export async function getUserProfile(ctx: ProtectedTRPCContext) {
   return userProfile;
 }
 
-export async function updateUserProfile(
-  ctx: ProtectedTRPCContext,
-  input: UpdateUserProfileInput,
-) {
+export async function updateUserProfile(ctx: ProtectedTRPCContext, input: UpdateUserProfileInput) {
   await ctx.prisma.user.update({
     where: { id: ctx.auth.userId },
     data: { name: input.name },

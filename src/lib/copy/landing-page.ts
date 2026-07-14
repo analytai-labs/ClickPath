@@ -20,9 +20,9 @@ export const landingPageCopy = {
         "Absolutely. Our detailed analytics dashboard provides comprehensive tracking of every click. See where clicks originate (geolocation), which devices are used, and which sources (referrers) are driving traffic, giving you the data needed for informed decisions.",
     },
     {
-      question: "Is iShortn free to use?",
+      question: "Is ClickPath free to use?",
       answer:
-        "Yes, iShortn offers a generous free plan with 30 links per month and 1,000 tracked events. For heavier usage, Pro and Ultra plans offer more capacity, custom domains, and advanced features.",
+        "Yes, ClickPath offers a generous free plan with 30 links per month and 1,000 tracked events. For heavier usage, Pro and Ultra plans offer more capacity, custom domains, and advanced features.",
     },
     {
       question: "Can I use my own custom domain?",
@@ -42,7 +42,7 @@ export const landingPageCopy = {
     {
       question: "Is there an API available?",
       answer:
-        "Yes, iShortn provides a RESTful API on the Pro plan and above. You can programmatically create short links, retrieve analytics, and manage your links. Full API documentation is available in our developer docs.",
+        "Yes, ClickPath provides a RESTful API on the Pro plan and above. You can programmatically create short links, retrieve analytics, and manage your links. Full API documentation is available in our developer docs.",
     },
     {
       question: "How secure are shortened links?",

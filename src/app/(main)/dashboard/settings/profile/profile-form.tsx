@@ -8,13 +8,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { api } from "@/trpc/react";
 
@@ -109,11 +103,7 @@ export function ProfileForm({ userProfile }: ProfileFormProps) {
             >
               {isSaving ? (
                 <>
-                  <IconLoader2
-                    size={14}
-                    stroke={1.5}
-                    className="mr-1.5 animate-spin"
-                  />
+                  <IconLoader2 size={14} stroke={1.5} className="mr-1.5 animate-spin" />
                   Saving...
                 </>
               ) : justSaved ? (

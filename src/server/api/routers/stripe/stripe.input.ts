@@ -9,10 +9,7 @@ export const DOWNGRADE_REASONS = [
   "other",
 ] as const;
 
-export const downgradeReasonLabels: Record<
-  (typeof DOWNGRADE_REASONS)[number],
-  string
-> = {
+export const downgradeReasonLabels: Record<(typeof DOWNGRADE_REASONS)[number], string> = {
   too_expensive: "Too expensive for my needs",
   not_using_features: "Not using the premium features",
   switching_to_competitor: "Switching to a different service",
@@ -27,6 +24,4 @@ export const downgradeWithFeedbackInput = z.object({
   additionalFeedback: z.string().max(1000).optional(),
 });
 
-export type DowngradeWithFeedbackInput = z.infer<
-  typeof downgradeWithFeedbackInput
->;
+export type DowngradeWithFeedbackInput = z.infer<typeof downgradeWithFeedbackInput>;

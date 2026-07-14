@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  IconClick,
-  IconDownload,
-  IconScan,
-  IconTrendingUp,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconClick, IconDownload, IconScan, IconTrendingUp, IconUsers } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 

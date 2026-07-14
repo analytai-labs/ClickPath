@@ -35,9 +35,7 @@ type AnalyticsOverviewPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AnalyticsOverviewPage(
-  props: AnalyticsOverviewPageProps
-) {
+export default async function AnalyticsOverviewPage(props: AnalyticsOverviewPageProps) {
   const searchParams = await props.searchParams;
   const range = (searchParams?.range ?? "7d") as RangeEnum;
   const filterType = (searchParams?.filterType ?? "all") as FilterType;
@@ -75,8 +73,8 @@ export default async function AnalyticsOverviewPage(
           </h1>
           {!isProPlan && (
             <p className="mt-1 text-[13px] text-neutral-400 dark:text-neutral-500">
-              Viewing limited analytics (last 7 days).{" "}
-              <UpgradeText text="Upgrade to Pro" /> for full data.
+              Viewing limited analytics (last 7 days). <UpgradeText text="Upgrade to Pro" /> for
+              full data.
             </p>
           )}
         </div>
@@ -107,7 +105,9 @@ export default async function AnalyticsOverviewPage(
         <QuickInfoCard
           title="Top Referrer"
           value={topReferrer}
-          icon={<IconTrendingUp size={16} stroke={1.5} className="text-blue-600 dark:text-blue-400" />}
+          icon={
+            <IconTrendingUp size={16} stroke={1.5} className="text-blue-600 dark:text-blue-400" />
+          }
         />
       </div>
 
@@ -121,10 +121,7 @@ export default async function AnalyticsOverviewPage(
 
       {/* Distribution Cards Grid */}
       <div className="mt-6 grid grid-cols-1 gap-4 md:mt-10 lg:auto-rows-fr lg:grid-cols-2">
-        <ShortLinksCard
-          clicksByLink={clicksByLink}
-          totalClicks={totalVisits.length}
-        />
+        <ShortLinksCard clicksByLink={clicksByLink} totalClicks={totalVisits.length} />
         <DestinationUrlsCard
           clicksByDestination={clicksByDestination}
           totalClicks={totalVisits.length}

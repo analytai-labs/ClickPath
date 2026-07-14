@@ -1,4 +1,4 @@
-import { BioRenderer, type BioRenderBlock, type BioRenderModel } from "./bio-renderer";
+import { type BioRenderBlock, type BioRenderModel, BioRenderer } from "./bio-renderer";
 import { BioPageViewBeacon } from "./view-beacon";
 
 import type { RouterOutputs } from "@/trpc/shared";

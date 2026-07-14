@@ -32,9 +32,7 @@ const percentGrowth = (current: number, prior: number | undefined | null) => {
   return ((current - prior) / prior) * 100;
 };
 
-export default async function LinkAnalyticsPage(
-  props: LinksAnalyticsPageProps
-) {
+export default async function LinkAnalyticsPage(props: LinksAnalyticsPageProps) {
   const searchParams = await props.searchParams;
   const params = await props.params;
   const range = (searchParams?.range ?? "7d") as RangeEnum;
@@ -66,8 +64,8 @@ export default async function LinkAnalyticsPage(
           </h1>
           {!isProPlan && (
             <p className="mt-1 text-[13px] text-neutral-400 dark:text-neutral-500">
-              Viewing limited analytics (last 7 days).{" "}
-              <UpgradeText text="Upgrade to Pro" /> for full data.
+              Viewing limited analytics (last 7 days). <UpgradeText text="Upgrade to Pro" /> for
+              full data.
             </p>
           )}
         </div>

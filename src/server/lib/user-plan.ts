@@ -1,6 +1,6 @@
-import { PrismaClient, Subscription, User } from "@prisma/client";
+import type { PrismaClient, Subscription, User } from "@prisma/client";
 
-import { getPlanCaps, Plan, resolvePlan } from "@/lib/billing/plans";
+import { type Plan, getPlanCaps, resolvePlan } from "@/lib/billing/plans";
 import { prisma } from "@/server/db";
 
 import type { PLAN_CAPS } from "@/lib/billing/plans";
@@ -40,7 +40,7 @@ const getMonthStart = () => {
 
 export async function getUserPlanContext(
   userId: string,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<UserPlanContext | null> {
   const userRecord = await dbClient.user.findFirst({
     where: { id: userId },
@@ -64,13 +64,10 @@ export async function getUserPlanContext(
 
 export async function normalizeMonthlyEventCount(
   ctx: UserPlanContext,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<number> {
   const monthStart = getMonthStart();
-  const lastReset =
-    ctx.userRecord.lastEventCountReset ??
-    ctx.userRecord.createdAt ??
-    new Date();
+  const lastReset = ctx.userRecord.lastEventCountReset ?? ctx.userRecord.createdAt ?? new Date();
 
   if (lastReset < monthStart) {
     await dbClient.user.update({
@@ -90,11 +87,10 @@ export async function normalizeMonthlyEventCount(
 
 export async function normalizeMonthlyLinkCount(
   ctx: UserPlanContext,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<number> {
   const monthStart = getMonthStart();
-  const lastReset =
-    ctx.userRecord.lastLinkCountReset ?? ctx.userRecord.createdAt ?? new Date();
+  const lastReset = ctx.userRecord.lastLinkCountReset ?? ctx.userRecord.createdAt ?? new Date();
 
   if (lastReset < monthStart) {
     await dbClient.user.update({

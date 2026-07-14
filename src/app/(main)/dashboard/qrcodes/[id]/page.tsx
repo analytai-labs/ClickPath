@@ -1,10 +1,9 @@
 import { IconClick, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
 
-import { aggregateVisits } from "@/lib/core/analytics";
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
+import { aggregateVisits } from "@/lib/core/analytics";
 import { api } from "@/trpc/server";
 
-import UpgradeText from "../_components/upgrade-text";
 import { BarChart } from "../../analytics/[alias]/_components/bar-chart";
 import { CountriesAndCitiesStats } from "../../analytics/[alias]/_components/countries-and-cities-stats";
 import { GeoRulesStats } from "../../analytics/[alias]/_components/geo-rules-stats";
@@ -13,6 +12,7 @@ import { RangeSelectorWrapper } from "../../analytics/[alias]/_components/range-
 import { ReferrerStats } from "../../analytics/[alias]/_components/referrers";
 import { UserAgentStats } from "../../analytics/[alias]/_components/user-agent-stats";
 import WorldMapHeatmap from "../../analytics/[alias]/_components/world-map-heatmap";
+import UpgradeText from "../_components/upgrade-text";
 
 import type { RangeEnum } from "@/server/api/routers/link/link.input";
 
@@ -39,19 +39,12 @@ export default async function QRCodeAnalyticsPage(props: QRCodeAnalyticsPageProp
   const alias = qrCode.link.alias!;
   const domain = qrCode.link.domain ?? DEFAULT_PLATFORM_DOMAIN;
 
-  const {
-    totalVisits,
-    uniqueVisits,
-    topCountry,
-    referers,
-    topReferrer,
-    isProPlan,
-    geoRules,
-  } = await api.link.linkVisits.query({
-    id: alias,
-    domain,
-    range,
-  });
+  const { totalVisits, uniqueVisits, topCountry, referers, topReferrer, isProPlan, geoRules } =
+    await api.link.linkVisits.query({
+      id: alias,
+      domain,
+      range,
+    });
 
   const aggregatedVisits = aggregateVisits(totalVisits, uniqueVisits);
   const countryData = aggregatedVisits.clicksPerCountry;
@@ -64,24 +57,18 @@ export default async function QRCodeAnalyticsPage(props: QRCodeAnalyticsPageProp
           {qrCode.qrCode && (
             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-neutral-100 bg-white p-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrCode.qrCode}
-                alt="QR Code"
-                className="h-full w-full object-contain"
-              />
+              <img src={qrCode.qrCode} alt="QR Code" className="h-full w-full object-contain" />
             </div>
           )}
           <div className="flex flex-col gap-1">
             <h1 className="text-xl font-semibold leading-tight tracking-tight text-neutral-900 md:text-2xl">
               {qrCode.title || "Untitled QR Code"}
             </h1>
-            <p className="text-[13px] text-neutral-400">
-              {qrCode.link.url}
-            </p>
+            <p className="text-[13px] text-neutral-400">{qrCode.link.url}</p>
             {!isProPlan && (
               <p className="text-[13px] text-neutral-400">
-                Viewing limited analytics (last 7 days).{" "}
-                <UpgradeText text="Upgrade to Pro" /> for full data.
+                Viewing limited analytics (last 7 days). <UpgradeText text="Upgrade to Pro" /> for
+                full data.
               </p>
             )}
           </div>

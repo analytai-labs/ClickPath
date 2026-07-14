@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "next-view-transitions";
 import { api } from "@/trpc/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { Link } from "next-view-transitions";
+import { useEffect, useState } from "react";
 
 export function ChangelogBanner() {
   const [isDismissed, setIsDismissed] = useState(true);

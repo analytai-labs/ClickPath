@@ -28,7 +28,7 @@ const DashboardHeader = () => {
           <IconBrandDiscord size={18} stroke={1.5} />
         </Link>
         <Link
-          href="https://github.com/AmoabaKelvin/ishortn.ink"
+          href="https://github.com/Shlok-Zanwar/ClickPath"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="GitHub"

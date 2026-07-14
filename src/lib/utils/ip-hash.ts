@@ -1,4 +1,6 @@
-import crypto from "node:crypto";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
 import { env } from "@/env.mjs";
 
@@ -17,7 +19,7 @@ import { env } from "@/env.mjs";
 export function hashIp(ip: string): string {
   const secret = env.IP_HASH_SECRET;
   if (secret) {
-    return crypto.createHmac("sha256", secret).update(ip).digest("hex");
+    return bytesToHex(hmac(sha256, new TextEncoder().encode(secret), new TextEncoder().encode(ip)));
   }
-  return crypto.createHash("sha256").update(ip).digest("hex");
+  return bytesToHex(sha256(new TextEncoder().encode(ip)));
 }

@@ -1,5 +1,5 @@
 import seedrandom from "seedrandom";
-import { encode, QrCodeDataType } from "uqr";
+import { QrCodeDataType, encode } from "uqr";
 
 import { clientLogger } from "@/lib/logger/client";
 
@@ -9,8 +9,8 @@ import { resolveMargin } from "./utils";
 
 import type {
   GenerateQRCodeResult,
-  QrCodeGeneratorMarkerState,
   QRCodeGeneratorState,
+  QrCodeGeneratorMarkerState,
 } from "./types";
 
 interface MarkerInfo {
@@ -75,7 +75,7 @@ export async function generateQRCode(
   ctx.imageSmoothingEnabled = false;
 
   // Define effective light color once
-  const effectiveLightColor = state.transparent ? 'rgba(0,0,0,0)' : state.lightColor;
+  const effectiveLightColor = state.transparent ? "rgba(0,0,0,0)" : state.lightColor;
 
   // Set initial background
   ctx.fillStyle = invert ? state.darkColor : effectiveLightColor;
@@ -822,7 +822,7 @@ function createQrInstance(state: QRCodeGeneratorState) {
   // recovery) so the QR code remains scannable despite covered modules.
   const ecc = state.logoImage ? "H" : state.ecc;
 
-  const qr = encode(state.text || "ishortn.ink", {
+  const qr = encode(state.text || "clickpath.analytai.in", {
     minVersion: state.minVersion,
     maxVersion: state.maxVersion,
     ecc,

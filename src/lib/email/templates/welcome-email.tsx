@@ -19,37 +19,36 @@ interface WelcomeEmailProps {
 export const WelcomeEmail = ({ userFirstname }: WelcomeEmailProps) => (
   <Html>
     <Head />
-    <Preview>iShortn - Free and open-source URL shortener</Preview>
+    <Preview>ClickPath - Enterprise URL Shortener & Link Management</Preview>
     <Body style={main}>
       <Container style={container}>
         <Text style={paragraph}>Hi {userFirstname ? userFirstname : "there"},</Text>
-        <Text style={paragraph}>Welcome and signing up to iShortn!</Text>
+        <Text style={paragraph}>Welcome and thank you for signing up to ClickPath!</Text>
         <Text style={paragraph}>
-          It&apos;s great to have you onboard our fleet of users. Just incase you have a concern or
-          a feature request you will want to share with us, feel free to reach out to me at{" "}
-          <Link href="mailto:kelvin@ishortn.ink" style={link}>
-            kelvin@ishortn.ink
+          It&apos;s great to have you onboard. If you have any questions or feature requests you
+          want to share with us, feel free to reach out to our team at{" "}
+          <Link href="mailto:support@clickpath.analytai.in" style={link}>
+            support@clickpath.analytai.in
           </Link>
         </Text>
         <Section style={btnContainer}>
-          <Button style={button} href="https://ishortn.ink/dashboard">
+          <Button style={button} href="https://clickpath.analytai.in/dashboard">
             Visit your Dashboard
           </Button>
         </Section>
         <Text style={paragraph}>
           Best,
           <br />
-          Kelvin Amoaba
-          <br />
-          iShortn Developer
+          The ClickPath Team
         </Text>
         <Hr style={hr} />
         <Text style={footer}>
-          Incase you need an engineer on your team or a freelancer, I am available for hire. You can
-          check out my portfolio at{" "}
-          <Link href="https://kelvinamoaba.com" style={link}>
-            kelvinamoaba.com
+          Thank you for joining ClickPath! If you have any questions, feedback, or feature requests,
+          feel free to reply directly to this email or visit{" "}
+          <Link href="https://clickpath.analytai.in" style={link}>
+            clickpath.analytai.in
           </Link>
+          .
         </Text>
       </Container>
     </Body>
@@ -61,7 +60,7 @@ export const renderWelcomeEmail = (name: string) => {
 };
 
 WelcomeEmail.PreviewProps = {
-  userFirstname: "Kelvin",
+  userFirstname: "ClickPath User",
 } as WelcomeEmailProps;
 
 export default WelcomeEmail;

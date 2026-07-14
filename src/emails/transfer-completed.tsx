@@ -1,13 +1,4 @@
-import {
-  Body,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Container, Head, Hr, Html, Preview, Section, Text } from "@react-email/components";
 
 import type { ResourceCounts } from "@/server/api/routers/account-transfer/account-transfer.service";
 
@@ -36,15 +27,15 @@ export const TransferCompletedEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Your iShortn resources have been transferred</Preview>
+      <Preview>Your ClickPath resources have been transferred</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={section}>
             <Text style={text}>Hi {senderName || "there"},</Text>
 
             <Text style={text}>
-              Your resource transfer to <strong>{recipientName}</strong> (
-              {recipientEmail}) has been completed successfully.
+              Your resource transfer to <strong>{recipientName}</strong> ({recipientEmail}) has been
+              completed successfully.
             </Text>
 
             <Hr style={hr} />
@@ -93,24 +84,20 @@ export const TransferCompletedEmail = ({
                   {resourceCounts.qrPresets !== 1 ? "s" : ""}
                 </Text>
               )}
-              {totalResources === 0 && (
-                <Text style={resourceItem}>No resources transferred</Text>
-              )}
+              {totalResources === 0 && <Text style={resourceItem}>No resources transferred</Text>}
             </Section>
 
             <Hr style={hr} />
 
             <Text style={text}>
-              These resources are now owned by {recipientName} and have been
-              removed from your account.
+              These resources are now owned by {recipientName} and have been removed from your
+              account.
             </Text>
 
             <Hr style={hr} />
 
-            <Text style={text}>Thanks for using iShortn!</Text>
-            <Text style={{ ...text, fontWeight: 500 }}>
-              Kelvin & the iShortn team
-            </Text>
+            <Text style={text}>Thanks for using ClickPath!</Text>
+            <Text style={{ ...text, fontWeight: 500 }}>The ClickPath team</Text>
           </Section>
         </Container>
       </Body>

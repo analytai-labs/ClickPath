@@ -1,13 +1,9 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { Prisma, PrismaClient } from "@prisma/client";
 
 import { canUseCampaignUtmDefaults } from "@/lib/billing/plans";
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
-import {
-  isWorkspaceAdmin,
-  requirePermission,
-  workspaceOwnership,
-} from "@/server/lib/workspace";
+import { isWorkspaceAdmin, requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
 import {
   checkCampaignLimit,
@@ -20,6 +16,8 @@ import {
   utmParamsEqual,
 } from "./utils";
 
+import type { Campaign } from "@prisma/client";
+import type { WorkspaceTRPCContext } from "../../trpc";
 import type {
   AddLinksInput,
   CampaignAnalyticsInput,
@@ -28,36 +26,35 @@ import type {
   RemoveLinkInput,
   UpdateCampaignInput,
 } from "./campaign.input";
-import type { Campaign } from "@prisma/client";
-import type { WorkspaceTRPCContext } from "../../trpc";
 
-const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) => 
-  workspace.type === "team" 
-    ? { teamId: workspace.teamId } 
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) =>
+  workspace.type === "team"
+    ? { teamId: workspace.teamId }
     : { userId: workspace.userId, teamId: null };
 
 async function getPrismaAccessibleFolderIds(
   prisma: PrismaClient,
   workspace: WorkspaceTRPCContext["workspace"],
-  teamFolderIds: number[]
+  teamFolderIds: number[],
 ): Promise<number[]> {
   if (teamFolderIds.length === 0) return [];
   if (workspace.type === "personal" || isWorkspaceAdmin(workspace)) return teamFolderIds;
 
   const folders = await prisma.folder.findMany({
     where: { id: { in: teamFolderIds } },
-    select: { id: true, isRestricted: true }
+    select: { id: true, isRestricted: true },
   });
 
   const folderRestrictionMap = new Map<number, boolean>();
   for (const f of folders) folderRestrictionMap.set(f.id, f.isRestricted);
 
   const restrictedFolderIds = folders.filter((f) => f.isRestricted).map((f) => f.id);
-  const allPermissions = restrictedFolderIds.length > 0
-    ? await prisma.folderPermission.findMany({
-        where: { folderId: { in: restrictedFolderIds } }
-      })
-    : [];
+  const allPermissions =
+    restrictedFolderIds.length > 0
+      ? await prisma.folderPermission.findMany({
+          where: { folderId: { in: restrictedFolderIds } },
+        })
+      : [];
 
   const folderPermissionMap = new Map<number, string[]>();
   for (const perm of allPermissions) {
@@ -76,10 +73,7 @@ async function getPrismaAccessibleFolderIds(
   });
 }
 
-async function fetchWorkspaceCampaign(
-  ctx: WorkspaceTRPCContext,
-  id: number,
-): Promise<Campaign> {
+async function fetchWorkspaceCampaign(ctx: WorkspaceTRPCContext, id: number): Promise<Campaign> {
   const row = await ctx.prisma.campaign.findFirst({
     where: {
       id,
@@ -92,7 +86,9 @@ async function fetchWorkspaceCampaign(
   return row;
 }
 
-async function folderAccessCondition(ctx: WorkspaceTRPCContext): Promise<Prisma.LinkWhereInput | undefined> {
+async function folderAccessCondition(
+  ctx: WorkspaceTRPCContext,
+): Promise<Prisma.LinkWhereInput | undefined> {
   if (ctx.workspace.type !== "team" || isWorkspaceAdmin(ctx.workspace)) return undefined;
 
   const allFolders = await ctx.prisma.folder.findMany({
@@ -194,27 +190,29 @@ export async function listCampaigns(ctx: WorkspaceTRPCContext, input: ListCampai
       where: finalMemberScope,
       _count: true,
     }),
-    ctx.prisma.linkVisit.groupBy({
-      by: ["linkId"],
-      where: {
-        link: finalMemberScope,
-      },
-      _count: true,
-    }).then(async (visits) => {
-       const linkIds = visits.map(v => v.linkId);
-       const links = await ctx.prisma.link.findMany({
-         where: { id: { in: linkIds } },
-         select: { id: true, campaignId: true }
-       });
-       const map = new Map<number, number>();
-       for (const v of visits) {
-         const link = links.find(l => l.id === v.linkId);
-         if (link && link.campaignId !== null) {
-           map.set(link.campaignId, (map.get(link.campaignId) || 0) + v._count);
-         }
-       }
-       return Array.from(map.entries()).map(([campaignId, count]) => ({ campaignId, count }));
-    }),
+    ctx.prisma.linkVisit
+      .groupBy({
+        by: ["linkId"],
+        where: {
+          link: finalMemberScope,
+        },
+        _count: true,
+      })
+      .then(async (visits) => {
+        const linkIds = visits.map((v) => v.linkId);
+        const links = await ctx.prisma.link.findMany({
+          where: { id: { in: linkIds } },
+          select: { id: true, campaignId: true },
+        });
+        const map = new Map<number, number>();
+        for (const v of visits) {
+          const link = links.find((l) => l.id === v.linkId);
+          if (link && link.campaignId !== null) {
+            map.set(link.campaignId, (map.get(link.campaignId) || 0) + v._count);
+          }
+        }
+        return Array.from(map.entries()).map(([campaignId, count]) => ({ campaignId, count }));
+      }),
   ]);
 
   const linkCountMap = new Map<number, number>();
@@ -224,9 +222,7 @@ export async function listCampaigns(ctx: WorkspaceTRPCContext, input: ListCampai
     const target = row.isQrCode ? qrCountMap : linkCountMap;
     target.set(row.campaignId, (target.get(row.campaignId) || 0) + row._count);
   }
-  const clickMap = new Map(
-    clickCounts.map((r) => [r.campaignId, r.count]),
-  );
+  const clickMap = new Map(clickCounts.map((r) => [r.campaignId, r.count]));
 
   return rows.map((row) => ({
     ...row,
@@ -425,7 +421,8 @@ export async function updateCampaign(ctx: WorkspaceTRPCContext, input: UpdateCam
         utmSource: input.utmSource !== undefined ? normalizeUtmValue(input.utmSource) : undefined,
         utmMedium: input.utmMedium !== undefined ? normalizeUtmValue(input.utmMedium) : undefined,
         utmTerm: input.utmTerm !== undefined ? normalizeUtmValue(input.utmTerm) : undefined,
-        utmContent: input.utmContent !== undefined ? normalizeUtmValue(input.utmContent) : undefined,
+        utmContent:
+          input.utmContent !== undefined ? normalizeUtmValue(input.utmContent) : undefined,
       },
     });
   } catch (error) {
@@ -476,7 +473,7 @@ export async function addLinks(ctx: WorkspaceTRPCContext, input: AddLinksInput) 
     ...getWorkspaceWhere(ctx.workspace),
     isBioLink: false,
   };
-  
+
   const candidates = await ctx.prisma.link.findMany({
     where: folderCondition ? { AND: [candidateScope, folderCondition] } : candidateScope,
     select: { id: true, alias: true, domain: true, utmParams: true },
@@ -586,12 +583,7 @@ export async function getCampaignAnalytics(
 
   // We fetch visits in memory because Drizzle was doing a huge series of complex raw aggregations.
   // Prisma doesn't natively support `DATE(createdAt)` inside `groupBy` out of the box in a type-safe way.
-  const [
-    prevTotal,
-    uniqueVisitorsRows,
-    perLinkRows,
-    visits,
-  ] = await Promise.all([
+  const [prevTotal, uniqueVisitorsRows, perLinkRows, visits] = await Promise.all([
     ctx.prisma.linkVisit.count({
       where: {
         linkId: { in: memberIds },
@@ -618,14 +610,14 @@ export async function getCampaignAnalytics(
         country: true,
         device: true,
         referer: true,
-      }
+      },
     }),
   ]);
 
   let clicks = 0;
   let scans = 0;
   const seriesMap = new Map<string, { date: string; clicks: number; scans: number }>();
-  
+
   const countryMap = new Map<string, number>();
   const deviceMap = new Map<string, number>();
   const refererMap = new Map<string, number>();
@@ -634,19 +626,21 @@ export async function getCampaignAnalytics(
     if (v.link?.isQrCode) scans++;
     else clicks++;
 
-    const dateStr = v.createdAt ? (v.createdAt.toISOString().split("T")[0] ?? "Unknown") : "Unknown";
+    const dateStr = v.createdAt
+      ? (v.createdAt.toISOString().split("T")[0] ?? "Unknown")
+      : "Unknown";
     const entry = seriesMap.get(dateStr) ?? { date: dateStr, clicks: 0, scans: 0 };
     if (v.link?.isQrCode) entry.scans++;
     else entry.clicks++;
     seriesMap.set(dateStr, entry);
 
-    const country = (v.country && v.country !== "") ? v.country : "Unknown";
+    const country = v.country && v.country !== "" ? v.country : "Unknown";
     countryMap.set(country, (countryMap.get(country) || 0) + 1);
 
-    const device = (v.device && v.device !== "") ? v.device : "Unknown";
+    const device = v.device && v.device !== "" ? v.device : "Unknown";
     deviceMap.set(device, (deviceMap.get(device) || 0) + 1);
 
-    const referer = (v.referer && v.referer !== "") ? v.referer : "Unknown";
+    const referer = v.referer && v.referer !== "" ? v.referer : "Unknown";
     refererMap.set(referer, (refererMap.get(referer) || 0) + 1);
   }
 
@@ -682,7 +676,7 @@ export async function getCampaignAnalytics(
     return Object.fromEntries(
       Array.from(map.entries())
         .sort((a, b) => b[1] - a[1])
-        .slice(0, BREAKDOWN_LIMIT)
+        .slice(0, BREAKDOWN_LIMIT),
     );
   };
 

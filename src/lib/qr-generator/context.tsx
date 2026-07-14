@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type React from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { defaultGeneratorState } from "./state";
 

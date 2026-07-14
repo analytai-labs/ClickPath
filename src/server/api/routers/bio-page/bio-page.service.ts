@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
 
+import { normalizeSocialUrl } from "@/components/bio/social-links";
 import {
   canRemoveBioBranding,
   canScheduleBioBlocks,
@@ -8,7 +9,6 @@ import {
   canUseBioCustomThemes,
   getPlanCaps,
 } from "@/lib/billing/plans";
-import { normalizeSocialUrl } from "@/components/bio/social-links";
 import { isPlatformDomain } from "@/lib/constants/domains";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import {
@@ -28,17 +28,17 @@ import {
   rethrowBioDuplicate,
 } from "./utils";
 
+import type { ImageType } from "@/server/lib/storage/types";
+import type { BioBlock, BioPage } from "@prisma/client";
+import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
   AddBioBlockInput,
+  BioThemeInput,
   CreateBioPageInput,
   ReorderBlocksInput,
   UpdateBioBlockInput,
   UpdateBioPageInput,
-  BioThemeInput,
 } from "./bio-page.input";
-import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
-import type { BioBlock, BioPage } from "@prisma/client";
-import type { ImageType } from "@/server/lib/storage/types";
 
 export type BioPageTheme = BioThemeInput;
 export type BioSocialLink = { platform: string; url: string };
@@ -112,7 +112,7 @@ async function resolveImageUpdate(
   previous: string | null,
 ): Promise<{ value: string | null; previousToDelete: string | null }> {
   const value = next
-    ? (await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next
+    ? ((await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next)
     : null;
   return { value, previousToDelete: previous && previous !== value ? previous : null };
 }
@@ -164,7 +164,10 @@ export async function listBioPages(ctx: WorkspaceTRPCContext) {
   return pages.map((p) => ({ ...p, blockCount: countMap.get(p.id) ?? 0 }));
 }
 
-function toEditorBlock(b: BioBlock, linkMap: Map<number, { domain: string; alias: string | null; blocked: boolean | null }>) {
+function toEditorBlock(
+  b: BioBlock,
+  linkMap: Map<number, { domain: string; alias: string | null; blocked: boolean | null }>,
+) {
   const base = {
     id: b.id,
     type: b.type,
@@ -245,7 +248,7 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
 
   if (input.removeBranding !== undefined) {
     if (input.removeBranding && !canRemoveBioBranding(plan)) {
-      throw forbidden("Removing iShortn branding is available on Pro and Ultra plans.");
+      throw forbidden("Removing ClickPath branding is available on Pro and Ultra plans.");
     }
     updates.removeBranding = input.removeBranding;
   }
@@ -262,7 +265,10 @@ export async function updateBioPage(ctx: WorkspaceTRPCContext, input: UpdateBioP
       if (!canUseBioCustomDomain(plan)) {
         throw forbidden("Custom domains for bio pages are available on Pro and Ultra plans.");
       }
-      const normalized = input.customDomain.trim().toLowerCase().replace(/^www\./, "");
+      const normalized = input.customDomain
+        .trim()
+        .toLowerCase()
+        .replace(/^www\./, "");
       if (isPlatformDomain(normalized)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -384,12 +390,15 @@ export async function addBlock(ctx: WorkspaceTRPCContext, input: AddBioBlockInpu
   const content =
     input.type === "social"
       ? JSON.stringify(normalizeSocials(input.socials ?? []))
-      : input.content ?? null;
+      : (input.content ?? null);
 
   if (input.type === "link") {
     const destination = input.url?.trim();
     if (!destination) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "A link block needs a destination URL." });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "A link block needs a destination URL.",
+      });
     }
     const prepared = await prepareHiddenTrackingLink(ctx, {
       url: destination,
@@ -444,7 +453,8 @@ export async function updateBlock(ctx: WorkspaceTRPCContext, input: UpdateBioBlo
   if (input.scheduledUntil !== undefined) updates.scheduledUntil = input.scheduledUntil;
 
   if (block.type === "social") {
-    if (input.socials !== undefined) updates.content = JSON.stringify(normalizeSocials(input.socials));
+    if (input.socials !== undefined)
+      updates.content = JSON.stringify(normalizeSocials(input.socials));
   } else if (input.content !== undefined) {
     updates.content = input.content;
   }
@@ -624,7 +634,10 @@ export async function getPublicBioPageByDomain(
   ctx: PublicTRPCContext,
   domain: string,
 ): Promise<PublicBioPage | null> {
-  const normalized = domain.trim().toLowerCase().replace(/^www\./, "");
+  const normalized = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
   const page = await ctx.prisma.bioPage.findFirst({
     where: { customDomain: normalized, isPublished: true },
   });

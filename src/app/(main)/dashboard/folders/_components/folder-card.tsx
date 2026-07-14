@@ -1,13 +1,7 @@
 "use client";
 
+import { IconClick, IconLock, IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import {
-  IconClick,
-  IconLock,
-  IconPencil,
-  IconSettings,
-  IconTrash,
-} from "@tabler/icons-react";
 import { useTransitionRouter } from "next-view-transitions";
 
 import { daysSinceDate } from "@/lib/utils";
@@ -70,9 +64,7 @@ export function FolderCard({
             {/* Metadata row */}
             <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px]">
               <span className="text-neutral-400 dark:text-neutral-500">
-                {daysSinceFolderCreation === 0
-                  ? "Today"
-                  : `${daysSinceFolderCreation}d`}
+                {daysSinceFolderCreation === 0 ? "Today" : `${daysSinceFolderCreation}d`}
               </span>
               <span className="text-neutral-300">&middot;</span>
               <span className="text-neutral-500 dark:text-neutral-400">

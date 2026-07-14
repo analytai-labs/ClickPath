@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { type PaidPlan } from "@/lib/constants/plan-pricing";
+import type { PaidPlan } from "@/lib/constants/plan-pricing";
 import { timeAgo } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/shared";
 

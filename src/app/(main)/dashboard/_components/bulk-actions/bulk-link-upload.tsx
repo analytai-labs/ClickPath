@@ -23,11 +23,7 @@ type BulkLinkUploadDialogProps = {
   proMembership: boolean;
 };
 
-export function BulkLinkUploadDialog({
-  open,
-  setOpen,
-  proMembership,
-}: BulkLinkUploadDialogProps) {
+export function BulkLinkUploadDialog({ open, setOpen, proMembership }: BulkLinkUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -74,17 +70,13 @@ export function BulkLinkUploadDialog({
           <DialogTitle>Bulk Link Upload</DialogTitle>
           {proMembership && (
             <DialogDescription>
-              Upload a CSV file with your links. The CSV should have our
-              required columns: 'url', 'alias' (optional), 'domain' (optional),
-              'note' (optional). (optional).
+              Upload a CSV file with your links. The CSV should have our required columns: 'url',
+              'alias' (optional), 'domain' (optional), 'note' (optional). (optional).
             </DialogDescription>
           )}
         </DialogHeader>
         {proMembership && (
-          <div
-            className="flex w-full items-center justify-center"
-            {...getRootProps()}
-          >
+          <div className="flex w-full items-center justify-center" {...getRootProps()}>
             <input {...getInputProps()} />
             <label
               htmlFor="dropzone-file"
@@ -92,7 +84,7 @@ export function BulkLinkUploadDialog({
                 "flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-border bg-gray-50 dark:bg-accent/50 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-accent",
                 {
                   "border-gray-500 dark:border-neutral-400": isDragActive,
-                }
+                },
               )}
             >
               <div className="flex flex-col items-center justify-center pb-6 pt-5">
@@ -106,8 +98,8 @@ export function BulkLinkUploadDialog({
                   {isDragActive
                     ? "Drop the files here to upload"
                     : file
-                    ? `Successfully uploaded ${file.name}`
-                    : "Drag 'n' drop some files here, or click to select files"}
+                      ? `Successfully uploaded ${file.name}`
+                      : "Drag 'n' drop some files here, or click to select files"}
                 </p>
               </div>
             </label>
@@ -121,10 +113,7 @@ export function BulkLinkUploadDialog({
         )}
 
         {proMembership ? (
-          <Button
-            onClick={handleUpload}
-            disabled={!file || uploadMutation.isLoading}
-          >
+          <Button onClick={handleUpload} disabled={!file || uploadMutation.isLoading}>
             {uploadMutation.isLoading ? "Creating links ..." : "Create links"}
           </Button>
         ) : (

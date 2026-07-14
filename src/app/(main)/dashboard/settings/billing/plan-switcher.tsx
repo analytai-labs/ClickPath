@@ -12,8 +12,8 @@ import { api } from "@/trpc/react";
 
 import { DowngradeFeedbackModal } from "../../pricing/_components/downgrade-feedback-modal";
 import {
-  buildPlanChangeCopy,
   PlanChangeConfirmDialog,
+  buildPlanChangeCopy,
 } from "../../pricing/_components/plan-change-confirm-dialog";
 
 import type { BillingInterval, Plan } from "@/lib/billing/plans";
@@ -21,7 +21,12 @@ import type { BillingInterval, Plan } from "@/lib/billing/plans";
 const PLANS: { id: Plan; name: string; monthly: number; annual: number }[] = [
   { id: "free", name: "Free", monthly: PLAN_PRICES_USD.free, annual: 0 },
   { id: "pro", name: "Pro", monthly: PLAN_PRICES_USD.pro, annual: PLAN_PRICES_ANNUAL_USD.pro },
-  { id: "ultra", name: "Ultra", monthly: PLAN_PRICES_USD.ultra, annual: PLAN_PRICES_ANNUAL_USD.ultra },
+  {
+    id: "ultra",
+    name: "Ultra",
+    monthly: PLAN_PRICES_USD.ultra,
+    annual: PLAN_PRICES_ANNUAL_USD.ultra,
+  },
 ];
 
 const planOrder: Record<Plan, number> = { free: 0, pro: 1, ultra: 2 };
@@ -42,9 +47,9 @@ export function PlanSwitcher({ currentPlan, currentInterval }: PlanSwitcherProps
     kind: "switch" | "upgrade";
   } | null>(null);
 
-  const createCheckoutOrUpdate = api.lemonsqueezy.createCheckoutOrUpdate.useMutation({
+  const createCheckoutOrUpdate = api.stripe.createCheckoutOrUpdate.useMutation({
     onSuccess: (data) => {
-      if (data.status === "redirect" && data.url) {
+      if (data.url) {
         window.location.href = data.url;
         return;
       }

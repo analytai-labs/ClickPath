@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 
-import { Plan, PLAN_CAPS } from "@/lib/billing/plans";
+import { PLAN_CAPS, type Plan } from "@/lib/billing/plans";
 import { prisma } from "@/server/db";
 
 import { getUserPlanContext, normalizeMonthlyEventCount } from "./user-plan";
@@ -21,15 +21,9 @@ type EventUsageResult = {
 
 const ALERT_THRESHOLDS = [80, 90, 100];
 
-function nextAlertLevel(
-  limit: number,
-  newCount: number,
-  previousLevel: number
-): number | null {
+function nextAlertLevel(limit: number, newCount: number, previousLevel: number): number | null {
   const percentage = Math.floor((newCount / limit) * 100);
-  const threshold = ALERT_THRESHOLDS.find(
-    (level) => percentage >= level && previousLevel < level
-  );
+  const threshold = ALERT_THRESHOLDS.find((level) => percentage >= level && previousLevel < level);
   return threshold ?? null;
 }
 
@@ -39,7 +33,7 @@ function shouldTrackCount(plan: Plan): boolean {
 
 export async function registerEventUsage(
   userId: string,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<EventUsageResult> {
   const ctx = await getUserPlanContext(userId, dbClient);
 

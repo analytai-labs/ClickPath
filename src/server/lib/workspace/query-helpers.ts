@@ -10,7 +10,7 @@ import type { WorkspaceContext } from "./types";
  * @returns Prisma condition for filtering by workspace
  */
 export function workspaceFilter(
-  workspace: WorkspaceContext
+  workspace: WorkspaceContext,
 ): { teamId: number } | { userId: string; teamId: null } {
   if (workspace.type === "team") {
     // Team workspace: only show team resources

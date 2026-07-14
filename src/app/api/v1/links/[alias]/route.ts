@@ -102,8 +102,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ ali
   } catch (error) {
     log.error({ err: error, alias, domain }, "failed to update link");
 
-    const cause =
-      error instanceof Error && error.cause instanceof Error ? error.cause : error;
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
     const isDuplicateKey = (candidate: unknown) =>
       candidate !== null && typeof candidate === "object" && (candidate as any).code === "P2002";
 

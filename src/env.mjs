@@ -12,18 +12,22 @@ export const env = createEnv({
       .url()
       .refine(
         (str) => !str.includes("YOUR_DATABASE_URL_HERE"),
-        "You forgot to change the default URL"
+        "You forgot to change the default URL",
       ),
     GEOLOCATION_API_KEY: z.string().optional(),
-    NODE_ENV: z
-      .enum(["development", "test", "production"])
-      .default("development"),
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     RESEND_API_KEY: z.string().optional(),
     WEBHOOK_SECRET: z.string().optional(),
     REDIS_URL: z.string().url(),
     UMAMI_TRACKING_ID: z.string().optional(),
     UMAMI_URL: z.string().url().optional(),
     DISCORD_WEBHOOK_URL: z.string().url().optional(),
+    AUTH_SECRET: z.string(),
+    AUTH_GOOGLE_ID: z.string().optional(),
+    AUTH_GOOGLE_SECRET: z.string().optional(),
+    AUTH_GITHUB_ID: z.string().optional(),
+    AUTH_GITHUB_SECRET: z.string().optional(),
+    EMAIL_FROM: z.string().email().optional(),
     // Google Safe Browsing & Web Risk (same key, Web Risk requires billing enabled)
     GOOGLE_SAFE_BROWSING_API_KEY: z.string().optional(),
     // Cloudflare R2 Storage (S3-compatible)
@@ -40,6 +44,11 @@ export const env = createEnv({
     // beacons. Optional: when unset, tokens are not issued and no verification
     // events are accepted — the feature is effectively disabled.
     VERIFIED_CLICKS_SECRET: z.string().min(32).optional(),
+    
+    // Stripe
+    STRIPE_API_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_PRO_MONTHLY_PLAN_ID: z.string().optional(),
   },
 
   /**
@@ -67,6 +76,12 @@ export const env = createEnv({
     UMAMI_TRACKING_ID: process.env.UMAMI_TRACKING_ID,
     UMAMI_URL: process.env.UMAMI_URL,
     DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    AUTH_GITHUB_ID: process.env.AUTH_GITHUB_ID,
+    AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
+    EMAIL_FROM: process.env.EMAIL_FROM,
     // Google Safe Browsing & Web Risk
     GOOGLE_SAFE_BROWSING_API_KEY: process.env.GOOGLE_SAFE_BROWSING_API_KEY,
     // Cloudflare R2 Storage
@@ -79,6 +94,10 @@ export const env = createEnv({
     VERIFIED_CLICKS_SECRET: process.env.VERIFIED_CLICKS_SECRET,
     // Client-side env vars
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    // Stripe
+    STRIPE_API_KEY: process.env.STRIPE_API_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRO_MONTHLY_PLAN_ID: process.env.STRIPE_PRO_MONTHLY_PLAN_ID,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

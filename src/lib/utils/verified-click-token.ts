@@ -1,4 +1,5 @@
-import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 
 import { env } from "@/env.mjs";
 
@@ -12,8 +13,8 @@ const TOKEN_VERSION = "v2";
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5_000;
 
-function base64urlEncode(buf: Buffer): string {
-  return buf
+function base64urlEncode(buf: Uint8Array): string {
+  return Buffer.from(buf)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -42,32 +43,28 @@ function canonicalizeDestination(raw: string): string {
 
 /** Short, URL-safe fingerprint that binds a token to its intended destination. */
 export function hashDestination(destination: string): string {
-  return base64urlEncode(
-    createHash("sha256")
-      .update(canonicalizeDestination(destination))
-      .digest()
-      .subarray(0, 16),
-  );
+  const hash = sha256(new TextEncoder().encode(canonicalizeDestination(destination)));
+  return base64urlEncode(hash.subarray(0, 16));
 }
 
 export function generateVisitId(): string {
-  return randomUUID();
+  return crypto.randomUUID();
 }
 
 /** Returns null when the secret is unset; caller treats that as feature-disabled. */
-export function signVerifiedClickToken(
-  visitId: string,
-  destination: string,
-): string | null {
+export function signVerifiedClickToken(visitId: string, destination: string): string | null {
   const secret = getSecret();
   if (!secret) return null;
 
   const issuedAt = Date.now();
   const destHash = hashDestination(destination);
   const payload = `${TOKEN_VERSION}.${visitId}.${destHash}.${issuedAt}`;
-  const sig = base64urlEncode(
-    createHmac("sha256", secret).update(payload).digest(),
+  const sigBytes = hmac(
+    sha256,
+    new TextEncoder().encode(secret),
+    new TextEncoder().encode(payload),
   );
+  const sig = base64urlEncode(sigBytes);
   return `${payload}.${sig}`;
 }
 
@@ -103,13 +100,7 @@ export function verifyVerifiedClickToken(
   if (parts.length !== 5) return null;
 
   const [version, visitId, destHash, issuedAtStr, providedSig] = parts;
-  if (
-    version !== TOKEN_VERSION ||
-    !visitId ||
-    !destHash ||
-    !issuedAtStr ||
-    !providedSig
-  ) {
+  if (version !== TOKEN_VERSION || !visitId || !destHash || !issuedAtStr || !providedSig) {
     return null;
   }
 
@@ -121,10 +112,19 @@ export function verifyVerifiedClickToken(
   if (issuedAt - now > CLOCK_SKEW_TOLERANCE_MS) return null;
 
   const payload = `${version}.${visitId}.${destHash}.${issuedAtStr}`;
-  const expected = createHmac("sha256", secret).update(payload).digest();
+  const expected = hmac(
+    sha256,
+    new TextEncoder().encode(secret),
+    new TextEncoder().encode(payload),
+  );
   const provided = base64urlDecode(providedSig);
   if (provided.length !== expected.length) return null;
-  if (!timingSafeEqual(provided, expected)) return null;
+
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= (expected[i] ?? 0) ^ (provided[i] ?? 0);
+  }
+  if (diff !== 0) return null;
 
   return { visitId, destHash };
 }

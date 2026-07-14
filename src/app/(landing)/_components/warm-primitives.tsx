@@ -17,11 +17,7 @@ export const Icon = {
       strokeWidth="1.5"
       {...p}
     >
-      <path
-        d="M3 8h10M9 4l4 4-4 4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   ArrowUpRight: (p: IconProps) => (
@@ -33,11 +29,7 @@ export const Icon = {
       strokeWidth="1.5"
       {...p}
     >
-      <path
-        d="M5 11L11 5M6 5h5v5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M5 11L11 5M6 5h5v5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   Check: (p: IconProps) => (
@@ -49,11 +41,7 @@ export const Icon = {
       strokeWidth="1.75"
       {...p}
     >
-      <path
-        d="M3 8.5l3.5 3.5L13 4.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M3 8.5l3.5 3.5L13 4.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   Copy: (p: IconProps) => (
@@ -78,14 +66,8 @@ export const Icon = {
       strokeWidth="1.5"
       {...p}
     >
-      <path
-        d="M7 9a3 3 0 004.24 0l2.12-2.12a3 3 0 00-4.24-4.24L8 3.76"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9 7a3 3 0 00-4.24 0L2.64 9.12a3 3 0 004.24 4.24L8 12.24"
-        strokeLinecap="round"
-      />
+      <path d="M7 9a3 3 0 004.24 0l2.12-2.12a3 3 0 00-4.24-4.24L8 3.76" strokeLinecap="round" />
+      <path d="M9 7a3 3 0 00-4.24 0L2.64 9.12a3 3 0 004.24 4.24L8 12.24" strokeLinecap="round" />
     </svg>
   ),
   Chart: (p: IconProps) => (
@@ -175,12 +157,9 @@ export const Wordmark = ({ onInk = false }: { onInk?: boolean }) => (
       letterSpacing: "-0.02em",
     }}
   >
-    <Logo
-      size={24}
-      color={onInk ? "var(--warm-paper)" : "var(--warm-ink)"}
-    />
+    <Logo size={24} color={onInk ? "var(--warm-paper)" : "var(--warm-ink)"} />
     <span>
-      iShortn<span style={{ color: "var(--warm-accent)" }}>.</span>
+      ClickPath<span style={{ color: "var(--warm-accent)" }}>.</span>
     </span>
   </span>
 );

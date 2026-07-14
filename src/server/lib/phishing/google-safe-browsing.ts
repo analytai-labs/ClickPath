@@ -8,9 +8,7 @@ export type SafeBrowsingResult =
   | { status: "unsafe"; threats: string[] }
   | { status: "error" };
 
-export async function checkGoogleSafeBrowsing(
-  url: string,
-): Promise<SafeBrowsingResult> {
+export async function checkGoogleSafeBrowsing(url: string): Promise<SafeBrowsingResult> {
   const apiKey = env.GOOGLE_SAFE_BROWSING_API_KEY;
 
   if (!apiKey) {
@@ -25,7 +23,7 @@ export async function checkGoogleSafeBrowsing(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client: {
-            clientId: "ishortn-ink",
+            clientId: "clickpath-analytai-in",
             clientVersion: "1.0.0",
           },
           threatInfo: {

@@ -28,8 +28,9 @@ export function MilestoneEditor({ milestones, onChange, disabled }: MilestoneEdi
 
   const addThreshold = (value: number) => {
     if (disabled || thresholdSet.has(value)) return;
-    const updated = [...milestones, { threshold: value, notifiedAt: null }]
-      .sort((a, b) => a.threshold - b.threshold);
+    const updated = [...milestones, { threshold: value, notifiedAt: null }].sort(
+      (a, b) => a.threshold - b.threshold,
+    );
     onChange(updated);
   };
 
@@ -41,7 +42,7 @@ export function MilestoneEditor({ milestones, onChange, disabled }: MilestoneEdi
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const value = parseInt(milestoneInput, 10);
+      const value = Number.parseInt(milestoneInput, 10);
       if (!value || value <= 0) return;
       addThreshold(value);
       setMilestoneInput("");

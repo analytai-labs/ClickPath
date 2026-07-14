@@ -68,15 +68,13 @@ export const feedbackRouter = createTRPCRouter({
       const feedbackId = inserted.id;
 
       // Upload images to R2 if provided
-      let imageUrls: string[] = [];
+      let images: string[] = [];
       if (input.images && input.images.length > 0) {
         const uploadResults = await Promise.allSettled(
-          input.images.map((img, i) =>
-            uploadFeedbackImage(img, userId, Number(feedbackId), i),
-          ),
+          input.images.map((img, i) => uploadFeedbackImage(img, userId, Number(feedbackId), i)),
         );
 
-        imageUrls = uploadResults
+        images = uploadResults
           .filter(
             (r): r is PromiseFulfilledResult<string | null> =>
               r.status === "fulfilled" && r.value !== null,
@@ -84,10 +82,10 @@ export const feedbackRouter = createTRPCRouter({
           .map((r) => r.value!);
 
         // Update feedback with image URLs
-        if (imageUrls.length > 0) {
+        if (images.length > 0) {
           await ctx.prisma.feedback.update({
             where: { id: Number(feedbackId) },
-            data: { imageUrls },
+            data: { imageUrls: images },
           });
         }
       }
@@ -106,7 +104,7 @@ export const feedbackRouter = createTRPCRouter({
           userName: userRecord?.name,
           feedbackType: input.type,
           message: input.message,
-          imageUrls,
+          imageUrls: images,
         }),
       );
 
@@ -132,10 +130,10 @@ export const feedbackRouter = createTRPCRouter({
         },
         include: {
           user: {
-            select: { name: true, email: true, imageUrl: true },
+            select: { name: true, email: true, image: true },
           },
         },
-        orderBy: { id: 'desc' },
+        orderBy: { id: "desc" },
         take: limit + 1,
       });
 

@@ -1,5 +1,5 @@
-import type { Team, TeamMember, TeamRole } from "@prisma/client";
 import type { Plan } from "@/lib/billing/plans";
+import type { Team, TeamMember, TeamRole } from "@prisma/client";
 
 /**
  * Workspace types
@@ -155,9 +155,7 @@ export type WorkspaceContext = PersonalWorkspaceContext | TeamWorkspaceContext;
 /**
  * Type guard to check if workspace is a team workspace
  */
-export function isTeamWorkspace(
-  workspace: WorkspaceContext
-): workspace is TeamWorkspaceContext {
+export function isTeamWorkspace(workspace: WorkspaceContext): workspace is TeamWorkspaceContext {
   return workspace.type === "team";
 }
 
@@ -165,7 +163,7 @@ export function isTeamWorkspace(
  * Type guard to check if workspace is a personal workspace
  */
 export function isPersonalWorkspace(
-  workspace: WorkspaceContext
+  workspace: WorkspaceContext,
 ): workspace is PersonalWorkspaceContext {
   return workspace.type === "personal";
 }

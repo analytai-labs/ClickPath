@@ -10,9 +10,9 @@ type UpgradeTextProps = {
 };
 
 function UpgradeText({ text }: UpgradeTextProps) {
-  const upgradeMutation = api.lemonsqueezy.createCheckoutOrUpdate.useMutation({
+  const upgradeMutation = api.stripe.createCheckoutOrUpdate.useMutation({
     onSuccess: (data) => {
-      if (data.status === "redirect" && data.url) {
+      if (data.url) {
         window.open(data.url);
       }
     },

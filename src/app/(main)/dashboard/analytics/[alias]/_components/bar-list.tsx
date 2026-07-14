@@ -26,7 +26,8 @@ export function BarList({ records, totalClicks, color = "blue" }: BarListProps) 
     <div className="flex flex-col gap-1.5">
       {sortedRecords.map((record) => {
         const percentage = maxClicks > 0 ? (record.clicks / maxClicks) * 100 : 0;
-        const percentOfTotal = totalClicks > 0 ? ((record.clicks / totalClicks) * 100).toFixed(0) : "0";
+        const percentOfTotal =
+          totalClicks > 0 ? ((record.clicks / totalClicks) * 100).toFixed(0) : "0";
         return (
           <div
             key={record.name}
@@ -36,7 +37,7 @@ export function BarList({ records, totalClicks, color = "blue" }: BarListProps) 
             <div
               className={cn(
                 "absolute inset-y-0 left-0 rounded-lg transition-all duration-300 ease-out",
-                colorMap[color].bg
+                colorMap[color].bg,
               )}
               style={{ width: `${percentage}%` }}
             />
@@ -96,11 +97,7 @@ type BarListTabViewSwitcherProps = {
   onChangeView: (view: string) => void;
 };
 
-function BarListTabViewSwitcher({
-  currentView,
-  views,
-  onChangeView,
-}: BarListTabViewSwitcherProps) {
+function BarListTabViewSwitcher({ currentView, views, onChangeView }: BarListTabViewSwitcherProps) {
   return (
     <div className="mb-4 flex items-center gap-1 border-b border-neutral-100 dark:border-border/50 pb-2">
       {views.map((name) => (
@@ -111,7 +108,7 @@ function BarListTabViewSwitcher({
             "relative rounded-md px-3 py-1.5 text-[12px] font-medium transition-all duration-150",
             currentView === name.toLowerCase()
               ? "bg-neutral-100 dark:bg-muted text-neutral-900 dark:text-foreground"
-              : "text-neutral-400 dark:text-neutral-500 hover:bg-neutral-50 dark:hover:bg-accent/50 hover:text-neutral-600 dark:hover:text-neutral-300"
+              : "text-neutral-400 dark:text-neutral-500 hover:bg-neutral-50 dark:hover:bg-accent/50 hover:text-neutral-600 dark:hover:text-neutral-300",
           )}
         >
           {name.charAt(0).toUpperCase() + name.slice(1)}

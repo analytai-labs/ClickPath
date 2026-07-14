@@ -1,6 +1,6 @@
 import { BIO_OG_SIZE, bioOgImageResponse } from "@/components/bio/og-image";
 import { prisma } from "@/server/db";
-import { type BioPageTheme } from "@/server/db/types";
+import type { BioPageTheme } from "@/server/db/types";
 
 export const runtime = "nodejs";
 export const alt = "Bio page preview";

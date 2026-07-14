@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Link } from "next-view-transitions";
+import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { Paths } from "@/lib/constants/app";
-import { competitors, type Competitor } from "@/lib/seo/competitors";
-import { createBreadcrumbSchema } from "@/lib/seo/structured-data";
+import { type Competitor, competitors } from "@/lib/seo/competitors";
 
 import { CTA } from "../../_components/cta";
 import { Footer } from "../../_components/footer";
@@ -20,6 +19,13 @@ function getCompetitor(slug: string): Competitor | undefined {
   return Object.values(competitors).find((c) => c.slug === slug);
 }
 
+import {
+  createBreadcrumbSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
+} from "@/lib/seo/structured-data";
+
 export async function generateMetadata({
   params,
 }: {
@@ -29,25 +35,31 @@ export async function generateMetadata({
   const competitor = getCompetitor(slug);
   if (!competitor) return {};
 
-  const title = `${competitor.name} vs iShortn — a warmer URL shortener`;
-  const description = `Compare ${competitor.name} and iShortn side by side. See features, pricing, and why creators and small teams pick iShortn.`;
+  const title = resolveTitle(`${competitor.name} vs ClickPath — Open-Source URL Shortener`);
+  const description = resolveDescription(
+    `Compare ${competitor.name} and ClickPath side by side. See features, pricing, and why creators and small teams pick ClickPath.`,
+  );
+  const canonicalUrl = resolveCanonical(`/compare/${competitor.slug}`);
 
   return {
     title,
     description,
     keywords: [
       `${competitor.name.toLowerCase()} alternative`,
-      `${competitor.name.toLowerCase()} vs ishortn`,
+      `${competitor.name.toLowerCase()} vs clickpath`,
       `${competitor.slug} alternative`,
       "url shortener comparison",
       "best url shortener",
       "link shortener alternative",
     ],
-    openGraph: { title, description, type: "website" },
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: { title, description, type: "website", url: canonicalUrl },
   };
 }
 
-const ishortn = {
+const clickpath = {
   freeLinks: "30/month on Free, 1,000 on Pro, unlimited on Ultra",
   freeAnalytics: "7 days on Free, unlimited on Pro and Ultra",
   customDomains: "3 on Pro, unlimited on Ultra",
@@ -60,7 +72,7 @@ const ishortn = {
 
 type FeatureRow = {
   label: string;
-  competitorKey: keyof typeof ishortn;
+  competitorKey: keyof typeof clickpath;
 };
 
 const featureRows: FeatureRow[] = [
@@ -87,10 +99,10 @@ export default async function ComparePage({
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
       <JsonLd
         data={createBreadcrumbSchema([
-          { name: "Home", url: "https://ishortn.ink" },
+          { name: "Home", url: resolveCanonical("/") },
           {
-            name: `${competitor.name} vs iShortn`,
-            url: `https://ishortn.ink/compare/${competitor.slug}`,
+            name: `${competitor.name} vs ClickPath`,
+            url: resolveCanonical(`/compare/${competitor.slug}`),
           },
         ])}
       />
@@ -99,20 +111,13 @@ export default async function ComparePage({
       <section className="warm-subhero">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 24 }}>
-            <Icon.Sparkle
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Sparkle style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Comparison
           </div>
-          <h1
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}
-          >
+          <h1 className="warm-display" style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}>
             {competitor.name}
             <br />
-            <em style={{ fontStyle: "italic", color: "var(--warm-accent)" }}>
-              vs iShortn.
-            </em>
+            <em style={{ fontStyle: "italic", color: "var(--warm-accent)" }}>vs ClickPath.</em>
           </h1>
           <p
             style={{
@@ -131,15 +136,10 @@ export default async function ComparePage({
       <section className="warm-section warm-section-paper">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 16 }}>
-            <Icon.Chart
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Chart style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Features
           </div>
-          <h2
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}
-          >
+          <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}>
             Feature-by-feature
             <br />
             <em style={{ fontStyle: "italic" }}>side by side.</em>
@@ -191,7 +191,7 @@ export default async function ComparePage({
                     color: "var(--warm-accent)",
                   }}
                 >
-                  iShortn
+                  ClickPath
                 </div>
               </div>
 
@@ -201,8 +201,7 @@ export default async function ComparePage({
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(3, minmax(200px, 1fr))",
-                    borderTop:
-                      i === 0 ? "none" : "1px solid var(--warm-line-soft)",
+                    borderTop: i === 0 ? "none" : "1px solid var(--warm-line-soft)",
                   }}
                 >
                   <div
@@ -233,7 +232,7 @@ export default async function ComparePage({
                       color: "var(--warm-ink)",
                     }}
                   >
-                    {ishortn[row.competitorKey]}
+                    {clickpath[row.competitorKey]}
                   </div>
                 </div>
               ))}
@@ -245,15 +244,10 @@ export default async function ComparePage({
       <section className="warm-section">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 16 }}>
-            <Icon.Heart
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Heart style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Why switch
           </div>
-          <h2
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}
-          >
+          <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}>
             Why teams leave
             <br />
             <em style={{ fontStyle: "italic" }}>{competitor.name}.</em>
@@ -309,15 +303,10 @@ export default async function ComparePage({
       <section className="warm-section warm-section-paper">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 16 }}>
-            <Icon.Sparkle
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Sparkle style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Pricing
           </div>
-          <h2
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}
-          >
+          <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(40px, 6vw, 60px)" }}>
             Pricing,
             <br />
             <em style={{ fontStyle: "italic" }}>plain and simple.</em>
@@ -387,7 +376,7 @@ export default async function ComparePage({
                   fontWeight: 500,
                 }}
               >
-                iShortn
+                ClickPath
               </h3>
               <p
                 style={{
@@ -410,19 +399,18 @@ export default async function ComparePage({
                 }}
               >
                 <p style={{ margin: 0 }}>
-                  <strong style={{ color: "var(--warm-paper)" }}>Free</strong> —
-                  30 links/month, 1,000 tracked events, 7-day analytics.
+                  <strong style={{ color: "var(--warm-paper)" }}>Free</strong> — 30 links/month,
+                  1,000 tracked events, 7-day analytics.
                 </p>
                 <p style={{ margin: 0 }}>
-                  <strong style={{ color: "var(--warm-paper)" }}>Pro $8/mo</strong>{" "}
-                  — 1,000 links/month, 10,000 tracked events, unlimited
-                  analytics history, 3 custom domains, branded + dynamic QR
-                  codes, REST API.
+                  <strong style={{ color: "var(--warm-paper)" }}>Pro $8/mo</strong> — 1,000
+                  links/month, 10,000 tracked events, unlimited analytics history, 3 custom domains,
+                  branded + dynamic QR codes, REST API.
                 </p>
                 <p style={{ margin: 0 }}>
-                  <strong style={{ color: "var(--warm-paper)" }}>Ultra $15/mo</strong>{" "}
-                  — everything in Pro plus unlimited links and events,
-                  unlimited custom domains, team workspaces, resource transfer.
+                  <strong style={{ color: "var(--warm-paper)" }}>Ultra $15/mo</strong> — everything
+                  in Pro plus unlimited links and events, unlimited custom domains, team workspaces,
+                  resource transfer.
                 </p>
               </div>
               <Link

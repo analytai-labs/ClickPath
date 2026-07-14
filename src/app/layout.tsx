@@ -1,11 +1,12 @@
 import "@/styles/globals.css";
 
-import { ClerkProvider } from "@clerk/nextjs";
+import { SessionProvider } from "next-auth/react";
 import { ViewTransitions } from "next-view-transitions";
 import Script from "next/script";
 
 import { MicrosoftClarityScript } from "@/components/scripts/clarity";
 import { ReleaseNotesScript } from "@/components/scripts/release-notes";
+import { JsonLd } from "@/components/seo/json-ld";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { env } from "@/env.mjs";
@@ -18,6 +19,7 @@ import {
   fontWarmDisplay,
   fontWarmUi,
 } from "@/lib/fonts";
+import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
 import { cn } from "@/lib/utils";
 import { TRPCReactProvider } from "@/trpc/react";
 
@@ -26,16 +28,16 @@ import { CSPostHogProvider } from "./providers";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ishortn.ink"),
+  metadataBase: new URL("https://clickpath.analytai.in"),
   title: {
     default: APP_TITLE,
     template: `%s | ${APP_TITLE}`,
   },
   description:
-    "Free URL shortener with powerful analytics. Create custom short links, track clicks, locations, and devices. QR codes, custom domains, and API included.",
+    "Branded short links with powerful privacy-friendly analytics, QR code logo overlays, and custom domains by ClickPath.",
   icons: [{ rel: "icon", url: "/icon.png" }],
   openGraph: {
-    siteName: "iShortn",
+    siteName: APP_TITLE,
     type: "website",
     locale: "en_US",
   },
@@ -60,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <SessionProvider>
       <ViewTransitions>
         {env.UMAMI_TRACKING_ID && (
           <Script
@@ -71,6 +73,10 @@ export default function RootLayout({
         )}
         <ReleaseNotesScript />
         <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+          <head>
+            <JsonLd data={organizationSchema} />
+            <JsonLd data={websiteSchema} />
+          </head>
           <MicrosoftClarityScript />
           <CSPostHogProvider>
             <body
@@ -81,7 +87,7 @@ export default function RootLayout({
                 fontHeading.variable,
                 fontLogo.variable,
                 fontWarmDisplay.variable,
-                fontWarmUi.variable
+                fontWarmUi.variable,
               )}
             >
               <ThemeProvider
@@ -97,6 +103,6 @@ export default function RootLayout({
           </CSPostHogProvider>
         </html>
       </ViewTransitions>
-    </ClerkProvider>
+    </SessionProvider>
   );
 }

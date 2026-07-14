@@ -17,9 +17,7 @@ export function DeviceStatsCard({
   clicksPerBrowser,
   totalClicks,
 }: DeviceStatsCardProps) {
-  const [currentView, setCurrentView] = useState<"devices" | "os" | "browsers">(
-    "devices"
-  );
+  const [currentView, setCurrentView] = useState<"devices" | "os" | "browsers">("devices");
 
   const recordsMap = {
     devices: Object.entries(clicksPerDevice).map(([name, clicks]) => ({
@@ -49,9 +47,7 @@ export function DeviceStatsCard({
       <TabSwitcher
         currentView={currentView}
         views={views}
-        onChangeView={(view) =>
-          setCurrentView(view as "devices" | "os" | "browsers")
-        }
+        onChangeView={(view) => setCurrentView(view as "devices" | "os" | "browsers")}
       />
     </ColoredDistributionCard>
   );

@@ -27,7 +27,7 @@ interface UploadImageOptions {
 
 export async function uploadImage(
   ctx: WorkspaceTRPCContext,
-  { image, resourceId, imageType }: UploadImageOptions
+  { image, resourceId, imageType }: UploadImageOptions,
 ): Promise<string | undefined> {
   if (!image) return undefined;
   if (image.startsWith("http")) return image;

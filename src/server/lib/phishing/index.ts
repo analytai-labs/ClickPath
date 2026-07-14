@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 
 import { logger } from "@/lib/logger";
-import { detectPhishingLink } from "@/server/api/routers/ai/ai.service";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
+import { detectPhishingLink } from "@/server/api/routers/ai/ai.service";
 
 import { checkBlocklist } from "./blocklist";
 import { checkGoogleSafeBrowsing } from "./google-safe-browsing";
@@ -32,9 +32,7 @@ const USER_MSG_SUSPICIOUS =
  * Runs all deterministic checks (heuristics + blocklist).
  * These are fast and don't call external APIs.
  */
-export async function runDeterministicChecks(
-  url: string,
-): Promise<CheckResult> {
+export async function runDeterministicChecks(url: string): Promise<CheckResult> {
   // Layer 1a: Heuristic pattern checks (synchronous, instant)
   const heuristicResult = runHeuristicChecks(url);
   if (heuristicResult.blocked) {

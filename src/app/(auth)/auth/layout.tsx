@@ -16,7 +16,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
       }}
     >
       <header style={{ padding: "32px 48px" }}>
-        <a href="/" aria-label="iShortn home">
+        <a href="/" aria-label="ClickPath home">
           <Wordmark />
         </a>
       </header>
@@ -39,7 +39,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
           textAlign: "center",
         }}
       >
-        A quietly lovely URL shortener. © {new Date().getFullYear()} iShortn.
+        A quietly lovely URL shortener. © {new Date().getFullYear()} ClickPath.
       </footer>
     </div>
   );

@@ -16,7 +16,10 @@ const PLATFORM_LINKS: Record<string, { base: (handle: string) => string; hosts: 
   threads: { base: (h) => `https://threads.net/@${h}`, hosts: ["threads.net"] },
   twitch: { base: (h) => `https://twitch.tv/${h}`, hosts: ["twitch.tv"] },
   snapchat: { base: (h) => `https://snapchat.com/add/${h}`, hosts: ["snapchat.com"] },
-  whatsapp: { base: (h) => `https://wa.me/${h.replace(/[^0-9]/g, "")}`, hosts: ["wa.me", "whatsapp.com"] },
+  whatsapp: {
+    base: (h) => `https://wa.me/${h.replace(/[^0-9]/g, "")}`,
+    hosts: ["wa.me", "whatsapp.com"],
+  },
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

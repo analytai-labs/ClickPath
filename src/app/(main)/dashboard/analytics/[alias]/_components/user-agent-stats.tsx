@@ -24,9 +24,7 @@ export function UserAgentStats({
   const browserRecordsAsArray = converRecordToArray(clicksPerBrowser);
   const modelRecordsAsArray = converRecordToArray(clicksPerModel);
 
-  const [currentView, setCurrentView] = useState<
-    "device" | "os" | "browser" | "model"
-  >("device");
+  const [currentView, setCurrentView] = useState<"device" | "os" | "browser" | "model">("device");
 
   const handleViewChange = (view: string) => {
     setCurrentView(view as "device" | "os" | "browser" | "model");

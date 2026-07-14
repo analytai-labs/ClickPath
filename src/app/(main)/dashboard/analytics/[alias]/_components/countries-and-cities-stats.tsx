@@ -29,23 +29,18 @@ export function CountriesAndCitiesStats({
     continents: continentRecordsAsArray,
   };
 
-  const [currentView, setCurrentView] = useState<
-    "countries" | "cities" | "continents"
-  >("countries");
+  const [currentView, setCurrentView] = useState<"countries" | "cities" | "continents">(
+    "countries",
+  );
 
-  const viewsToShow = proUser
-    ? ["countries", "cities", "continents"]
-    : ["countries", "cities"];
+  const viewsToShow = proUser ? ["countries", "cities", "continents"] : ["countries", "cities"];
 
   const handleViewChange = (view: string) => {
     setCurrentView(view as "countries" | "cities" | "continents");
   };
 
   return (
-    <BarList.BarListTitle
-      title="Countries and cities"
-      description="Top countries and cities"
-    >
+    <BarList.BarListTitle title="Countries and cities" description="Top countries and cities">
       <BarList.BarListTabViewSwitcher
         currentView={currentView}
         views={viewsToShow}

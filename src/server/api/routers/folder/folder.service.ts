@@ -29,10 +29,7 @@ const getWorkspaceWhere = (workspace: any) =>
     ? { teamId: workspace.teamId }
     : { userId: workspace.userId, teamId: null };
 
-export const createFolder = async (
-  ctx: WorkspaceTRPCContext,
-  input: CreateFolderInput
-) => {
+export const createFolder = async (ctx: WorkspaceTRPCContext, input: CreateFolderInput) => {
   // Use workspace plan - team workspaces have Ultra features (unlimited folders)
   const workspacePlan = ctx.workspace.plan;
   const caps = getPlanCaps(workspacePlan);
@@ -41,8 +38,7 @@ export const createFolder = async (
   if (folderLimit === 0) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message:
-        "Folders are available on Pro and Ultra plans. Upgrade to create folders.",
+      message: "Folders are available on Pro and Ultra plans. Upgrade to create folders.",
     });
   }
 
@@ -59,8 +55,7 @@ export const createFolder = async (
       if (currentFolders >= folderLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message:
-            "You have reached your folder limit. Upgrade to Ultra for unlimited folders.",
+          message: "You have reached your folder limit. Upgrade to Ultra for unlimited folders.",
         });
       }
     }
@@ -113,16 +108,9 @@ export const listFolders = async (ctx: WorkspaceTRPCContext) => {
 
   // Filter folders based on access permissions (for team members)
   let accessibleFolders = allFolders;
-  if (
-    ctx.workspace.type === "team" &&
-    !shouldBypassFolderPermissions(ctx.workspace)
-  ) {
+  if (ctx.workspace.type === "team" && !shouldBypassFolderPermissions(ctx.workspace)) {
     const folderIds = allFolders.map((f) => f.id);
-    const accessibleIds = await getAccessibleFolderIds(
-      ctx.prisma,
-      ctx.workspace,
-      folderIds
-    );
+    const accessibleIds = await getAccessibleFolderIds(ctx.prisma, ctx.workspace, folderIds);
     accessibleFolders = allFolders.filter((f) => accessibleIds.includes(f.id));
   }
 
@@ -152,16 +140,13 @@ export const listFolders = async (ctx: WorkspaceTRPCContext) => {
         hasRestrictions: permittedUserIds.length > 0,
         permittedUserIds,
       };
-    })
+    }),
   );
 
   return foldersWithCounts;
 };
 
-export const getFolder = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetFolderInput
-) => {
+export const getFolder = async (ctx: WorkspaceTRPCContext, input: GetFolderInput) => {
   const folderData = await ctx.prisma.folder.findFirst({
     where: {
       id: input.id,
@@ -199,7 +184,7 @@ export const getFolder = async (
   const linksWithTags = await Promise.all(
     folderLinksRaw.map(async (linkItem) => {
       const tagRecords = await getTagsForLink(ctx, linkItem.id);
-      
+
       const archivedClicks = linkItem.dailySummaries.reduce((sum, s) => sum + s.clicks, 0);
       const { _count, dailySummaries, ...rest } = linkItem;
 
@@ -209,7 +194,7 @@ export const getFolder = async (
         tags: tagRecords.map((tagRecord) => tagRecord.name),
         folder: { id: folderData.id, name: folderData.name },
       };
-    })
+    }),
   );
 
   return {
@@ -218,10 +203,7 @@ export const getFolder = async (
   };
 };
 
-export const updateFolder = async (
-  ctx: WorkspaceTRPCContext,
-  input: UpdateFolderInput
-) => {
+export const updateFolder = async (ctx: WorkspaceTRPCContext, input: UpdateFolderInput) => {
   // Check if folder exists and belongs to workspace
   const existingFolder = await ctx.prisma.folder.findFirst({
     where: {
@@ -274,10 +256,7 @@ export const updateFolder = async (
   };
 };
 
-export const deleteFolder = async (
-  ctx: WorkspaceTRPCContext,
-  input: DeleteFolderInput
-) => {
+export const deleteFolder = async (ctx: WorkspaceTRPCContext, input: DeleteFolderInput) => {
   // Check if folder exists and belongs to workspace
   const existingFolder = await ctx.prisma.folder.findFirst({
     where: {
@@ -321,10 +300,7 @@ export const deleteFolder = async (
   return { success: true };
 };
 
-export const moveLinkToFolder = async (
-  ctx: WorkspaceTRPCContext,
-  input: MoveLinkToFolderInput
-) => {
+export const moveLinkToFolder = async (ctx: WorkspaceTRPCContext, input: MoveLinkToFolderInput) => {
   // Check if link exists and belongs to workspace
   const existingLink = await ctx.prisma.link.findFirst({
     where: {
@@ -372,7 +348,7 @@ export const moveLinkToFolder = async (
 
 export const moveBulkLinksToFolder = async (
   ctx: WorkspaceTRPCContext,
-  input: MoveBulkLinksToFolderInput
+  input: MoveBulkLinksToFolderInput,
 ) => {
   if (input.linkIds.length === 0) {
     throw new TRPCError({
@@ -433,7 +409,7 @@ export const getFolderStats = async (ctx: WorkspaceTRPCContext) => {
  */
 export const getFolderPermissions = async (
   ctx: WorkspaceTRPCContext,
-  input: GetFolderPermissionsInput
+  input: GetFolderPermissionsInput,
 ) => {
   // Require admin/owner role
   requireFolderPermissionManagement(ctx.workspace);
@@ -462,7 +438,7 @@ export const getFolderPermissions = async (
           id: true,
           name: true,
           email: true,
-          imageUrl: true,
+          image: true,
         },
       },
     },
@@ -487,7 +463,7 @@ export const getFolderPermissions = async (
  */
 export const updateFolderPermissions = async (
   ctx: WorkspaceTRPCContext,
-  input: UpdateFolderPermissionsInput
+  input: UpdateFolderPermissionsInput,
 ) => {
   // Require admin/owner role
   requireFolderPermissionManagement(ctx.workspace);
@@ -511,11 +487,7 @@ export const updateFolderPermissions = async (
   const uniqueUserIds = input.isRestricted ? [...new Set(input.userIds)] : [];
 
   // Validate userIds are actual team members (if any provided)
-  if (
-    uniqueUserIds.length > 0 &&
-    ctx.workspace.type === "team" &&
-    ctx.workspace.teamId
-  ) {
+  if (uniqueUserIds.length > 0 && ctx.workspace.type === "team" && ctx.workspace.teamId) {
     const validMembers = await ctx.prisma.teamMember.findMany({
       where: {
         teamId: ctx.workspace.teamId,

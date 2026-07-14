@@ -23,11 +23,7 @@ export async function checkGoogleWebRisk(url: string): Promise<WebRiskResult> {
     });
 
     // Web Risk supports these threat types
-    for (const threatType of [
-      "MALWARE",
-      "SOCIAL_ENGINEERING",
-      "UNWANTED_SOFTWARE",
-    ]) {
+    for (const threatType of ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"]) {
       params.append("threatTypes", threatType);
     }
 

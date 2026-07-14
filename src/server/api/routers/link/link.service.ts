@@ -1,22 +1,11 @@
-import bcrypt from "bcryptjs";
-import { parse } from "csv-parse/sync";
-import { endOfYear, startOfMonth, startOfYear, subDays } from "date-fns";
-import { Prisma } from "@prisma/client";
 import {
   canUseCampaignUtmDefaults,
   canUseGeoRules,
   getGeoRulesLimit,
   isUnlimitedGeoRules,
 } from "@/lib/billing/plans";
-import { assertUrlSafe } from "@/server/lib/phishing";
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
 import { retrieveDeviceAndGeolocationData } from "@/lib/core/analytics";
-import { logger } from "@/lib/logger";
-import { hashIp } from "@/lib/utils/ip-hash";
-import {
-  assertCanEnableVerifiedClicks,
-  issueVerifiedClickToken,
-} from "@/server/lib/verified-click";
 import {
   buildCacheKey,
   deleteFromCache,
@@ -25,12 +14,18 @@ import {
   setInCache,
 } from "@/lib/core/cache";
 import { generateShortLink } from "@/lib/core/links";
+import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
+import { hashIp } from "@/lib/utils/ip-hash";
 import { prisma } from "@/server/db";
-import { mergeCampaignUtm } from "../campaign/utils";
 import { checkAndFireMilestones } from "@/server/lib/milestone-check";
+import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
+import {
+  assertCanEnableVerifiedClicks,
+  issueVerifiedClickToken,
+} from "@/server/lib/verified-click";
 import {
   getAccessibleFolderIds,
   isWorkspaceAdmin,
@@ -38,6 +33,11 @@ import {
   workspaceFilter,
   workspaceOwnership,
 } from "@/server/lib/workspace";
+import { Prisma } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { parse } from "csv-parse/sync";
+import { endOfYear, startOfMonth, startOfYear, subDays } from "date-fns";
+import { mergeCampaignUtm } from "../campaign/utils";
 
 import { associateTagsWithLink, getTagsForLink } from "../tag/tag.service";
 
@@ -65,10 +65,7 @@ import type {
 
 const log = logger.child({ component: "link.service" });
 
-export const getLinks = async (
-  ctx: WorkspaceTRPCContext,
-  input: ListLinksInput,
-) => {
+export const getLinks = async (ctx: WorkspaceTRPCContext, input: ListLinksInput) => {
   const {
     page,
     pageSize,
@@ -80,9 +77,12 @@ export const getLinks = async (
     search,
   } = input;
 
-  const workspaceWhere = ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null };
+  const workspaceWhere =
+    ctx.workspace.type === "team"
+      ? { teamId: ctx.workspace.teamId }
+      : { userId: ctx.workspace.userId, teamId: null };
 
-  let where: any = {
+  const where: any = {
     ...workspaceWhere,
     isQrCode: false,
     isBioLink: false,
@@ -93,13 +93,13 @@ export const getLinks = async (
     const tagRecord = await prisma.tag.findFirst({
       where: {
         name: tagName.trim().toLowerCase(),
-        ...workspaceWhere
+        ...workspaceWhere,
       },
     });
 
     if (tagRecord) {
       where.linkTags = {
-        some: { tagId: tagRecord.id }
+        some: { tagId: tagRecord.id },
       };
     } else {
       // No links with this tag, return empty results
@@ -138,7 +138,7 @@ export const getLinks = async (
   if (ctx.workspace.type === "team" && !isWorkspaceAdmin(ctx.workspace)) {
     const allFolders = await prisma.folder.findMany({
       where: workspaceWhere,
-      select: { id: true }
+      select: { id: true },
     });
 
     const folderIds = allFolders.map((f) => f.id);
@@ -152,7 +152,7 @@ export const getLinks = async (
       where.OR = [
         ...(where.OR || []),
         { folderId: { in: accessibleFolderIds } },
-        { folderId: null }
+        { folderId: null },
       ];
     } else {
       where.folderId = null;
@@ -164,7 +164,7 @@ export const getLinks = async (
     orderByPrisma = { linkVisits: { _count: orderDirection } };
   } else if (orderBy === "lastClicked") {
     // Approximated: order by createdAt as prisma can't easily order by relation MAX field
-    orderByPrisma = { createdAt: orderDirection }; 
+    orderByPrisma = { createdAt: orderDirection };
   }
 
   const [totalLinks, totalVisitsCount, archivedClicksAgg, links] = await Promise.all([
@@ -175,8 +175,8 @@ export const getLinks = async (
           ...workspaceWhere,
           isQrCode: false,
           isBioLink: false,
-        }
-      }
+        },
+      },
     }),
     prisma.linkVisitDailySummary.aggregate({
       _sum: { clicks: true },
@@ -185,55 +185,59 @@ export const getLinks = async (
           ...workspaceWhere,
           isQrCode: false,
           isBioLink: false,
-        }
-      }
+        },
+      },
     }),
     prisma.link.findMany({
       where,
       include: {
         _count: {
-          select: { linkVisits: true }
+          select: { linkVisits: true },
         },
         dailySummaries: {
-          select: { clicks: true }
+          select: { clicks: true },
         },
         linkTags: {
-          include: { tag: true }
+          include: { tag: true },
         },
         folder: {
-          select: { id: true, name: true }
+          select: { id: true, name: true },
         },
         user: {
-          select: { id: true, name: true, imageUrl: true }
+          select: { id: true, name: true, image: true },
         },
         campaign: true,
       },
       take: pageSize,
       skip: (page - 1) * pageSize,
-      orderBy: orderByPrisma
-    })
+      orderBy: orderByPrisma,
+    }),
   ]);
 
-  const linksWithTags = links.map(l => {
+  const linksWithTags = links.map((l) => {
     const archivedClicks = l.dailySummaries.reduce((sum, s) => sum + s.clicks, 0);
-    
+
     // Clean up prisma specific relation returns to match previous drizzle return format somewhat
     const { _count, dailySummaries, linkTags, user, ...rest } = l;
-    
+
     return {
       ...rest,
       totalClicks: _count.linkVisits + archivedClicks,
-      tags: linkTags.map(lt => lt.tag.name),
-      createdBy: user ? {
-        id: user.id,
-        name: user.name,
-        imageUrl: user.imageUrl,
-      } : null,
+      tags: linkTags.map((lt) => lt.tag.name),
+      createdBy: user
+        ? {
+            id: user.id,
+            name: user.name,
+            image: user.image,
+          }
+        : null,
     };
   });
-  
+
   if (orderBy === "totalClicks") {
-    linksWithTags.sort((a, b) => orderDirection === "desc" ? b.totalClicks - a.totalClicks : a.totalClicks - b.totalClicks);
+    linksWithTags.sort((a, b) =>
+      orderDirection === "desc" ? b.totalClicks - a.totalClicks : a.totalClicks - b.totalClicks,
+    );
   }
 
   const totalClicks = totalVisitsCount + (archivedClicksAgg._sum.clicks || 0);
@@ -247,14 +251,13 @@ export const getLinks = async (
   };
 };
 
-export const getLink = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkInput,
-) => {
+export const getLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
   const linkData = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -273,22 +276,18 @@ export const getLinkByAlias = async (input: {
   return prisma.link.findMany({
     where: {
       domain: input.domain,
-      alias: { equals: input.alias, mode: "insensitive" }
+      alias: { equals: input.alias, mode: "insensitive" },
     },
   });
 };
 
-export const createLink = async (
-  ctx: WorkspaceTRPCContext,
-  input: CreateLinkInput,
-) => {
+export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInput) => {
   const { plan, currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
   const isPaidPlan = plan !== "free";
 
   const domain = input.domain?.trim() || DEFAULT_PLATFORM_DOMAIN;
   await assertDomainAllowed(ctx, domain);
-  const alias =
-    input.alias && input.alias !== "" ? input.alias : await generateShortLink();
+  const alias = input.alias && input.alias !== "" ? input.alias : await generateShortLink();
 
   await assertUrlSafe(input.url);
 
@@ -300,9 +299,7 @@ export const createLink = async (
 
   if (input.password) {
     if (!isPaidPlan) {
-      throw new Error(
-        "You need to upgrade to a pro plan to use password protection",
-      );
+      throw new Error("You need to upgrade to a pro plan to use password protection");
     }
 
     input.password = await bcrypt.hash(input.password, 10);
@@ -315,9 +312,7 @@ export const createLink = async (
   );
   if (hasUserFilledMetadata) {
     if (!isPaidPlan) {
-      throw new Error(
-        "You need to upgrade to a pro plan to use custom social media previews",
-      );
+      throw new Error("You need to upgrade to a pro plan to use custom social media previews");
     }
   }
 
@@ -353,7 +348,9 @@ export const createLink = async (
     const campaignRow = await prisma.campaign.findFirst({
       where: {
         id: input.campaignId,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
     });
     if (!campaignRow) {
@@ -393,7 +390,7 @@ export const createLink = async (
       metadata: input.metadata ? (input.metadata as any) : Prisma.JsonNull,
       cloaking: input.cloaking ?? false,
       verifiedClicksEnabled: input.verifiedClicksEnabled ?? false,
-    }
+    },
   });
 
   // Associate tags with the link
@@ -414,11 +411,7 @@ export const createLink = async (
     }
 
     const geoLimit = getGeoRulesLimit(plan);
-    if (
-      !isUnlimitedGeoRules(plan) &&
-      geoLimit !== undefined &&
-      geoRulesInput.length > geoLimit
-    ) {
+    if (!isUnlimitedGeoRules(plan) && geoLimit !== undefined && geoRulesInput.length > geoLimit) {
       throw new Error(
         `Your plan allows a maximum of ${geoLimit} geo rules per link. Please upgrade to Ultra for unlimited rules.`,
       );
@@ -435,36 +428,33 @@ export const createLink = async (
         destination: rule.action === "redirect" ? rule.destination : null,
         blockMessage: rule.action === "block" ? rule.blockMessage : null,
         priority: index,
-      }))
+      })),
     });
   }
 
   // Upload OG image to R2 if it's base64
   if (input.metadata?.image) {
     try {
-      const imageUrl = await uploadImage(ctx, {
+      const image = await uploadImage(ctx, {
         image: input.metadata.image,
         resourceId: linkId,
         imageType: "og-image",
       });
 
       // Update link with the R2 URL if upload was successful and URL changed
-      if (imageUrl && imageUrl !== input.metadata.image) {
+      if (image && image !== input.metadata.image) {
         await prisma.link.update({
           where: { id: linkId },
           data: {
             metadata: {
               ...(input.metadata as any),
-              image: imageUrl,
+              image: image,
             },
-          }
+          },
         });
       }
     } catch (error) {
-      log.error(
-        { err: error, linkId, action: "create" },
-        "failed to upload OG image",
-      );
+      log.error({ err: error, linkId, action: "create" }, "failed to upload OG image");
       // Don't fail link creation if image upload fails - base64 is already saved
     }
   }
@@ -474,15 +464,14 @@ export const createLink = async (
   return result;
 };
 
-export const updateLink = async (
-  ctx: WorkspaceTRPCContext,
-  input: UpdateLinkInput,
-) => {
+export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInput) => {
   // Get existing link first
   const existingLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -545,7 +534,9 @@ export const updateLink = async (
     const campaignRow = await prisma.campaign.findFirst({
       where: {
         id: input.campaignId,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
     });
     if (!campaignRow) {
@@ -562,24 +553,21 @@ export const updateLink = async (
   // Upload OG image to R2 if it's base64
   if (linkData.metadata?.image) {
     try {
-      const imageUrl = await uploadImage(ctx, {
+      const image = await uploadImage(ctx, {
         image: linkData.metadata.image,
         resourceId: input.id,
         imageType: "og-image",
       });
 
       // Update metadata with the R2 URL if upload was successful
-      if (imageUrl) {
+      if (image) {
         linkData.metadata = {
           ...linkData.metadata,
-          image: imageUrl,
+          image: image,
         };
       }
     } catch (error) {
-      log.error(
-        { err: error, linkId: input.id, action: "update" },
-        "failed to upload OG image",
-      );
+      log.error({ err: error, linkId: input.id, action: "update" }, "failed to upload OG image");
       // Continue with the original image (base64 or URL) if upload fails
     }
   }
@@ -619,7 +607,7 @@ export const updateLink = async (
 
     // Delete existing geo rules for this link
     await prisma.geoRule.deleteMany({
-      where: { linkId: input.id }
+      where: { linkId: input.id },
     });
 
     // Insert new geo rules if any
@@ -634,7 +622,7 @@ export const updateLink = async (
           destination: rule.action === "redirect" ? rule.destination : null,
           blockMessage: rule.action === "block" ? rule.blockMessage : null,
           priority: index,
-        }))
+        })),
       });
     }
 
@@ -645,7 +633,9 @@ export const updateLink = async (
   const updatedLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -661,29 +651,20 @@ export const updateLink = async (
   };
 
   // If alias or domain changed, delete the OLD cache key (existingLink has the old values)
-  if (
-    existingLink.alias !== updatedLink.alias ||
-    existingLink.domain !== updatedLink.domain
-  ) {
-    await deleteFromCache(
-      buildCacheKey(existingLink.domain, existingLink.alias!),
-    );
+  if (existingLink.alias !== updatedLink.alias || existingLink.domain !== updatedLink.domain) {
+    await deleteFromCache(buildCacheKey(existingLink.domain, existingLink.alias!));
   }
   // Always set the new cache entry with updated values
-  await setInCache(
-    buildCacheKey(updatedLink.domain, updatedLink.alias!),
-    updatedLinkWithTags,
-  );
+  await setInCache(buildCacheKey(updatedLink.domain, updatedLink.alias!), updatedLinkWithTags);
 };
 
-export const deleteLink = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkInput,
-) => {
+export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
   const linkToDelete = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -702,32 +683,26 @@ export const deleteLink = async (
     try {
       await deleteImage(metadata.image);
     } catch (error) {
-      log.error(
-        { err: error, linkId: input.id },
-        "failed to delete OG image from R2",
-      );
+      log.error({ err: error, linkId: input.id }, "failed to delete OG image from R2");
     }
   }
 
   await prisma.linkMilestone.deleteMany({ where: { linkId: input.id } });
 
   await Promise.all([
-    deleteFromCache(
-      buildCacheKey(linkToDelete.domain, linkToDelete.alias!),
-    ),
+    deleteFromCache(buildCacheKey(linkToDelete.domain, linkToDelete.alias!)),
     prisma.link.deleteMany({
       where: {
         id: input.id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
     }),
   ]);
 };
 
-export const bulkDeleteLinks = async (
-  ctx: WorkspaceTRPCContext,
-  linkIds: number[],
-) => {
+export const bulkDeleteLinks = async (ctx: WorkspaceTRPCContext, linkIds: number[]) => {
   if (linkIds.length === 0) {
     return { success: true, count: 0 };
   }
@@ -736,7 +711,9 @@ export const bulkDeleteLinks = async (
   let linksToDelete = await prisma.link.findMany({
     where: {
       id: { in: linkIds },
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -747,11 +724,7 @@ export const bulkDeleteLinks = async (
   // Filter by folder access for team members
   if (ctx.workspace.type === "team" && !isWorkspaceAdmin(ctx.workspace)) {
     const folderIds = Array.from(
-      new Set(
-        linksToDelete
-          .map((l) => l.folderId)
-          .filter((id): id is number => id !== null),
-      ),
+      new Set(linksToDelete.map((l) => l.folderId).filter((id): id is number => id !== null)),
     );
     const accessibleFolderIds =
       folderIds.length > 0
@@ -775,10 +748,7 @@ export const bulkDeleteLinks = async (
       try {
         await deleteImage(metadata.image);
       } catch (error) {
-        log.error(
-          { err: error, linkId: l.id },
-          "failed to delete OG image for link",
-        );
+        log.error({ err: error, linkId: l.id }, "failed to delete OG image for link");
       }
     }
   }
@@ -807,23 +777,20 @@ export const bulkDeleteLinks = async (
   // Invalidate cache for all deleted links in the background. waitUntil keeps
   // the serverless function alive until every deleteFromCache settles.
   void runBackgroundTask(
-    Promise.all(
-      linksToDelete.map((l) => deleteFromCache(buildCacheKey(l.domain, l.alias!))),
-    ).catch((err) => {
-      log.error(
-        { err, count: linksToDelete.length },
-        "failed to invalidate cache for deleted links",
-      );
-    }),
+    Promise.all(linksToDelete.map((l) => deleteFromCache(buildCacheKey(l.domain, l.alias!)))).catch(
+      (err) => {
+        log.error(
+          { err, count: linksToDelete.length },
+          "failed to invalidate cache for deleted links",
+        );
+      },
+    ),
   );
 
   return { success: true, count: linksToDelete.length };
 };
 
-export const bulkArchiveLinks = async (
-  ctx: WorkspaceTRPCContext,
-  input: BulkArchiveLinksInput,
-) => {
+export const bulkArchiveLinks = async (ctx: WorkspaceTRPCContext, input: BulkArchiveLinksInput) => {
   const { linkIds, archive } = input;
 
   if (linkIds.length === 0) {
@@ -834,7 +801,9 @@ export const bulkArchiveLinks = async (
   let linksToUpdate = await prisma.link.findMany({
     where: {
       id: { in: linkIds },
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -845,11 +814,7 @@ export const bulkArchiveLinks = async (
   // Filter by folder access for team members
   if (ctx.workspace.type === "team" && !isWorkspaceAdmin(ctx.workspace)) {
     const folderIds = Array.from(
-      new Set(
-        linksToUpdate
-          .map((l) => l.folderId)
-          .filter((id): id is number => id !== null),
-      ),
+      new Set(linksToUpdate.map((l) => l.folderId).filter((id): id is number => id !== null)),
     );
     const accessibleFolderIds =
       folderIds.length > 0
@@ -868,7 +833,7 @@ export const bulkArchiveLinks = async (
 
   await prisma.link.updateMany({
     where: { id: { in: validLinkIds } },
-    data: { archived: archive }
+    data: { archived: archive },
   });
 
   return { success: true, count: linksToUpdate.length, archived: archive };
@@ -888,7 +853,9 @@ export const bulkToggleLinkStatus = async (
   let linksToUpdate = await prisma.link.findMany({
     where: {
       id: { in: linkIds },
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -899,11 +866,7 @@ export const bulkToggleLinkStatus = async (
   // Filter by folder access for team members
   if (ctx.workspace.type === "team" && !isWorkspaceAdmin(ctx.workspace)) {
     const folderIds = Array.from(
-      new Set(
-        linksToUpdate
-          .map((l) => l.folderId)
-          .filter((id): id is number => id !== null),
-      ),
+      new Set(linksToUpdate.map((l) => l.folderId).filter((id): id is number => id !== null)),
     );
     const accessibleFolderIds =
       folderIds.length > 0
@@ -922,7 +885,7 @@ export const bulkToggleLinkStatus = async (
 
   await prisma.link.updateMany({
     where: { id: { in: validLinkIds } },
-    data: { disabled: disable }
+    data: { disabled: disable },
   });
 
   // Invalidate cache for all affected links
@@ -949,7 +912,7 @@ export const retrieveOriginalUrl = async (
       where: {
         alias: { equals: input.alias, mode: "insensitive" },
         domain: domain,
-      }
+      },
     });
 
     if (!link) {
@@ -993,7 +956,7 @@ export const shortenLinkWithAutoAlias = async (
         description: fetchedMetadata.description,
         image: fetchedMetadata.image,
       } as any,
-    }
+    },
   });
 
   // Associate tags with the link
@@ -1023,7 +986,9 @@ export const getLinkVisits = async (
     where: {
       alias: input.id,
       domain: input.domain,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -1095,31 +1060,35 @@ export const getLinkVisits = async (
     prisma.linkVisit.findMany({
       where: {
         linkId: foundLink.id,
-        createdAt: { gte: startDate, lte: now }
-      }
+        createdAt: { gte: startDate, lte: now },
+      },
     }),
     prisma.uniqueLinkVisit.findMany({
       where: {
         linkId: foundLink.id,
-        createdAt: { gte: startDate, lte: now }
-      }
+        createdAt: { gte: startDate, lte: now },
+      },
     }),
     prisma.geoRule.findMany({
       where: { linkId: foundLink.id },
-      select: { id: true, action: true }
+      select: { id: true, action: true },
     }),
     hasPreviousPeriod
       ? Promise.all([
           prisma.linkVisit.aggregate({
             _count: { _all: true },
-            where: { linkId: foundLink.id, createdAt: { gte: prevStart, lt: prevEnd } }
+            where: { linkId: foundLink.id, createdAt: { gte: prevStart, lt: prevEnd } },
           }),
           prisma.linkVisit.count({
-            where: { linkId: foundLink.id, createdAt: { gte: prevStart, lt: prevEnd }, verifiedAt: { not: null } }
+            where: {
+              linkId: foundLink.id,
+              createdAt: { gte: prevStart, lt: prevEnd },
+              verifiedAt: { not: null },
+            },
           }),
           prisma.uniqueLinkVisit.count({
-            where: { linkId: foundLink.id, createdAt: { gte: prevStart, lt: prevEnd } }
-          })
+            where: { linkId: foundLink.id, createdAt: { gte: prevStart, lt: prevEnd } },
+          }),
         ])
       : Promise.resolve(null),
   ]);
@@ -1202,14 +1171,25 @@ export const getAllUserAnalytics = async (
   // Fetch workspace links with optional filtering
   const userLinks = await prisma.link.findMany({
     where: {
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
       isQrCode: false,
       isBioLink: false,
-      ...(input.filterType === "folder" && input.filterId !== undefined ? { folderId: input.filterId === "null" || input.filterId === null ? null : Number(input.filterId) } : {}),
-      ...(input.filterType === "domain" && input.filterId ? { domain: String(input.filterId) } : {}),
+      ...(input.filterType === "folder" && input.filterId !== undefined
+        ? {
+            folderId:
+              input.filterId === "null" || input.filterId === null ? null : Number(input.filterId),
+          }
+        : {}),
+      ...(input.filterType === "domain" && input.filterId
+        ? { domain: String(input.filterId) }
+        : {}),
       ...(input.filterType === "link" && input.filterId ? { id: Number(input.filterId) } : {}),
-      ...(input.filterType === "campaign" && input.filterId ? { campaignId: Number(input.filterId) } : {}),
-    }
+      ...(input.filterType === "campaign" && input.filterId
+        ? { campaignId: Number(input.filterId) }
+        : {}),
+    },
   });
 
   if (userLinks.length === 0) {
@@ -1275,14 +1255,14 @@ export const getAllUserAnalytics = async (
     prisma.linkVisit.findMany({
       where: {
         linkId: { in: linkIds },
-        createdAt: { gte: startDate, lte: now }
-      }
+        createdAt: { gte: startDate, lte: now },
+      },
     }),
     prisma.uniqueLinkVisit.findMany({
       where: {
         linkId: { in: linkIds },
-        createdAt: { gte: startDate, lte: now }
-      }
+        createdAt: { gte: startDate, lte: now },
+      },
     }),
   ]);
 
@@ -1312,8 +1292,7 @@ export const getAllUserAnalytics = async (
   totalVisits.forEach((visit) => {
     const linkInfo = linkIdToInfo.get(visit.linkId);
     if (linkInfo) {
-      clicksByLink[linkInfo.shortLink] =
-        (clicksByLink[linkInfo.shortLink] ?? 0) + 1;
+      clicksByLink[linkInfo.shortLink] = (clicksByLink[linkInfo.shortLink] ?? 0) + 1;
       if (linkInfo.destination) {
         clicksByDestination[linkInfo.destination] =
           (clicksByDestination[linkInfo.destination] ?? 0) + 1;
@@ -1347,9 +1326,7 @@ export const getAllUserAnalytics = async (
   );
   const topReferrer =
     Object.entries(referrerVisits).length > 0
-      ? Object.entries(referrerVisits).reduce((a, b) =>
-          a[1] > b[1] ? a : b,
-        )[0]
+      ? Object.entries(referrerVisits).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
       : "null";
 
   return {
@@ -1364,14 +1341,13 @@ export const getAllUserAnalytics = async (
   };
 };
 
-export const togglePublicStats = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkInput,
-) => {
+export const togglePublicStats = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
   const fetchedLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -1382,22 +1358,23 @@ export const togglePublicStats = async (
   return prisma.link.updateMany({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
     data: {
       publicStats: !fetchedLink.publicStats,
-    }
+    },
   });
 };
 
-export const toggleLinkStatus = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkInput,
-) => {
+export const toggleLinkStatus = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
   const fetchedLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -1408,31 +1385,30 @@ export const toggleLinkStatus = async (
   const result = await prisma.link.updateMany({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
     data: {
       disabled: !fetchedLink.disabled,
-    }
+    },
   });
 
   // Invalidate cache so the status change takes effect immediately
   if (fetchedLink.alias) {
-    await deleteFromCache(
-      buildCacheKey(fetchedLink.domain, fetchedLink.alias),
-    );
+    await deleteFromCache(buildCacheKey(fetchedLink.domain, fetchedLink.alias));
   }
 
   return result;
 };
 
-export const resetLinkStatistics = async (
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkInput,
-) => {
+export const resetLinkStatistics = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
   const fetchedLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
@@ -1457,10 +1433,7 @@ export const verifyLinkPassword = async (
     return null;
   }
 
-  const isPasswordCorrect = await bcrypt.compare(
-    input.password,
-    link.passwordHash,
-  );
+  const isPasswordCorrect = await bcrypt.compare(input.password, link.passwordHash);
 
   if (!isPasswordCorrect) {
     return null;
@@ -1473,21 +1446,19 @@ export const verifyLinkPassword = async (
   const clientIp = (ctx.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() ?? "";
   const ipHash = hashIp(clientIp);
 
-  const tokenIssue = link.url
-    ? await issueVerifiedClickToken(link, link.url)
-    : null;
+  const tokenIssue = link.url ? await issueVerifiedClickToken(link, link.url) : null;
 
   await prisma.linkVisit.create({
     data: {
       linkId: link.id,
       ...deviceDetails,
       visitId: tokenIssue?.visitId ?? null,
-    }
+    },
   });
 
   try {
     await prisma.uniqueLinkVisit.create({
-      data: { linkId: link.id, ipHash }
+      data: { linkId: link.id, ipHash },
     });
   } catch (e) {
     // Ignore duplicate key errors
@@ -1512,23 +1483,25 @@ export const changeLinkPassword = async (
   await prisma.link.updateMany({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
     data: {
       passwordHash,
-    }
+    },
   });
 
   const updatedLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
   });
 
-  await deleteFromCache(
-    buildCacheKey(updatedLink!.domain, updatedLink!.alias!),
-  );
+  await deleteFromCache(buildCacheKey(updatedLink!.domain, updatedLink!.alias!));
 
   return updatedLink;
 };
@@ -1551,10 +1524,7 @@ type LinkRecord = {
   note?: string;
 };
 
-export const bulkCreateLinks = async (
-  ctx: WorkspaceTRPCContext,
-  csvContent: string,
-) => {
+export const bulkCreateLinks = async (ctx: WorkspaceTRPCContext, csvContent: string) => {
   const records = parse(csvContent, {
     columns: true,
     skip_empty_lines: true,
@@ -1580,7 +1550,7 @@ export const bulkCreateLinks = async (
           createdByUserId: ctx.auth.userId, // Track the actual user who created the link
           domain: record.domain?.trim() || DEFAULT_PLATFORM_DOMAIN,
           note: record.note,
-        }
+        },
       });
     }),
   );
@@ -1611,7 +1581,9 @@ export const exportAllUserLinks = async (ctx: WorkspaceTRPCContext) => {
       createdAt: true,
     },
     where: {
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
       isQrCode: false,
       isBioLink: false,
     },
@@ -1626,22 +1598,19 @@ export const checkPresenceOfVercelHeaders = async (ctx: PublicTRPCContext) => {
   };
 };
 
-export const toggleArchive = async (
-  ctx: WorkspaceTRPCContext,
-  input: ToggleArchiveInput,
-) => {
+export const toggleArchive = async (ctx: WorkspaceTRPCContext, input: ToggleArchiveInput) => {
   const currentLink = await prisma.link.findFirst({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
     select: { archived: true },
   });
 
   if (!currentLink) {
-    throw new Error(
-      "Link not found or you don't have permission to modify it.",
-    );
+    throw new Error("Link not found or you don't have permission to modify it.");
   }
 
   const newArchivedStatus = !currentLink.archived;
@@ -1649,9 +1618,11 @@ export const toggleArchive = async (
   await prisma.link.updateMany({
     where: {
       id: input.id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
-    data: { archived: newArchivedStatus }
+    data: { archived: newArchivedStatus },
   });
 
   // Invalidate cache if necessary (if the link was cached)
@@ -1665,19 +1636,23 @@ export const toggleArchive = async (
 export const getStats = async (ctx: WorkspaceTRPCContext) => {
   const totalLinks = await prisma.link.count({
     where: {
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
       isQrCode: false,
       isBioLink: false,
-    }
+    },
   });
 
   const activeLinks = await prisma.link.count({
     where: {
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
       isQrCode: false,
       isBioLink: false,
       archived: false,
-    }
+    },
   });
 
   return {

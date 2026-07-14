@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
 import {
   IconCheck,
   IconCopy,
@@ -17,13 +16,13 @@ import {
   IconUserPlus,
   IconUsers,
 } from "@tabler/icons-react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -50,13 +50,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -86,19 +80,13 @@ const roleConfig = {
 export default function TeamMembersPage() {
   const router = useRouter();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(
-    null
-  );
-  const [transferOwnershipMemberId, setTransferOwnershipMemberId] = useState<
-    string | null
-  >(null);
+  const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(null);
+  const [transferOwnershipMemberId, setTransferOwnershipMemberId] = useState<string | null>(null);
 
   const currentWorkspace = api.team.currentWorkspace.useQuery();
   const isTeamWorkspace = currentWorkspace.data?.type === "team";
   const currentRole =
-    currentWorkspace.data?.type === "team"
-      ? currentWorkspace.data.role
-      : undefined;
+    currentWorkspace.data?.type === "team" ? currentWorkspace.data.role : undefined;
 
   const isOwner = currentRole === "owner";
   const canManageMembers = currentRole === "owner" || currentRole === "admin";
@@ -291,10 +279,7 @@ export default function TeamMembersPage() {
                 </div>
               ) : (
                 <Form {...inviteForm}>
-                  <form
-                    onSubmit={inviteForm.handleSubmit(onInvite)}
-                    className="space-y-4"
-                  >
+                  <form onSubmit={inviteForm.handleSubmit(onInvite)} className="space-y-4">
                     <FormField
                       control={inviteForm.control}
                       name="email"
@@ -326,20 +311,14 @@ export default function TeamMembersPage() {
                           <label className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
                             Role
                           </label>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
                                 <SelectValue />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem
-                                value="member"
-                                className="text-[13px]"
-                              >
+                              <SelectItem value="member" className="text-[13px]">
                                 <div className="flex items-center gap-2">
                                   <IconUser
                                     size={14}
@@ -350,10 +329,7 @@ export default function TeamMembersPage() {
                                 </div>
                               </SelectItem>
                               {isOwner && (
-                                <SelectItem
-                                  value="admin"
-                                  className="text-[13px]"
-                                >
+                                <SelectItem value="admin" className="text-[13px]">
                                   <div className="flex items-center gap-2">
                                     <IconShield
                                       size={14}
@@ -385,11 +361,7 @@ export default function TeamMembersPage() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                       >
                         {createInviteMutation.isLoading && (
-                          <IconLoader2
-                            size={14}
-                            stroke={1.5}
-                            className="animate-spin"
-                          />
+                          <IconLoader2 size={14} stroke={1.5} className="animate-spin" />
                         )}
                         Create invite
                       </button>
@@ -405,9 +377,7 @@ export default function TeamMembersPage() {
       {/* Members List */}
       <div className="divide-y divide-neutral-300/60">
         {members.data?.map((member, index) => {
-          const config =
-            roleConfig[member.role as keyof typeof roleConfig] ??
-            roleConfig.member;
+          const config = roleConfig[member.role as keyof typeof roleConfig] ?? roleConfig.member;
 
           return (
             <motion.div
@@ -420,7 +390,7 @@ export default function TeamMembersPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage
-                    src={member.user?.imageUrl ?? undefined}
+                    src={member.user?.image ?? undefined}
                     alt={member.user?.name ?? "User"}
                   />
                   <AvatarFallback className="bg-neutral-100 dark:bg-muted text-[12px] font-medium text-neutral-600 dark:text-neutral-400">
@@ -436,9 +406,7 @@ export default function TeamMembersPage() {
                       {member.user?.name || "Unknown"}
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
-                      <span
-                        className={`inline-block h-1.5 w-1.5 rounded-full ${config.color}`}
-                      />
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${config.color}`} />
                       {config.label}
                     </span>
                   </div>
@@ -469,11 +437,7 @@ export default function TeamMembersPage() {
                             }
                             className="text-[13px]"
                           >
-                            <IconShield
-                              size={14}
-                              stroke={1.5}
-                              className="mr-2"
-                            />
+                            <IconShield size={14} stroke={1.5} className="mr-2" />
                             Make admin
                           </DropdownMenuItem>
                         )}
@@ -487,11 +451,7 @@ export default function TeamMembersPage() {
                             }
                             className="text-[13px]"
                           >
-                            <IconUser
-                              size={14}
-                              stroke={1.5}
-                              className="mr-2"
-                            />
+                            <IconUser size={14} stroke={1.5} className="mr-2" />
                             Make member
                           </DropdownMenuItem>
                         )}
@@ -499,16 +459,10 @@ export default function TeamMembersPage() {
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() =>
-                                setTransferOwnershipMemberId(member.userId)
-                              }
+                              onClick={() => setTransferOwnershipMemberId(member.userId)}
                               className="text-[13px] text-amber-600 dark:text-amber-400"
                             >
-                              <IconCrown
-                                size={14}
-                                stroke={1.5}
-                                className="mr-2"
-                              />
+                              <IconCrown size={14} stroke={1.5} className="mr-2" />
                               Transfer ownership
                             </DropdownMenuItem>
                           </>
@@ -522,11 +476,7 @@ export default function TeamMembersPage() {
                           }
                           className="text-[13px] text-red-600 dark:text-red-400"
                         >
-                          <IconUserMinus
-                            size={14}
-                            stroke={1.5}
-                            className="mr-2"
-                          />
+                          <IconUserMinus size={14} stroke={1.5} className="mr-2" />
                           Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -610,17 +560,13 @@ export default function TeamMembersPage() {
                         <DropdownMenuItem
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `https://${baseDomain}/teams/accept-invite?token=${invite.token}`
+                              `https://${baseDomain}/teams/accept-invite?token=${invite.token}`,
                             );
                             toast.success("Link copied");
                           }}
                           className="text-[13px]"
                         >
-                          <IconCopy
-                            size={14}
-                            stroke={1.5}
-                            className="mr-2"
-                          />
+                          <IconCopy size={14} stroke={1.5} className="mr-2" />
                           Copy link
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -632,11 +578,7 @@ export default function TeamMembersPage() {
                           }
                           className="text-[13px] text-red-600 dark:text-red-400"
                         >
-                          <IconTrash
-                            size={14}
-                            stroke={1.5}
-                            className="mr-2"
-                          />
+                          <IconTrash size={14} stroke={1.5} className="mr-2" />
                           Revoke
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -660,9 +602,9 @@ export default function TeamMembersPage() {
               Transfer ownership
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[12px] text-neutral-500 dark:text-neutral-400">
-              This action is irreversible. You will lose owner privileges and
-              become an admin of this team. The new owner will have full control
-              over the team, including the ability to remove you.
+              This action is irreversible. You will lose owner privileges and become an admin of
+              this team. The new owner will have full control over the team, including the ability
+              to remove you.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

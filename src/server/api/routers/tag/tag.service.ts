@@ -4,9 +4,9 @@ import { workspaceOwnership } from "@/server/lib/workspace";
 
 import type { WorkspaceTRPCContext } from "../../trpc";
 
-const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) => 
-  workspace.type === "team" 
-    ? { teamId: workspace.teamId } 
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) =>
+  workspace.type === "team"
+    ? { teamId: workspace.teamId }
     : { userId: workspace.userId, teamId: null };
 
 // Create a new tag if it doesn't exist
@@ -45,7 +45,7 @@ export const createTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
 
       return createdTag;
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         // Another request created the tag concurrently, fetch and return it
         const createdTag = await ctx.prisma.tag.findFirst({
           where: {
@@ -105,7 +105,7 @@ export const getUserTags = async (ctx: WorkspaceTRPCContext) => {
 export const associateTagsWithLink = async (
   ctx: WorkspaceTRPCContext,
   linkId: number,
-  tagNames: string[]
+  tagNames: string[],
 ) => {
   // Verify the link belongs to the current workspace before modifying
   const linkRecord = await ctx.prisma.link.findFirst({
@@ -144,10 +144,7 @@ export const associateTagsWithLink = async (
 
 // Get tags for a specific link
 // Verifies the link belongs to the current workspace before returning tags
-export const getTagsForLink = async (
-  ctx: WorkspaceTRPCContext,
-  linkId: number
-) => {
+export const getTagsForLink = async (ctx: WorkspaceTRPCContext, linkId: number) => {
   // Verify the link belongs to the current workspace
   const linkRecord = await ctx.prisma.link.findFirst({
     where: {
@@ -173,10 +170,7 @@ export const getTagsForLink = async (
 };
 
 // Get links by tag
-export const getLinksByTag = async (
-  ctx: WorkspaceTRPCContext,
-  tagName: string
-) => {
+export const getLinksByTag = async (ctx: WorkspaceTRPCContext, tagName: string) => {
   const tagRecord = await ctx.prisma.tag.findFirst({
     where: {
       name: tagName.toLowerCase().trim(),

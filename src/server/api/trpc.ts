@@ -1,20 +1,21 @@
-import { auth } from "@clerk/nextjs/server";
-import { initTRPC, TRPCError } from "@trpc/server";
+import { auth } from "@/auth";
+import { TRPCError, initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
 import { prisma } from "@/server/db";
 import {
+  type WorkspaceContext,
   resolveWorkspaceContext,
   userHasUltraPlan,
-  WorkspaceContext
 } from "@/server/lib/workspace";
 
 import type { inferAsyncReturnType } from "@trpc/server";
+import type { Session } from "next-auth";
 
 export const createTRPCContext = async (opts: {
-  auth: Awaited<ReturnType<typeof auth>>;
+  auth: Session | null;
   headers: Headers;
 }) => {
   return {
@@ -31,8 +32,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
+        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
     };
   },
@@ -48,8 +48,9 @@ export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
 
 // Protected context type with enforced userId
 export type ProtectedTRPCContext = Omit<TRPCContext, "auth"> & {
-  auth: Omit<NonNullable<TRPCContext["auth"]>, "userId"> & {
+  auth: {
     userId: string;
+    session: Session;
   };
   /** Whether the user has isAdmin=true, fetched once during auth */
   isAdmin: boolean;
@@ -62,16 +63,17 @@ const currentUserCache = new WeakMap<
   Promise<{ banned: boolean | null; isAdmin: boolean | null } | null>
 >();
 
-// Protected procedure middleware
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.auth.userId) {
+  const session = ctx.auth;
+  const userId = session?.user?.id;
+  if (!session || !userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
   let cached = currentUserCache.get(ctx);
   if (!cached) {
     cached = ctx.prisma.user.findUnique({
-      where: { id: ctx.auth.userId },
+      where: { id: userId },
       select: { banned: true, isAdmin: true },
     });
     currentUserCache.set(ctx, cached);
@@ -89,8 +91,8 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     ctx: {
       ...ctx,
       auth: {
-        ...ctx.auth,
-        userId: ctx.auth.userId,
+        userId,
+        session,
       },
       isAdmin: currentUser?.isAdmin ?? false,
     } as ProtectedTRPCContext,
@@ -112,24 +114,18 @@ export type WorkspaceTRPCContext = ProtectedTRPCContext & {
  * Workspace-aware procedure that resolves the current workspace from the hostname.
  * This should be used for all operations that need workspace context.
  */
-export const workspaceProcedure = protectedProcedure.use(
-  async ({ ctx, next }) => {
-    const hostname = ctx.headers.get("host") ?? DEFAULT_PLATFORM_DOMAIN;
+export const workspaceProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const hostname = ctx.headers.get("host") ?? DEFAULT_PLATFORM_DOMAIN;
 
-    const workspace = await resolveWorkspaceContext(
-      ctx.auth.userId,
-      hostname,
-      ctx.prisma
-    );
+  const workspace = await resolveWorkspaceContext(ctx.auth.userId, hostname, ctx.prisma);
 
-    return next({
-      ctx: {
-        ...ctx,
-        workspace,
-      } as WorkspaceTRPCContext,
-    });
-  }
-);
+  return next({
+    ctx: {
+      ...ctx,
+      workspace,
+    } as WorkspaceTRPCContext,
+  });
+});
 
 /**
  * Context type for team-only procedures

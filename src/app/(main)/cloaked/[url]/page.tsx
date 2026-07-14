@@ -90,9 +90,7 @@ export default async function CloakedPage(props: CloakedPageProps) {
   const searchParams = await props.searchParams;
   const url = decodeURIComponent(params.url);
   const token =
-    typeof searchParams.t === "string" && searchParams.t.length > 0
-      ? searchParams.t
-      : null;
+    typeof searchParams.t === "string" && searchParams.t.length > 0 ? searchParams.t : null;
 
   // Validate and normalize the URL before rendering
   let validatedUrl: string;
@@ -117,11 +115,7 @@ export default async function CloakedPage(props: CloakedPageProps) {
 
   return (
     <>
-      {token && (
-        <script
-          dangerouslySetInnerHTML={{ __html: buildBeaconScript(token) }}
-        />
-      )}
+      {token && <script dangerouslySetInnerHTML={{ __html: buildBeaconScript(token) }} />}
       <iframe
         src={validatedUrl}
         title="Cloaked content"

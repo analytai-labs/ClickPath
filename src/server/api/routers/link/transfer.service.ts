@@ -3,14 +3,12 @@ import { TRPCError } from "@trpc/server";
 import { getPlanCaps } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
 import { prisma } from "@/server/db";
+import { getUserPlanContext } from "@/server/lib/user-plan";
+import { workspaceOwnership } from "@/server/lib/workspace";
 import {
   getTeamWorkspaceContextById,
   getUserTeams,
 } from "@/server/lib/workspace/workspace.service";
-import {
-  workspaceOwnership,
-} from "@/server/lib/workspace";
-import { getUserPlanContext } from "@/server/lib/user-plan";
 
 import type { WorkspaceContext } from "@/server/lib/workspace/types";
 import type { WorkspaceTRPCContext } from "../../trpc";
@@ -41,7 +39,12 @@ export interface AvailableWorkspace {
 export interface TransferValidationResult {
   isValid: boolean;
   errors: Array<{
-    type: "ALIAS_COLLISION" | "DOMAIN_MISSING" | "LIMIT_EXCEEDED" | "PERMISSION_DENIED" | "SAME_WORKSPACE";
+    type:
+      | "ALIAS_COLLISION"
+      | "DOMAIN_MISSING"
+      | "LIMIT_EXCEEDED"
+      | "PERMISSION_DENIED"
+      | "SAME_WORKSPACE";
     message: string;
     details?: Record<string, unknown>;
   }>;
@@ -66,13 +69,13 @@ export interface TransferResult {
 // ============================================================================
 
 export async function getAvailableWorkspaces(
-  ctx: WorkspaceTRPCContext
+  ctx: WorkspaceTRPCContext,
 ): Promise<AvailableWorkspace[]> {
   const workspaces: AvailableWorkspace[] = [];
 
   // Get personal workspace info
   const personalLinkCount = await prisma.link.count({
-    where: { userId: ctx.auth.userId, teamId: null }
+    where: { userId: ctx.auth.userId, teamId: null },
   });
 
   const planCtx = await getUserPlanContext(ctx.auth.userId, prisma as any);
@@ -99,11 +102,10 @@ export async function getAvailableWorkspaces(
 
   for (const { team, role } of userTeams) {
     const teamLinkCount = await prisma.link.count({
-      where: { teamId: team.id }
+      where: { teamId: team.id },
     });
 
-    const isCurrent =
-      ctx.workspace.type === "team" && ctx.workspace.teamId === team.id;
+    const isCurrent = ctx.workspace.type === "team" && ctx.workspace.teamId === team.id;
 
     workspaces.push({
       id: `team-${team.id}`,
@@ -128,7 +130,7 @@ export async function getAvailableWorkspaces(
 
 export async function validateTransfer(
   ctx: WorkspaceTRPCContext,
-  input: TransferLinksInput
+  input: TransferLinksInput,
 ): Promise<TransferValidationResult> {
   const { linkIds, targetWorkspaceType, targetTeamId } = input;
   const errors: TransferValidationResult["errors"] = [];
@@ -175,7 +177,7 @@ export async function validateTransfer(
       targetWorkspace = await getTeamWorkspaceContextById(
         ctx.auth.userId,
         targetTeamId,
-        prisma as any
+        prisma as any,
       );
     } catch {
       errors.push({
@@ -227,8 +229,10 @@ export async function validateTransfer(
   const sourceLinks = await prisma.link.findMany({
     where: {
       id: { in: linkIds },
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
-    }
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
+    },
   });
 
   if (sourceLinks.length !== linkIds.length) {
@@ -252,7 +256,7 @@ export async function validateTransfer(
 
     if (limit !== undefined) {
       const currentCount = await prisma.link.count({
-        where: { userId: ctx.auth.userId, teamId: null }
+        where: { userId: ctx.auth.userId, teamId: null },
       });
 
       const newTotal = currentCount + linkIds.length;
@@ -287,8 +291,10 @@ export async function validateTransfer(
       where: {
         alias: { in: aliasesForDomain },
         domain: domain,
-        ...(targetWorkspace.type === "team" ? { teamId: targetWorkspace.teamId } : { userId: ctx.auth.userId, teamId: null })
-      }
+        ...(targetWorkspace.type === "team"
+          ? { teamId: targetWorkspace.teamId }
+          : { userId: ctx.auth.userId, teamId: null }),
+      },
     });
 
     if (existingAliases.length > 0) {
@@ -312,8 +318,10 @@ export async function validateTransfer(
     const targetDomains = await prisma.customDomain.findMany({
       where: {
         domain: { in: customDomains },
-        ...(targetWorkspace.type === "team" ? { teamId: targetWorkspace.teamId } : { userId: ctx.auth.userId, teamId: null })
-      }
+        ...(targetWorkspace.type === "team"
+          ? { teamId: targetWorkspace.teamId }
+          : { userId: ctx.auth.userId, teamId: null }),
+      },
     });
 
     const targetDomainSet = new Set(targetDomains.map((d) => d.domain));
@@ -331,7 +339,7 @@ export async function validateTransfer(
   // Calculate warnings
   // Tags to be dropped
   const tagCount = await prisma.linkTag.count({
-    where: { linkId: { in: linkIds } }
+    where: { linkId: { in: linkIds } },
   });
 
   if (tagCount > 0) {
@@ -354,7 +362,7 @@ export async function validateTransfer(
 
   // QR codes to be transferred
   const qrCodeCount = await prisma.qrCode.count({
-    where: { linkId: { in: linkIds } }
+    where: { linkId: { in: linkIds } },
   });
 
   if (qrCodeCount > 0) {
@@ -380,7 +388,7 @@ export async function validateTransfer(
 
 export async function transferLinksToWorkspace(
   ctx: WorkspaceTRPCContext,
-  input: TransferLinksInput
+  input: TransferLinksInput,
 ): Promise<TransferResult> {
   const { linkIds, targetWorkspaceType, targetTeamId } = input;
 
@@ -409,19 +417,21 @@ export async function transferLinksToWorkspace(
     await tx.link.updateMany({
       where: {
         id: { in: linkIds },
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
       data: {
         userId: targetOwnership.userId,
         teamId: targetOwnership.teamId,
         folderId: null, // Reset folder assignment
         campaignId: null, // Campaigns are workspace-scoped too
-      }
+      },
     });
 
     // 2. Delete tag associations (tags are workspace-scoped)
     await tx.linkTag.deleteMany({
-      where: { linkId: { in: linkIds } }
+      where: { linkId: { in: linkIds } },
     });
 
     // 3. Transfer QR codes
@@ -430,7 +440,7 @@ export async function transferLinksToWorkspace(
       data: {
         userId: targetOwnership.userId,
         teamId: targetOwnership.teamId,
-      }
+      },
     });
 
     // Note: linkVisit and uniqueLinkVisit are NOT updated

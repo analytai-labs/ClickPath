@@ -6,11 +6,11 @@ shortDesc: One public page for all your links — fully tracked, with themes and
 category: new
 ---
 
-iShortn now does more than one link at a time. Build a single public bio page — the kind you put in an Instagram, TikTok, or X profile — that holds all your important links, social profiles, and a short intro. And because it's built on iShortn, every link on the page is a real tracked short link.
+ClickPath now does more than one link at a time. Build a single public bio page — the kind you put in an Instagram, TikTok, or X profile — that holds all your important links, social profiles, and a short intro. And because it's built on ClickPath, every link on the page is a real tracked short link.
 
 ## What's new
 
-A new **Bio Pages** section in your dashboard lets you create a page at `ishortn.ink/p/yourname`. It comes with a fast, mobile-first builder and a live preview beside it.
+A new **Bio Pages** section in your dashboard lets you create a page at `clickpath.analytai.in/p/yourname`. It comes with a fast, mobile-first builder and a live preview beside it.
 
 ### Blocks
 
@@ -35,7 +35,7 @@ Every bio page has a QR code that points straight at it — ready for print, sli
 
 ## Plans
 
-- **Free** — 1 bio page with the iShortn badge
+- **Free** — 1 bio page with the ClickPath badge
 - **Pro** — 3 pages, custom domains, full theme customization, branding removal, and a custom social-preview image
 - **Ultra** — unlimited pages, scheduled blocks, per-block UTM attribution, and team-managed pages
 

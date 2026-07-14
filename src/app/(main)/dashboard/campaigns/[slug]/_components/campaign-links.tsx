@@ -129,9 +129,7 @@ export function CampaignLinks({ campaign }: { campaign: CampaignData }) {
                   <button
                     aria-label="Remove from campaign"
                     title="Remove from campaign"
-                    onClick={() =>
-                      removeLink.mutate({ id: campaign.id, linkId: memberLink.id })
-                    }
+                    onClick={() => removeLink.mutate({ id: campaign.id, linkId: memberLink.id })}
                     className="rounded-md p-2 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                   >
                     <IconX size={15} stroke={1.5} />

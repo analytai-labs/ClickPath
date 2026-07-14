@@ -1,7 +1,7 @@
 # Link-in-Bio — Implementation Plan
 
 Status: **Built end-to-end (Phases 0–6), typecheck + production build pass.** Branch:
-`AmoabaKelvin/link-in-bio`. Roadmap origin: Phase 2 of the Product Growth Roadmap
+`ClickPath/link-in-bio`. Roadmap origin: Phase 2 of the Product Growth Roadmap
 (`01 Link-in-Bio Pages.md`).
 
 **Before this ships:** apply migration `drizzle/0063_*.sql` to the database (`bun run db:migrate`)
@@ -24,13 +24,13 @@ filters by current time).
 ## 1. What we're building and why
 
 A public bio page (Linktree-style) where a user collects their important links, socials, and
-content in one place. The decisive design choice: **every link block is backed by a real iShortn
+content in one place. The decisive design choice: **every link block is backed by a real ClickPath
 `link` row**, so every click flows through the existing redirect + analytics pipeline. Per-block
 click data, geo/device/referrer, unique visits, UTM, verified clicks, and QR all come for free.
 
 **Positioning / wedge:** _"The link-in-bio that actually tells you what's working."_ Tracking-first,
 not design-first or commerce-first. Linktree gates analytics hard (Free = 28-day aggregates, no
-geo/device/referrer); iShortn already computes all of that server-side and bot-filtered. That is the
+geo/device/referrer); ClickPath already computes all of that server-side and bot-filtered. That is the
 differentiator we lead with.
 
 We are building this **end-to-end**, not as a stripped MVP slice — full builder, public page,
@@ -40,7 +40,7 @@ analytics, themes, QR, custom domain, and tier gating.
 
 | Decision | Choice |
 | --- | --- |
-| Public URL namespace | **`ishortn.ink/p/[slug]`** (prefixed path — zero collision with the root `[linkAlias]` redirect, simplest routing) |
+| Public URL namespace | **`clickpath.analytai.in/p/[slug]`** (prefixed path — zero collision with the root `[linkAlias]` redirect, simplest routing) |
 | Link block model | **Each `link`-type block auto-creates / references a real `link` row** (reuse redirect + analytics pipeline) |
 | Block storage | **Relational `BioBlock` table** (not JSON blob) — needed for reorder, per-block tracking, querying |
 | Multi-page gating | **Free 1 · Pro ~3 · Ultra unlimited** |
@@ -57,7 +57,7 @@ analytics, themes, QR, custom domain, and tier gating.
 
 ```text
 Public bio page (HTML, SSG/ISR)          Link block click
-  ishortn.ink/p/yourname          ->      ishortn.ink/<alias>  (existing redirect route)
+  clickpath.analytai.in/p/yourname          ->      clickpath.analytai.in/<alias>  (existing redirect route)
   - renders BioBlocks                       -> /api/link -> recordClick() -> linkVisit
   - page-view beacon -> bioPageView         -> full geo/device/referrer/UTM analytics (reused)
 ```
@@ -150,7 +150,7 @@ Add: `bioPageLimit` (free 1 / pro 3 / ultra undefined=unlimited),
 | Per-block click tracking (reused pipeline) | Yes | Yes | Yes |
 | Page analytics (views, clicks, CTR) | 7-day window* | Unlimited history + geo/device/referrer | + UTM attribution, advanced |
 | Themes | Curated presets | Custom (color/button/background/font) | Custom |
-| iShortn branding badge | On | **Removable** | Removed |
+| ClickPath branding badge | On | **Removable** | Removed |
 | Custom domain | — | Reuse 3-domain cap | Unlimited |
 | QR for page | Standard | Branded/dynamic | Branded/dynamic |
 | Custom social preview (OG) | Auto-generated | Custom image | Custom |
@@ -189,7 +189,7 @@ Add: `bioPageLimit` (free 1 / pro 3 / ultra undefined=unlimited),
   analytics pipeline. The **page-view beacon** runs `recordBioPageView` (bot-filtered, IP-hashed,
   calls `registerEventUsage` first): over quota → the page still renders, the view event is skipped,
   and the dashboard shows a "views not tracked this month" notice.
-- Free pages show the "Made with iShortn" badge; Pro/Ultra remove it.
+- Free pages show the "Made with ClickPath" badge; Pro/Ultra remove it.
 - **Custom domain:** `brand.com/` renders the page whose `customDomain == host` (root route branches
   on host; middleware already skips `/`). `/p/[slug]` stays canonical and also works on the custom
   domain; short links on the same domain (`brand.com/[alias]`) are unchanged.

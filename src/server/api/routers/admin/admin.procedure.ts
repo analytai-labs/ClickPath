@@ -1,4 +1,4 @@
-import { createTRPCRouter, adminProcedure } from "../../trpc";
+import { adminProcedure, createTRPCRouter } from "../../trpc";
 
 import * as inputs from "./admin.input";
 import * as services from "./admin.service";
@@ -6,17 +6,11 @@ import * as services from "./admin.service";
 export const adminRouter = createTRPCRouter({
   getStats: adminProcedure.query(({ ctx }) => services.getStats(ctx)),
 
-  getRecentActivity: adminProcedure.query(({ ctx }) =>
-    services.getRecentActivity(ctx),
-  ),
+  getRecentActivity: adminProcedure.query(({ ctx }) => services.getRecentActivity(ctx)),
 
-  getDailyStats: adminProcedure.query(({ ctx }) =>
-    services.getDailyStats(ctx),
-  ),
+  getDailyStats: adminProcedure.query(({ ctx }) => services.getDailyStats(ctx)),
 
-  getRecentUsers: adminProcedure.query(({ ctx }) =>
-    services.getRecentUsers(ctx),
-  ),
+  getRecentUsers: adminProcedure.query(({ ctx }) => services.getRecentUsers(ctx)),
 
   searchLinks: adminProcedure
     .input(inputs.searchLinksSchema)
@@ -42,9 +36,7 @@ export const adminRouter = createTRPCRouter({
     .input(inputs.unbanUserSchema)
     .mutation(({ ctx, input }) => services.unbanUser(ctx, input)),
 
-  getBlockedDomains: adminProcedure.query(({ ctx }) =>
-    services.getBlockedDomains(ctx),
-  ),
+  getBlockedDomains: adminProcedure.query(({ ctx }) => services.getBlockedDomains(ctx)),
 
   addBlockedDomain: adminProcedure
     .input(inputs.addBlockedDomainSchema)
@@ -87,9 +79,7 @@ export const adminRouter = createTRPCRouter({
     .input(inputs.getMonthlyBreakdownSchema)
     .query(({ ctx, input }) => services.getMonthlyBreakdown(ctx, input)),
 
-  getSystemHealth: adminProcedure.query(({ ctx }) =>
-    services.getSystemHealth(ctx),
-  ),
+  getSystemHealth: adminProcedure.query(({ ctx }) => services.getSystemHealth(ctx)),
 
   getUserBaseSummary: adminProcedure
     .input(inputs.getUserBaseSummarySchema)

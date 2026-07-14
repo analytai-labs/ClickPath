@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  closestCenter,
   DndContext,
   type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -227,7 +227,11 @@ function SortableRow({
           className="rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-muted"
           title={block.isVisible ? "Hide" : "Show"}
         >
-          {block.isVisible ? <IconEye size={16} stroke={1.5} /> : <IconEyeOff size={16} stroke={1.5} />}
+          {block.isVisible ? (
+            <IconEye size={16} stroke={1.5} />
+          ) : (
+            <IconEyeOff size={16} stroke={1.5} />
+          )}
         </button>
         {block.type !== "divider" && (
           <button

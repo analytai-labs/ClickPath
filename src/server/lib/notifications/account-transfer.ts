@@ -1,6 +1,7 @@
 import AccountTransferEmail from "@/emails/account-transfer";
 import TransferCompletedEmail from "@/emails/transfer-completed";
 import TransferDeclinedEmail from "@/emails/transfer-declined";
+import { EMAIL_SENDER } from "@/lib/constants/app";
 import { getAppBaseDomain } from "@/lib/constants/domains";
 import { logger } from "@/lib/logger";
 
@@ -34,9 +35,9 @@ export async function sendAccountTransferEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: toEmail,
-      subject: `${fromName} wants to transfer their iShortn resources to you`,
+      subject: `${fromName} wants to transfer their ClickPath resources to you`,
       react: AccountTransferEmail({
         recipientName: toName,
         senderName: fromName,
@@ -72,9 +73,9 @@ export async function sendTransferCompletedEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: toEmail,
-      subject: "Your iShortn resources have been transferred",
+      subject: "Your ClickPath resources have been transferred",
       react: TransferCompletedEmail({
         senderName: toName,
         recipientName,
@@ -107,9 +108,9 @@ export async function sendTransferDeclinedEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: toEmail,
-      subject: "Your iShortn transfer request was declined",
+      subject: "Your ClickPath transfer request was declined",
       react: TransferDeclinedEmail({
         senderName: toName,
         recipientName,

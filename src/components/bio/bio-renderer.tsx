@@ -98,13 +98,13 @@ export function BioRenderer({
 
         {!model.removeBranding && (
           <a
-            href="https://ishortn.ink"
+            href="https://clickpath.analytai.in"
             target="_blank"
             rel="noreferrer"
             className="mt-10 text-xs opacity-60 transition-opacity hover:opacity-100"
             style={{ color: t.mutedColor }}
           >
-            Made with iShortn
+            Made with ClickPath
           </a>
         )}
       </div>

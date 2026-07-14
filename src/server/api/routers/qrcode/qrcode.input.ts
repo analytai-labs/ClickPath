@@ -47,12 +47,10 @@ export type QRCodeInput = z.infer<typeof qrcodeInput>;
 // QR Preset schemas
 const hexColorSchema = z.string().regex(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/, "Invalid hex color");
 
-const marginNoiseRateSchema = z
-  .string()
-  .refine((val) => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num >= 0 && num <= 1;
-  }, "marginNoiseRate must be a number between 0 and 1");
+const marginNoiseRateSchema = z.string().refine((val) => {
+  const num = Number.parseFloat(val);
+  return !isNaN(num) && num >= 0 && num <= 1;
+}, "marginNoiseRate must be a number between 0 and 1");
 
 // Logo image validator: must be a valid base64 data URI (PNG/JPEG) under 2MB
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
@@ -60,7 +58,7 @@ const logoImageSchema = z
   .string()
   .regex(
     /^data:image\/(png|jpe?g);base64,[A-Za-z0-9+/]+=*$/,
-    "Logo must be a valid base64 PNG or JPEG data URI"
+    "Logo must be a valid base64 PNG or JPEG data URI",
   )
   .refine((dataUri) => {
     // Extract the base64 payload after the comma

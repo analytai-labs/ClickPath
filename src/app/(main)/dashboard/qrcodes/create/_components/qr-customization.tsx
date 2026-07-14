@@ -75,10 +75,7 @@ function QRCodeCustomization({
           </div>
         </div>
 
-        <ColorPicker
-          selectedColor={selectedColor}
-          setSelectedColor={setSelectedColor}
-        />
+        <ColorPicker selectedColor={selectedColor} setSelectedColor={setSelectedColor} />
         <LogoUploader setLogoImage={setLogoImage} />
       </div>
     </div>

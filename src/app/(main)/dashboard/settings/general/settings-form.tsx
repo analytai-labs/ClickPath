@@ -8,13 +8,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -36,10 +30,7 @@ type SettingsFormProps = {
   availableDomains: RouterOutputs["customDomain"]["list"];
 };
 
-export function SettingsForm({
-  userSettings,
-  availableDomains,
-}: SettingsFormProps) {
+export function SettingsForm({ userSettings, availableDomains }: SettingsFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
@@ -85,10 +76,7 @@ export function SettingsForm({
                 <label className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
                   Default Domain
                 </label>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
                       <SelectValue placeholder="Select a domain" />
@@ -135,11 +123,7 @@ export function SettingsForm({
             >
               {isSaving ? (
                 <>
-                  <IconLoader2
-                    size={14}
-                    stroke={1.5}
-                    className="mr-1.5 animate-spin"
-                  />
+                  <IconLoader2 size={14} stroke={1.5} className="mr-1.5 animate-spin" />
                   Saving...
                 </>
               ) : justSaved ? (

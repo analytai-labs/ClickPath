@@ -41,9 +41,7 @@ function validateApiKey(request: Request): boolean {
   }
 
   // Support both "Bearer <token>" and just "<token>"
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : authHeader;
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
   // Use timing-safe comparison to prevent timing attacks
   if (token.length !== cronSecret.length) {
@@ -95,7 +93,7 @@ export async function GET(request: Request) {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

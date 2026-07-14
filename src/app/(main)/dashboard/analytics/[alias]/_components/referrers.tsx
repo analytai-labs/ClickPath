@@ -11,16 +11,12 @@ type ReferrerStatsProps = {
 
 export function ReferrerStats({ referers, totalClicks }: ReferrerStatsProps) {
   // Convert referrers record to array format
-  const referrerRecordsAsArray = Object.entries(referers).map(
-    ([name, clicks]) => ({
-      name: name === "null" ? "Direct" : formatReferrer(name),
-      clicks: +clicks,
-    })
-  );
+  const referrerRecordsAsArray = Object.entries(referers).map(([name, clicks]) => ({
+    name: name === "null" ? "Direct" : formatReferrer(name),
+    clicks: +clicks,
+  }));
 
-  const [currentView, setCurrentView] = useState<"all" | "social" | "search">(
-    "all"
-  );
+  const [currentView, setCurrentView] = useState<"all" | "social" | "search">("all");
 
   const handleViewChange = (view: string) => {
     setCurrentView(view as "all" | "social" | "search");
@@ -35,10 +31,7 @@ export function ReferrerStats({ referers, totalClicks }: ReferrerStatsProps) {
   });
 
   return (
-    <BarList.BarListTitle
-      title="Traffic Sources"
-      description="Top referrers and traffic sources"
-    >
+    <BarList.BarListTitle title="Traffic Sources" description="Top referrers and traffic sources">
       <BarList.BarListTabViewSwitcher
         currentView={currentView}
         views={["all", "social", "search"]}

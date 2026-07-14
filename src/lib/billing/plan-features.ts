@@ -18,7 +18,7 @@ export const PLAN_FEATURES: Record<
       "Standard QR codes",
       "1 link-in-bio page",
       `${free.campaignLimit} campaign with aggregate analytics`,
-      "ishortn.ink links",
+      "clickpath.analytai.in links",
     ],
   },
   pro: {

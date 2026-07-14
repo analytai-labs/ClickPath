@@ -1,4 +1,4 @@
-import { normalize, type Context, type Level } from "./shared";
+import { type Context, type Level, normalize } from "./shared";
 
 const isDev = process.env.NODE_ENV !== "production";
 

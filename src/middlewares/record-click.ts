@@ -1,5 +1,11 @@
 import { parseDeviceDetails, parseReferrer, resolveGeo } from "@/lib/core/analytics/visitor";
-import { type Link, buildCacheKey, normalizeDomain, getFromCache, setInCache } from "@/lib/core/cache";
+import {
+  type Link,
+  buildCacheKey,
+  getFromCache,
+  normalizeDomain,
+  setInCache,
+} from "@/lib/core/cache";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { hashIp } from "@/lib/utils/ip-hash";
 import { isBot } from "@/lib/utils/is-bot";
@@ -20,8 +26,8 @@ export async function resolveLink(domain: string, alias: string): Promise<Link |
   const link = await prisma.link.findFirst({
     where: {
       domain: normalizeDomain(domain),
-      alias: { equals: alias.replace("/", ""), mode: "insensitive" }
-    }
+      alias: { equals: alias.replace("/", ""), mode: "insensitive" },
+    },
   });
   if (!link) return null;
 
@@ -34,11 +40,13 @@ export async function resolveLink(domain: string, alias: string): Promise<Link |
  * concurrent inserts silently collapse to a no-op.
  */
 async function recordUniqueClick(ipHash: string, linkId: number) {
-  await prisma.uniqueLinkVisit.create({
-    data: { ipHash, linkId }
-  }).catch(() => {
-    // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
-  });
+  await prisma.uniqueLinkVisit
+    .create({
+      data: { ipHash, linkId },
+    })
+    .catch(() => {
+      // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
+    });
 }
 
 type RecordClickOptions = {
@@ -97,7 +105,7 @@ export async function recordClick(opts: RecordClickOptions): Promise<void> {
         continent: continentName,
         matchedGeoRuleId: matchedGeoRuleId ?? null,
         visitId: visitId ?? null,
-      }
+      },
     }),
     recordUniqueClick(ipHash, link.id),
   ]);

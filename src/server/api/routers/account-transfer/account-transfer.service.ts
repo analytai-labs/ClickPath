@@ -1,6 +1,6 @@
+import crypto from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { addDays } from "date-fns";
-import crypto from "node:crypto";
 
 import { getPlanCaps, resolvePlan } from "@/lib/billing/plans";
 import type { Plan } from "@/lib/billing/plans";
@@ -13,9 +13,9 @@ import {
 
 import type { ProtectedTRPCContext } from "../../trpc";
 import type {
-  InitiateTransferInput,
   AcceptTransferInput,
   CancelTransferInput,
+  InitiateTransferInput,
 } from "./account-transfer.input";
 
 // ============================================================================
@@ -75,20 +75,16 @@ export interface TransferResult {
 /**
  * Count all transferable resources in the user's personal workspace
  */
-async function countUserResources(
-  userId: string,
-  prisma: any
-): Promise<ResourceCounts> {
-  const [links, domains, qrCodes, folders, tags, utmTemplates, qrPresets] =
-    await Promise.all([
-      prisma.link.count({ where: { userId, teamId: null } }),
-      prisma.customDomain.count({ where: { userId, teamId: null } }),
-      prisma.qrcode.count({ where: { userId, teamId: null } }),
-      prisma.folder.count({ where: { userId, teamId: null } }),
-      prisma.tag.count({ where: { userId, teamId: null } }),
-      prisma.utmTemplate.count({ where: { userId, teamId: null } }),
-      prisma.qrPreset.count({ where: { userId, teamId: null } }),
-    ]);
+async function countUserResources(userId: string, prisma: any): Promise<ResourceCounts> {
+  const [links, domains, qrCodes, folders, tags, utmTemplates, qrPresets] = await Promise.all([
+    prisma.link.count({ where: { userId, teamId: null } }),
+    prisma.customDomain.count({ where: { userId, teamId: null } }),
+    prisma.qrcode.count({ where: { userId, teamId: null } }),
+    prisma.folder.count({ where: { userId, teamId: null } }),
+    prisma.tag.count({ where: { userId, teamId: null } }),
+    prisma.utmTemplate.count({ where: { userId, teamId: null } }),
+    prisma.qrPreset.count({ where: { userId, teamId: null } }),
+  ]);
 
   return {
     links,
@@ -116,7 +112,7 @@ async function countUserResources(
 export async function validateAccountTransfer(
   ctx: ProtectedTRPCContext,
   targetEmail: string,
-  excludeTransferId?: number
+  excludeTransferId?: number,
 ): Promise<TransferValidationResult> {
   const errors: TransferValidationResult["errors"] = [];
 
@@ -162,8 +158,7 @@ export async function validateAccountTransfer(
   if (!targetUser) {
     errors.push({
       type: "TARGET_NOT_FOUND",
-      message:
-        "Target account does not exist. The recipient must sign up first.",
+      message: "Target account does not exist. The recipient must sign up first.",
     });
     return {
       isValid: false,
@@ -184,8 +179,7 @@ export async function validateAccountTransfer(
   if (targetUser.deletedAt !== null) {
     errors.push({
       type: "TARGET_DELETED",
-      message:
-        "Target account is marked for deletion and cannot receive transfers",
+      message: "Target account is marked for deletion and cannot receive transfers",
     });
     return {
       isValid: false,
@@ -214,8 +208,7 @@ export async function validateAccountTransfer(
   if (existingTransfer) {
     errors.push({
       type: "PENDING_TRANSFER_EXISTS",
-      message:
-        "You already have a pending transfer. Cancel it before initiating a new one.",
+      message: "You already have a pending transfer. Cancel it before initiating a new one.",
     });
     return {
       isValid: false,
@@ -257,8 +250,7 @@ export async function validateAccountTransfer(
   }
 
   if (targetCaps.domainLimit !== undefined && resourceCounts.customDomains > 0) {
-    const newTotal =
-      targetCurrentCounts.customDomains + resourceCounts.customDomains;
+    const newTotal = targetCurrentCounts.customDomains + resourceCounts.customDomains;
     if (newTotal > targetCaps.domainLimit) {
       errors.push({
         type: "LIMIT_EXCEEDED",
@@ -284,11 +276,9 @@ export async function validateAccountTransfer(
       }),
     ]);
 
-    const targetFolderNames = new Set(
-      targetFolders.map((f) => f.name.toLowerCase())
-    );
+    const targetFolderNames = new Set(targetFolders.map((f) => f.name.toLowerCase()));
     const newFoldersCount = sourceFolders.filter(
-      (f) => !targetFolderNames.has(f.name.toLowerCase())
+      (f) => !targetFolderNames.has(f.name.toLowerCase()),
     ).length;
 
     const newTotal = targetCurrentCounts.folders + newFoldersCount;
@@ -367,7 +357,7 @@ export async function validateAccountTransfer(
 
 export async function initiateAccountTransfer(
   ctx: ProtectedTRPCContext,
-  input: InitiateTransferInput
+  input: InitiateTransferInput,
 ) {
   // Validate the transfer
   const validation = await validateAccountTransfer(ctx, input.targetEmail);
@@ -438,10 +428,7 @@ export async function initiateAccountTransfer(
 // GET TRANSFER INFO
 // ============================================================================
 
-export async function getTransferByToken(
-  ctx: ProtectedTRPCContext,
-  token: string
-) {
+export async function getTransferByToken(ctx: ProtectedTRPCContext, token: string) {
   const transfer = await ctx.prisma.accountTransfer.findFirst({
     where: { token },
     include: {
@@ -488,7 +475,7 @@ export async function getPendingTransfer(ctx: ProtectedTRPCContext) {
   const transfer = await ctx.prisma.accountTransfer.findFirst({
     where: {
       fromUserId: ctx.auth.userId,
-      status: "pending"
+      status: "pending",
     },
   });
 
@@ -521,7 +508,7 @@ export async function getPendingTransfer(ctx: ProtectedTRPCContext) {
 
 export async function acceptAccountTransfer(
   ctx: ProtectedTRPCContext,
-  input: AcceptTransferInput
+  input: AcceptTransferInput,
 ): Promise<TransferResult> {
   const transfer = await ctx.prisma.accountTransfer.findFirst({
     where: { token: input.token },
@@ -577,7 +564,7 @@ export async function acceptAccountTransfer(
   const revalidation = await validateAccountTransfer(
     sourceUserContext,
     transfer.toEmail,
-    transfer.id
+    transfer.id,
   );
 
   if (!revalidation.isValid) {
@@ -595,7 +582,7 @@ export async function acceptAccountTransfer(
     ctx,
     transfer.fromUserId,
     ctx.auth.userId,
-    transfer.id
+    transfer.id,
   );
 
   // Notify the source user that transfer was completed
@@ -634,7 +621,7 @@ async function executeResourceTransfer(
   ctx: ProtectedTRPCContext,
   fromUserId: string,
   toUserId: string,
-  transferId: number
+  transferId: number,
 ): Promise<TransferResult> {
   const result: TransferResult = {
     success: true,
@@ -689,9 +676,7 @@ async function executeResourceTransfer(
       where: { userId: toUserId, teamId: null },
     });
 
-    const targetFoldersByName = new Map(
-      targetFolders.map((f) => [f.name.toLowerCase(), f])
-    );
+    const targetFoldersByName = new Map(targetFolders.map((f) => [f.name.toLowerCase(), f]));
 
     const folderIdMapping = new Map<number, number>(); // source ID -> target ID
 
@@ -734,9 +719,7 @@ async function executeResourceTransfer(
       where: { userId: toUserId, teamId: null },
     });
 
-    const targetTagsByName = new Map(
-      targetTags.map((t) => [t.name.toLowerCase(), t])
-    );
+    const targetTagsByName = new Map(targetTags.map((t) => [t.name.toLowerCase(), t]));
 
     const tagIdMapping = new Map<number, number>(); // source ID -> target ID
 
@@ -784,7 +767,7 @@ async function executeResourceTransfer(
       // Update links ownership and folder IDs
       for (const sourceLink of sourceLinks) {
         const newFolderId = sourceLink.folderId
-          ? folderIdMapping.get(sourceLink.folderId) ?? null
+          ? (folderIdMapping.get(sourceLink.folderId) ?? null)
           : null;
 
         await tx.link.update({
@@ -906,15 +889,11 @@ async function executeResourceTransfer(
     const targetSlugs = new Set(targetCampaigns.map((c) => c.slug));
     const targetNames = new Set(targetCampaigns.map((c) => c.name.toLowerCase()));
     const allSlugs = new Set([...targetSlugs, ...sourceCampaigns.map((c) => c.slug)]);
-    const allNames = new Set([
-      ...targetNames,
-      ...sourceCampaigns.map((c) => c.name.toLowerCase()),
-    ]);
+    const allNames = new Set([...targetNames, ...sourceCampaigns.map((c) => c.name.toLowerCase())]);
 
     for (const sourceCampaign of sourceCampaigns) {
       const collides =
-        targetSlugs.has(sourceCampaign.slug) ||
-        targetNames.has(sourceCampaign.name.toLowerCase());
+        targetSlugs.has(sourceCampaign.slug) || targetNames.has(sourceCampaign.name.toLowerCase());
       if (!collides) continue;
 
       let suffix = 2;
@@ -969,10 +948,7 @@ async function executeResourceTransfer(
 // CANCEL TRANSFER
 // ============================================================================
 
-export async function cancelAccountTransfer(
-  ctx: ProtectedTRPCContext,
-  input: CancelTransferInput
-) {
+export async function cancelAccountTransfer(ctx: ProtectedTRPCContext, input: CancelTransferInput) {
   const transfer = await ctx.prisma.accountTransfer.findFirst({
     where: { id: input.transferId },
   });
@@ -1010,10 +986,7 @@ export async function cancelAccountTransfer(
 // DECLINE TRANSFER (Recipient declines)
 // ============================================================================
 
-export async function declineAccountTransfer(
-  ctx: ProtectedTRPCContext,
-  input: { token: string }
-) {
+export async function declineAccountTransfer(ctx: ProtectedTRPCContext, input: { token: string }) {
   const transfer = await ctx.prisma.accountTransfer.findFirst({
     where: { token: input.token },
   });

@@ -1,5 +1,5 @@
+import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { Prisma } from "@prisma/client";
 
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { generateShortLink } from "@/lib/core/links";

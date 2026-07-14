@@ -4,7 +4,7 @@ export const competitors = {
     slug: "bitly",
     tagline: "The most popular URL shortener",
     description:
-      "Bitly is the most well-known URL shortener, but its free plan has become extremely restrictive. See how iShortn compares.",
+      "Bitly is the most well-known URL shortener, but its free plan has become extremely restrictive. See how ClickPath compares.",
     freeLinks: "5/month",
     freeAnalytics: "30 days, basic clicks only",
     customDomains: "Paid only",
@@ -14,11 +14,11 @@ export const competitors = {
     passwordProtection: "Paid only",
     pricing: "Free, Core $35/mo, Growth $300/mo",
     whySwitch: [
-      "Bitly's free plan only allows 5 links per month — iShortn gives you 30",
+      "Bitly's free plan only allows 5 links per month — ClickPath gives you 30",
       "Bitly free links may show interstitial ad pages before redirecting",
-      "Bitly charges $35/month for Core — iShortn Pro is just $8/month",
-      "iShortn includes full analytics and QR codes on all plans, plus password protection on Pro and Ultra",
-      "No API access on Bitly free — iShortn Pro includes full API for $8/month",
+      "Bitly charges $35/month for Core — ClickPath Pro is just $8/month",
+      "ClickPath includes full analytics and QR codes on all plans, plus password protection on Pro and Ultra",
+      "No API access on Bitly free — ClickPath Pro includes full API for $8/month",
     ],
   },
   tinyurl: {
@@ -26,7 +26,7 @@ export const competitors = {
     slug: "tinyurl",
     tagline: "The original URL shortener",
     description:
-      "TinyURL was one of the first URL shorteners, but it lacks analytics and modern features. See how iShortn compares.",
+      "TinyURL was one of the first URL shorteners, but it lacks analytics and modern features. See how ClickPath compares.",
     freeLinks: "Unlimited (no account needed)",
     freeAnalytics: "None",
     customDomains: "Paid only",
@@ -36,11 +36,11 @@ export const competitors = {
     passwordProtection: "None",
     pricing: "Free, Pro $9.99/mo, Bulk $99/mo",
     whySwitch: [
-      "TinyURL offers zero analytics on the free plan — iShortn tracks every click with detailed data",
+      "TinyURL offers zero analytics on the free plan — ClickPath tracks every click with detailed data",
       "No QR codes, custom domains, or password protection on TinyURL free",
-      "TinyURL free plan shows ads — iShortn is ad-free on all plans",
-      "Even TinyURL Pro at $9.99/month only offers basic click counts — iShortn free gives you more",
-      "iShortn includes AI-powered link safety scanning on all plans",
+      "TinyURL free plan shows ads — ClickPath is ad-free on all plans",
+      "Even TinyURL Pro at $9.99/month only offers basic click counts — ClickPath free gives you more",
+      "ClickPath includes AI-powered link safety scanning on all plans",
     ],
   },
   rebrandly: {
@@ -48,7 +48,7 @@ export const competitors = {
     slug: "rebrandly",
     tagline: "Branded link management platform",
     description:
-      "Rebrandly focuses on branded links with a generous free tier for custom domains, but iShortn delivers more analytics at a lower price.",
+      "Rebrandly focuses on branded links with a generous free tier for custom domains, but ClickPath delivers more analytics at a lower price.",
     freeLinks: "500 total",
     freeAnalytics: "Basic click tracking",
     customDomains: "5 on free plan",
@@ -58,10 +58,10 @@ export const competitors = {
     passwordProtection: "Paid only",
     pricing: "Free, Essentials $13/mo, Professional $32/mo",
     whySwitch: [
-      "Rebrandly free gives 500 total links — iShortn gives 30 new links every month, ongoing",
-      "Rebrandly Essentials costs $13/month — iShortn Pro is just $8/month",
-      "Rebrandly QR codes have watermarks on free — iShortn QR codes are clean on all plans",
-      "iShortn includes geo-targeting and AI-powered security that Rebrandly charges extra for",
+      "Rebrandly free gives 500 total links — ClickPath gives 30 new links every month, ongoing",
+      "Rebrandly Essentials costs $13/month — ClickPath Pro is just $8/month",
+      "Rebrandly QR codes have watermarks on free — ClickPath QR codes are clean on all plans",
+      "ClickPath includes geo-targeting and AI-powered security that Rebrandly charges extra for",
     ],
   },
   "short-io": {
@@ -69,7 +69,7 @@ export const competitors = {
     slug: "short-io",
     tagline: "White-label link shortener",
     description:
-      "Short.io is a solid link shortener focused on custom domains, but iShortn offers a more complete feature set at a better price.",
+      "Short.io is a solid link shortener focused on custom domains, but ClickPath offers a more complete feature set at a better price.",
     freeLinks: "1,000 total",
     freeAnalytics: "50,000 tracked clicks",
     customDomains: "Required (bring your own)",
@@ -79,10 +79,10 @@ export const competitors = {
     passwordProtection: "Paid only",
     pricing: "Free, Pro $19/mo, Business $48/mo",
     whySwitch: [
-      "Short.io requires you to bring your own domain even to get started — iShortn works instantly",
-      "Short.io free gives 1,000 links total lifetime — iShortn gives fresh links every month",
-      "Short.io Business plan is $48/month — iShortn Pro is just $8/month",
-      "iShortn includes password protection and AI-powered phishing detection on all links",
+      "Short.io requires you to bring your own domain even to get started — ClickPath works instantly",
+      "Short.io free gives 1,000 links total lifetime — ClickPath gives fresh links every month",
+      "Short.io Business plan is $48/month — ClickPath Pro is just $8/month",
+      "ClickPath includes password protection and AI-powered phishing detection on all links",
     ],
   },
   dub: {
@@ -90,7 +90,7 @@ export const competitors = {
     slug: "dub",
     tagline: "Open-source link management",
     description:
-      "Dub.co is an open-source link management platform popular with developers. See how iShortn compares on features and pricing.",
+      "Dub.co is an open-source link management platform popular with developers. See how ClickPath compares on features and pricing.",
     freeLinks: "25/month",
     freeAnalytics: "30-day retention",
     customDomains: "3 on free plan",
@@ -100,10 +100,10 @@ export const competitors = {
     passwordProtection: "Paid only",
     pricing: "Free, Pro $24/mo, Business $89/mo",
     whySwitch: [
-      "Dub Pro costs $24/month — iShortn Pro is just $8/month for similar features",
-      "Dub free analytics only goes back 30 days — same as iShortn free, but iShortn Pro unlocks unlimited retention for $8 vs Dub's $24",
-      "iShortn offers 30 free links/month vs Dub's 25",
-      "iShortn includes password protection and geo-targeting on the Pro plan",
+      "Dub Pro costs $24/month — ClickPath Pro is just $8/month for similar features",
+      "Dub free analytics only goes back 30 days — same as ClickPath free, but ClickPath Pro unlocks unlimited retention for $8 vs Dub's $24",
+      "ClickPath offers 30 free links/month vs Dub's 25",
+      "ClickPath includes password protection and geo-targeting on the Pro plan",
     ],
   },
   linktree: {
@@ -111,7 +111,7 @@ export const competitors = {
     slug: "linktree",
     tagline: "The default link-in-bio — but you pay to see what's working",
     description:
-      "Linktree is the most recognized link-in-bio tool, with a generous free page and a huge template library. The catch: the analytics that show which links convert sit behind paid plans. See how iShortn compares.",
+      "Linktree is the most recognized link-in-bio tool, with a generous free page and a huge template library. The catch: the analytics that show which links convert sit behind paid plans. See how ClickPath compares.",
     freeLinks: "Unlimited links on the bio page",
     freeAnalytics: "Basic views only — per-link geo/device data is paid",
     customDomains: "Paid only",
@@ -121,11 +121,11 @@ export const competitors = {
     passwordProtection: "Not available",
     pricing: "Free, Starter $8/mo, Pro $15/mo, Premium $35/mo",
     whySwitch: [
-      "Every link on an iShortn bio page is a tracked short link with full click, geo, device, and referrer analytics — included on every plan, even Free. Linktree charges $8 to $15/mo to unlock that",
-      "iShortn Pro ($8/mo) gives unlimited analytics retention; Linktree's link-level insight only arrives on paid tiers",
-      "iShortn is link-in-bio plus a full URL shortener, QR codes, and analytics in one tool — not a bio page with analytics sold separately",
-      "iShortn Pro adds password-protected links, which Linktree doesn't offer at all",
-      "iShortn Pro ships a full REST API to automate your links and bio — Linktree has no comparable public API",
+      "Every link on a ClickPath bio page is a tracked short link with full click, geo, device, and referrer analytics — included on every plan, even Free. Linktree charges $8 to $15/mo to unlock that",
+      "ClickPath Pro ($8/mo) gives unlimited analytics retention; Linktree's link-level insight only arrives on paid tiers",
+      "ClickPath is link-in-bio plus a full URL shortener, QR codes, and analytics in one tool — not a bio page with analytics sold separately",
+      "ClickPath Pro adds password-protected links, which Linktree doesn't offer at all",
+      "ClickPath Pro ships a full REST API to automate your links and bio — Linktree has no comparable public API",
     ],
   },
   beacons: {
@@ -133,7 +133,7 @@ export const competitors = {
     slug: "beacons",
     tagline: "A creator-commerce platform first, a link-in-bio second",
     description:
-      "Beacons bundles a link-in-bio with stores, email, and AI tools for creators who sell. That breadth is powerful, but it comes with transaction fees and a busier product if you just want a fast, tracked bio page. See how iShortn compares.",
+      "Beacons bundles a link-in-bio with stores, email, and AI tools for creators who sell. That breadth is powerful, but it comes with transaction fees and a busier product if you just want a fast, tracked bio page. See how ClickPath compares.",
     freeLinks: "Unlimited links on the bio page",
     freeAnalytics: "Real-time, but built around the storefront",
     customDomains: "Paid only (free first year)",
@@ -143,11 +143,11 @@ export const competitors = {
     passwordProtection: "Not available",
     pricing: "Free (9% sales fee), paid plans from $10/mo",
     whySwitch: [
-      "Beacons charges up to a 9% transaction fee to monetize — iShortn is a flat subscription (Free $0, Pro $8/mo, Ultra $15/mo) with no per-sale cut",
-      "Every iShortn bio link is a tracked short link with click, geo, device, and referrer data on all plans — see where your audience comes from, not just store conversions",
-      "If you just want a fast, tracked bio page plus short links and QR codes, iShortn does it in one focused tool instead of a sprawling commerce suite",
-      "iShortn Pro ($8/mo) includes 3 custom domains outright, while Beacons gates domains to paid plans (free only for year one)",
-      "iShortn Pro ships a full REST API for your links and bio — Beacons offers no equivalent public API",
+      "Beacons charges up to a 9% transaction fee to monetize — ClickPath is a flat subscription (Free $0, Pro $8/mo, Ultra $15/mo) with no per-sale cut",
+      "Every ClickPath bio link is a tracked short link with click, geo, device, and referrer data on all plans — see where your audience comes from, not just store conversions",
+      "If you just want a fast, tracked bio page plus short links and QR codes, ClickPath does it in one focused tool instead of a sprawling commerce suite",
+      "ClickPath Pro ($8/mo) includes 3 custom domains outright, while Beacons gates domains to paid plans (free only for year one)",
+      "ClickPath Pro ships a full REST API for your links and bio — Beacons offers no equivalent public API",
     ],
   },
   carrd: {
@@ -155,7 +155,7 @@ export const competitors = {
     slug: "carrd",
     tagline: "A great one-page site builder — not a link-in-bio analytics tool",
     description:
-      "Carrd is a beloved, low-cost way to build simple one-page sites, and at $9 to $49/year it's hard to beat on price. But it's a static site builder — no native click analytics, no QR codes, no short links — so you can't see how your bio performs. See how iShortn compares.",
+      "Carrd is a beloved, low-cost way to build simple one-page sites, and at $9 to $49/year it's hard to beat on price. But it's a static site builder — no native click analytics, no QR codes, no short links — so you can't see how your bio performs. See how ClickPath compares.",
     freeLinks: "Up to 3 one-page sites (carrd.co subdomain + badge)",
     freeAnalytics: "None native — Google Analytics from $19/yr",
     customDomains: "From $19/yr (Pro Standard)",
@@ -165,11 +165,11 @@ export const competitors = {
     passwordProtection: "Pro Plus ($49/yr) only",
     pricing: "Free, Pro Lite $9/yr, Pro Standard $19/yr, Pro Plus $49/yr",
     whySwitch: [
-      "iShortn gives every bio link full click, geo, device, and referrer analytics on every plan — Carrd has no native analytics, only a Google Analytics bolt-on from $19/yr",
-      "iShortn is a bio page plus a real URL shortener and QR codes in one tool, where Carrd is a static site builder with no link tracking or QR support",
-      "iShortn's free plan includes a bio page, 30 tracked short links/month, and QR codes — with no 'Made with' badge the way Carrd's free tier works",
-      "iShortn Pro ($8/mo) adds password-protected links and removes branding; Carrd only unlocks password protection on its $49/yr Pro Plus plan",
-      "iShortn Pro includes a full REST API and custom domains, neither of which Carrd offers",
+      "ClickPath gives every bio link full click, geo, device, and referrer analytics on every plan — Carrd has no native analytics, only a Google Analytics bolt-on from $19/yr",
+      "ClickPath is a bio page plus a real URL shortener and QR codes in one tool, where Carrd is a static site builder with no link tracking or QR support",
+      "ClickPath's free plan includes a bio page, 30 tracked short links/month, and QR codes — with no 'Made with' badge the way Carrd's free tier works",
+      "ClickPath Pro ($8/mo) adds password-protected links and removes branding; Carrd only unlocks password protection on its $49/yr Pro Plus plan",
+      "ClickPath Pro includes a full REST API and custom domains, neither of which Carrd offers",
     ],
   },
 } as const;

@@ -31,15 +31,12 @@ export function LogoUploader({ setLogoImage }: LogoUploaderProps) {
         reader.readAsDataURL(file);
       }
     },
-    [setLogoImage]
+    [setLogoImage],
   );
 
-  const handleDragOver = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-    },
-    []
-  );
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  }, []);
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -62,7 +59,7 @@ export function LogoUploader({ setLogoImage }: LogoUploaderProps) {
         reader.readAsDataURL(file);
       }
     },
-    [setLogoImage]
+    [setLogoImage],
   );
 
   return (
@@ -88,9 +85,7 @@ export function LogoUploader({ setLogoImage }: LogoUploaderProps) {
         </label>
         <span className="text-neutral-400">or drag and drop</span>
       </div>
-      <p className="text-[11px] text-neutral-400">
-        PNG, JPG, GIF up to 2MB
-      </p>
+      <p className="text-[11px] text-neutral-400">PNG, JPG, GIF up to 2MB</p>
       {error && <p className="text-[11px] text-red-500">{error}</p>}
     </div>
   );

@@ -2,31 +2,31 @@
 
 import { ArrowUpRightIcon, CheckIcon, Loader2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { trackUpgradeClick } from "@/lib/analytics/upgrade-prompt";
 import { PLAN_FEATURES } from "@/lib/billing/plan-features";
 import { clientLogger } from "@/lib/logger/client";
-import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
 import { satoshi } from "@/styles/fonts";
 import { api } from "@/trpc/react";
 
 const proPlanBenefits = PLAN_FEATURES.pro.features;
 
 export function UpgradeToPro() {
-  const upgradeMutation = api.lemonsqueezy.createCheckoutOrUpdate.useMutation();
+  const upgradeMutation = api.stripe.createCheckoutOrUpdate.useMutation();
 
   const handleUpgrade = async () => {
     try {
       const result = await upgradeMutation.mutateAsync({ plan: "pro" });
-      if (result.status === "redirect" && result.url) {
+      if (result.url) {
         window.open(result.url);
       } else if (result.status === "updated") {
         window.location.reload();
@@ -58,7 +58,7 @@ export function UpgradeToPro() {
       <DialogContent className="sm:max-w-[425px]">
         <div className={`space-y-4 ${satoshi.className}`}>
           <DialogHeader>
-            <DialogTitle className="text-center text-4xl">iShortn Pro</DialogTitle>
+            <DialogTitle className="text-center text-4xl">ClickPath Pro</DialogTitle>
             <DialogDescription>
               Unlock advanced features and support the development of this amazing product.
             </DialogDescription>
@@ -88,9 +88,7 @@ export function UpgradeToPro() {
                 disabled={upgradeMutation.isLoading}
                 onClick={handleUpgrade}
               >
-                {upgradeMutation.isLoading && (
-                  <Loader2 className="mr-2 size-5 animate-spin" />
-                )}
+                {upgradeMutation.isLoading && <Loader2 className="mr-2 size-5 animate-spin" />}
                 Upgrade Now
               </Button>
             </div>

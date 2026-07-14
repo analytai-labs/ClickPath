@@ -1,8 +1,8 @@
 ---
 title: "Best Free URL Shorteners in 2026: Complete Comparison Guide"
-description: "Compare the top free URL shorteners including Bitly, TinyURL, Rebrandly, and iShortn. Find the best link shortener for your needs with our detailed comparison."
+description: "Compare the top free URL shorteners including Bitly, TinyURL, Rebrandly, and ClickPath. Find the best link shortener for your needs with our detailed comparison."
 date: "2026-03-06"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["url shortener", "comparison", "free tools", "link management"]
 published: true
 ---
@@ -37,15 +37,15 @@ The free plan includes 500 total links and basic click tracking. You can connect
 
 Rebrandly's interface is clean and well-organized. The main limitation is that the 500 links is a lifetime total rather than a monthly allowance, meaning once you use them, you need to upgrade. More advanced analytics and team features require the Essentials plan at $13 per month.
 
-### iShortn
+### ClickPath
 
-iShortn takes a different approach to the free URL shortener model. Instead of gating analytics behind a paywall, it provides detailed click analytics on the free tier, including geographic breakdowns, device and browser data, referral sources, and time-series charts.
+ClickPath takes a different approach to the free URL shortener model. Instead of gating analytics behind a paywall, it provides detailed click analytics on the free tier, including geographic breakdowns, device and browser data, referral sources, and time-series charts.
 
 The free plan includes generous link creation limits, custom aliases, QR code generation with styling options, and link expiration controls. Custom domains are supported, and there is a developer-friendly API for programmatic link management. Geo-targeting, which lets you redirect users to different destinations based on their location, is also available.
 
 The platform is straightforward to use. You can create a short link, generate a QR code, and review analytics from a single dashboard without navigating a maze of settings. For teams, shared workspaces allow collaborative link management.
 
-Where iShortn stands out is the depth of its free offering. Features that competing platforms reserve for paid plans, such as detailed analytics dashboards, QR code customization, and geo-targeting, are accessible without upgrading.
+Where ClickPath stands out is the depth of its free offering. Features that competing platforms reserve for paid plans, such as detailed analytics dashboards, QR code customization, and geo-targeting, are accessible without upgrading.
 
 ### Short.io
 
@@ -57,7 +57,7 @@ Short.io's API is well-documented, making it a reasonable choice for developers.
 
 ## Feature Comparison Table
 
-| Feature | Bitly | TinyURL | Rebrandly | iShortn | Short.io |
+| Feature | Bitly | TinyURL | Rebrandly | ClickPath | Short.io |
 |---|---|---|---|---|---|
 | **Free links/month** | 5 | Unlimited | 500 total | Generous | 1,000 total |
 | **Click analytics** | Basic | Minimal | Basic | Detailed | Basic |
@@ -100,6 +100,6 @@ The best link shortener depends on your specific needs, but here is a general gu
 - **For quick, disposable links** where you do not need tracking, TinyURL's no-account-required approach is hard to beat.
 - **For branded links on a budget**, Rebrandly and Short.io both offer a free custom domain, though their analytics are limited.
 - **For enterprise teams** already embedded in Bitly's ecosystem, its integrations and brand recognition may justify the cost, even if the free tier feels thin.
-- **For marketers, creators, and developers who want real analytics without paying**, iShortn offers the most complete free tier. Detailed geographic and device analytics, QR code generation with styling, geo-targeting, link expiration, and API access are all available without upgrading. If you have been looking for a Bitly alternative that does not paywall the features you actually need, iShortn is worth trying.
+- **For marketers, creators, and developers who want real analytics without paying**, ClickPath offers the most complete free tier. Detailed geographic and device analytics, QR code generation with styling, geo-targeting, link expiration, and API access are all available without upgrading. If you have been looking for a Bitly alternative that does not paywall the features you actually need, ClickPath is worth trying.
 
-Getting started takes less than a minute. Sign up at [ishortn.ink](https://ishortn.ink), shorten your first link, and see your analytics populate in real time. No credit card, no trial period, no artificial limits on the insights you can access.
+Getting started takes less than a minute. Sign up at [clickpath.analytai.in](https://clickpath.analytai.in), shorten your first link, and see your analytics populate in real time. No credit card, no trial period, no artificial limits on the insights you can access.

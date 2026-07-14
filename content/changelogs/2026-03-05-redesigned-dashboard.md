@@ -6,7 +6,7 @@ shortDesc: A completely refreshed UI with a cleaner, more intuitive design
 category: improved
 ---
 
-We have completely redesigned the iShortn dashboard and landing page. Every page has been rebuilt with a refined design system focused on clarity, consistency, and ease of use.
+We have completely redesigned the ClickPath dashboard and landing page. Every page has been rebuilt with a refined design system focused on clarity, consistency, and ease of use.
 
 ## What's changed?
 
@@ -34,7 +34,7 @@ The entire interface has been overhauled with a minimal, modern design language.
 
 ### Brand identity
 
-- **New wordmark font** — Updated the iShortn brand text to Eagle Lake for a more distinctive, memorable identity
+- **New wordmark font** — Updated the ClickPath brand text to Eagle Lake for a more distinctive, memorable identity
 - **Consistent typography** — Dedicated brand font utility applied across header, footer, and sidebar
 
 ## Design principles

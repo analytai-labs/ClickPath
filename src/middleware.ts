@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { geolocation, ipAddress } from "@vercel/functions";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -8,7 +8,7 @@ import { isBot } from "@/lib/utils/is-bot";
 
 const log = logger.child({ component: "proxy" });
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+const isProtectedRoute = (req: NextRequest) => req.nextUrl.pathname.startsWith("/dashboard");
 
 async function resolveLinkAndLogAnalytics(request: NextRequest) {
   if (isProtectedRoute(request)) {
@@ -159,8 +159,11 @@ async function resolveLinkAndLogAnalytics(request: NextRequest) {
   return redirectResponse;
 }
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect();
+export default auth((req) => {
+  if (isProtectedRoute(req) && !req.auth) {
+    const newUrl = new URL("/auth/sign-in", req.nextUrl.origin);
+    return NextResponse.redirect(newUrl);
+  }
   return resolveLinkAndLogAnalytics(req);
 });
 

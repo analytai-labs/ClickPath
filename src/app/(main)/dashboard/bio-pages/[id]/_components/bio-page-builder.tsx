@@ -16,7 +16,11 @@ import { Link } from "next-view-transitions";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { BioRenderer, type BioRenderBlock, type BioRenderModel } from "@/components/bio/bio-renderer";
+import {
+  type BioRenderBlock,
+  type BioRenderModel,
+  BioRenderer,
+} from "@/components/bio/bio-renderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,16 +32,16 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Plan } from "@/lib/billing/plans";
+import type { BioPageTheme } from "@/server/db/types";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
 import type { BioBlockType } from "@prisma/client";
-import type { BioPageTheme } from "@/server/db/types";
 
 import { AnalyticsPanel } from "./analytics-panel";
 import { BlockFormDialog } from "./block-form-dialog";
 import { BlockList } from "./block-list";
 import { PageQrDialog } from "./page-qr-dialog";
-import { SettingsPanel, type BioSettingsDraft } from "./settings-panel";
+import { type BioSettingsDraft, SettingsPanel } from "./settings-panel";
 
 type BioPageData = RouterOutputs["bioPage"]["get"];
 type EditorBlock = BioPageData["blocks"][number];
@@ -164,11 +168,14 @@ export function BioPageBuilder({
               {page.title || `/${page.slug}`}
             </h2>
             <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-              ishortn.ink/p/{page.slug}
+              clickpath.analytai.in/p/{page.slug}
             </p>
           </div>
           {page.isPublished ? (
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            <Badge
+              variant="secondary"
+              className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+            >
               Live
             </Badge>
           ) : (

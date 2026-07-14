@@ -1,8 +1,5 @@
 import type { Plan } from "@/lib/billing/plans";
-import {
-  generateVisitId,
-  signVerifiedClickToken,
-} from "@/lib/utils/verified-click-token";
+import { generateVisitId, signVerifiedClickToken } from "@/lib/utils/verified-click-token";
 
 import { isOwnerOnPaidPlan } from "./user-plan";
 

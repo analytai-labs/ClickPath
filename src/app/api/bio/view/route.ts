@@ -1,5 +1,5 @@
 import { geolocation, ipAddress } from "@vercel/functions";
-import { type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { redis } from "@/lib/core/cache";
 import { runBackgroundTask } from "@/lib/utils/background";

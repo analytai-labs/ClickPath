@@ -13,18 +13,18 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
-  pixelStyles,
-  markerShapes,
   markerInnerShapes,
-  qrEffects,
-  presetColors,
+  markerShapes,
+  pixelStyles,
   presetBackgroundColors,
+  presetColors,
+  qrEffects,
 } from "@/lib/constants/qrcode";
 import type {
-  QRPixelStyle,
-  QRMarkerShape,
-  QRMarkerInnerShape,
   QREffect,
+  QRMarkerInnerShape,
+  QRMarkerShape,
+  QRPixelStyle,
 } from "@/lib/qr-generator/types";
 
 import { ColorSwatch } from "./color-swatch";
@@ -95,7 +95,9 @@ export function QRAdvancedCustomization({
         <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Shape</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Pixel Style</Label>
+            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+              Pixel Style
+            </Label>
             <Select
               value={pixelStyle}
               onValueChange={(value) => setPixelStyle(value as QRPixelStyle)}
@@ -114,7 +116,9 @@ export function QRAdvancedCustomization({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Marker Shape</Label>
+            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+              Marker Shape
+            </Label>
             <Select
               value={markerShape}
               onValueChange={(value) => setMarkerShape(value as QRMarkerShape)}
@@ -133,7 +137,9 @@ export function QRAdvancedCustomization({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Inner Shape</Label>
+            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+              Inner Shape
+            </Label>
             <Select
               value={markerInnerShape}
               onValueChange={(value) => setMarkerInnerShape(value as QRMarkerInnerShape)}
@@ -179,11 +185,10 @@ export function QRAdvancedCustomization({
         <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Effects</p>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Effect Type</Label>
-            <Select
-              value={effect}
-              onValueChange={(value) => setEffect(value as QREffect)}
-            >
+            <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+              Effect Type
+            </Label>
+            <Select value={effect} onValueChange={(value) => setEffect(value as QREffect)}>
               <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
                 <SelectValue placeholder="Select effect" />
               </SelectTrigger>
@@ -200,8 +205,12 @@ export function QRAdvancedCustomization({
           {effect !== "none" && (
             <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
               <div className="flex items-center justify-between">
-                <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Effect Intensity</Label>
-                <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">{effectRadius}</span>
+                <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                  Effect Intensity
+                </Label>
+                <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">
+                  {effectRadius}
+                </span>
               </div>
               <Slider
                 value={[effectRadius]}
@@ -215,25 +224,28 @@ export function QRAdvancedCustomization({
 
           <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-border p-3">
             <div className="space-y-0.5">
-              <Label htmlFor="margin-noise" className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+              <Label
+                htmlFor="margin-noise"
+                className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300"
+              >
                 Margin Noise
               </Label>
               <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
                 Add decorative dots around the QR code
               </p>
             </div>
-            <Switch
-              id="margin-noise"
-              checked={marginNoise}
-              onCheckedChange={setMarginNoise}
-            />
+            <Switch id="margin-noise" checked={marginNoise} onCheckedChange={setMarginNoise} />
           </div>
 
           {marginNoise && (
             <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
               <div className="flex items-center justify-between">
-                <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Noise Density</Label>
-                <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">{Math.round(marginNoiseRate * 100)}%</span>
+                <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                  Noise Density
+                </Label>
+                <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">
+                  {Math.round(marginNoiseRate * 100)}%
+                </span>
               </div>
               <Slider
                 value={[marginNoiseRate]}
@@ -271,8 +283,12 @@ export function QRAdvancedCustomization({
 
               <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Logo Size</Label>
-                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">{logoSize}%</span>
+                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                    Logo Size
+                  </Label>
+                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">
+                    {logoSize}%
+                  </span>
                 </div>
                 <Slider
                   value={[logoSize]}
@@ -285,8 +301,12 @@ export function QRAdvancedCustomization({
 
               <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Logo Padding</Label>
-                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">{logoMargin}px</span>
+                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                    Logo Padding
+                  </Label>
+                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">
+                    {logoMargin}px
+                  </span>
                 </div>
                 <Slider
                   value={[logoMargin]}
@@ -299,8 +319,12 @@ export function QRAdvancedCustomization({
 
               <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">Corner Radius</Label>
-                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">{logoBorderRadius}%</span>
+                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                    Corner Radius
+                  </Label>
+                  <span className="text-[12px] tabular-nums font-medium text-neutral-900 dark:text-foreground">
+                    {logoBorderRadius}%
+                  </span>
                 </div>
                 <Slider
                   value={[logoBorderRadius]}

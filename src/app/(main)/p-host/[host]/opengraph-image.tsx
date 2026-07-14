@@ -1,6 +1,6 @@
 import { BIO_OG_SIZE, bioOgImageResponse } from "@/components/bio/og-image";
 import { prisma } from "@/server/db";
-import { type BioPageTheme } from "@/server/db/types";
+import type { BioPageTheme } from "@/server/db/types";
 
 export const runtime = "nodejs";
 export const alt = "Bio page preview";
@@ -11,7 +11,9 @@ type Props = { params: Promise<{ host: string }> };
 
 export default async function Image({ params }: Props) {
   const { host } = await params;
-  const domain = decodeURIComponent(host).toLowerCase().replace(/^www\./, "");
+  const domain = decodeURIComponent(host)
+    .toLowerCase()
+    .replace(/^www\./, "");
   const page = await prisma.bioPage
     .findFirst({
       where: { customDomain: domain, isPublished: true },
@@ -26,5 +28,8 @@ export default async function Image({ params }: Props) {
     })
     .catch(() => null);
 
-  return bioOgImageResponse(page ? { ...page, theme: page.theme as BioPageTheme } : null, page?.slug ?? "");
+  return bioOgImageResponse(
+    page ? { ...page, theme: page.theme as BioPageTheme } : null,
+    page?.slug ?? "",
+  );
 }

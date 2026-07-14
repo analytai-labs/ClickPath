@@ -16,12 +16,8 @@ export function ChangelogHero() {
           }}
         >
           What we've{" "}
-          <span
-            style={{ fontStyle: "italic", color: "var(--warm-accent)" }}
-          >
-            shipped
-          </span>{" "}
-          — big and small.
+          <span style={{ fontStyle: "italic", color: "var(--warm-accent)" }}>shipped</span> — big
+          and small.
         </h1>
         <p
           style={{
@@ -32,8 +28,8 @@ export function ChangelogHero() {
             lineHeight: 1.5,
           }}
         >
-          A public log of every release. We ship weekly-ish, and we try to
-          write these like letters — not press notes.
+          A public log of every release. We ship weekly-ish, and we try to write these like letters
+          — not press notes.
         </p>
       </div>
     </header>

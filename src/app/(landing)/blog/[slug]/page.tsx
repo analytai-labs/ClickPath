@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Link } from "next-view-transitions";
+import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog";
+import { Paths } from "@/lib/constants/app";
 import {
   createArticleSchema,
   createBreadcrumbSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
 } from "@/lib/seo/structured-data";
-import { Paths } from "@/lib/constants/app";
 
 import { Footer } from "../../_components/footer";
 import { Header } from "../../_components/header";
@@ -22,35 +26,40 @@ export async function generateStaticParams() {
   return posts.map((post) => ({ slug: post.slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: BlogPostPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
 
   if (!post) {
-    return { title: "Post Not Found - iShortn" };
+    return { title: resolveTitle("Post Not Found — ClickPath") };
   }
 
+  const title = resolveTitle(`${post.title} — ClickPath Blog`);
+  const description = resolveDescription(post.description);
+  const canonicalUrl = resolveCanonical(`/blog/${slug}`);
+
   return {
-    title: `${post.title} — iShortn Blog`,
-    description: post.description,
+    title,
+    description,
     keywords: post.tags,
     authors: [{ name: post.author }],
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: post.title,
-      description: post.description,
+      title,
+      description,
       type: "article",
       publishedTime: post.date,
       authors: [post.author],
       tags: post.tags,
-      url: `https://ishortn.ink/blog/${slug}`,
+      url: canonicalUrl,
       ...(post.image && { images: [{ url: post.image }] }),
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.description,
+      title,
+      description,
       ...(post.image && { images: [post.image] }),
     },
   };
@@ -78,7 +87,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const articleSchema = createArticleSchema({
     title: post.title,
     description: post.description,
-    url: `https://ishortn.ink/blog/${slug}`,
+    url: resolveCanonical(`/blog/${slug}`),
     datePublished: post.date,
     dateModified: post.updated ?? post.date,
     author: post.author,
@@ -86,25 +95,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   });
 
   const breadcrumbSchema = createBreadcrumbSchema([
-    { name: "Home", url: "https://ishortn.ink" },
-    { name: "Blog", url: "https://ishortn.ink/blog" },
-    { name: post.title, url: `https://ishortn.ink/blog/${slug}` },
+    { name: "Home", url: resolveCanonical("/") },
+    { name: "Blog", url: resolveCanonical("/blog") },
+    { name: post.title, url: resolveCanonical(`/blog/${slug}`) },
   ]);
 
   return (
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
       <Header />
 
-      <script
-        type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
+      <JsonLd data={articleSchema} />
+      <JsonLd data={breadcrumbSchema} />
 
       <section className="warm-subhero">
         <div className="warm-container" style={{ maxWidth: 860 }}>
@@ -226,21 +227,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         >
           <div className="warm-container">
             <div className="warm-eyebrow" style={{ marginBottom: 20 }}>
-              <Icon.Sparkle
-                style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-              />
+              <Icon.Sparkle style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
               Related posts
             </div>
-            <h2
-              className="warm-display"
-              style={{ margin: 0, fontSize: "clamp(36px, 5vw, 48px)" }}
-            >
+            <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(36px, 5vw, 48px)" }}>
               Keep reading.
             </h2>
-            <div
-              className="warm-blog-grid"
-              style={{ display: "grid", gap: 20, marginTop: 40 }}
-            >
+            <div className="warm-blog-grid" style={{ display: "grid", gap: 20, marginTop: 40 }}>
               {relatedPosts.map((relatedPost) => {
                 const relatedTag = relatedPost.tags[0];
                 return (
@@ -298,10 +291,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                         color: "var(--warm-mute)",
                       }}
                     >
-                      <time dateTime={relatedPost.date}>
-                        {formatDate(relatedPost.date)}
-                      </time>{" "}
-                      · {relatedPost.readingTime} min read
+                      <time dateTime={relatedPost.date}>{formatDate(relatedPost.date)}</time> ·{" "}
+                      {relatedPost.readingTime} min read
                     </div>
                   </Link>
                 );
@@ -327,11 +318,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               textAlign: "center",
             }}
           >
-            <h2
-              className="warm-display"
-              style={{ margin: 0, fontSize: "clamp(36px, 5vw, 48px)" }}
-            >
-              Start <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>shortening</em>.
+            <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(36px, 5vw, 48px)" }}>
+              Start <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>shortening</em>
+              .
             </h2>
             <p
               style={{

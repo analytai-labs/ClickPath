@@ -2,7 +2,7 @@
 title: "How to Use Short Links in Social Media Marketing"
 description: "Maximize your social media impact with short links. Learn strategies for using URL shorteners on Twitter, Instagram, LinkedIn, and TikTok."
 date: "2026-03-02"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["social media", "marketing", "short links", "guide"]
 published: true
 ---
@@ -26,7 +26,7 @@ https://example.com/webinar/register?utm_source=linkedin&utm_medium=social&utm_c
 ```
 
 ```
-https://ishortn.ink/spring-webinar
+https://clickpath.analytai.in/spring-webinar
 ```
 
 The second link is easier to read, easier to remember, and far more likely to earn a click. Branded short links reinforce your identity and signal professionalism to your audience.
@@ -41,7 +41,7 @@ Different platforms have different constraints and user behaviors. Tailoring you
 
 ### X (Twitter)
 
-Character economy is paramount on X. Use short links to reclaim space for your message, mentions, and hashtags. Custom aliases also help here: a link like `ishortn.ink/launch26` tells your audience what to expect before they click, which can improve click-through rates.
+Character economy is paramount on X. Use short links to reclaim space for your message, mentions, and hashtags. Custom aliases also help here: a link like `clickpath.analytai.in/launch26` tells your audience what to expect before they click, which can improve click-through rates.
 
 If you are running a thread, use distinct short links for each tweet so you can measure which position in the thread drives the most traffic.
 
@@ -53,7 +53,7 @@ For Stories (available to accounts with sufficient reach), swipe-up or link stic
 
 ### LinkedIn
 
-LinkedIn audiences tend to be more professional and detail-oriented. Branded short links with descriptive aliases perform well here because they signal credibility. A link like `ishortn.ink/2026-report` carries more weight than a generic shortened URL.
+LinkedIn audiences tend to be more professional and detail-oriented. Branded short links with descriptive aliases perform well here because they signal credibility. A link like `clickpath.analytai.in/2026-report` carries more weight than a generic shortened URL.
 
 LinkedIn also truncates long URLs in posts, which can strip UTM parameters before users even reach your site. Short links avoid this problem entirely because the redirect preserves the full destination URL, including all tracking parameters.
 
@@ -77,9 +77,9 @@ Short links turn every share into a measurable event. Here is how to use that ca
 
 Create a separate short link for each combination of campaign and platform. For example, if you are promoting a product launch across X, LinkedIn, and Instagram, create three distinct links:
 
-- `ishortn.ink/launch-x`
-- `ishortn.ink/launch-li`
-- `ishortn.ink/launch-ig`
+- `clickpath.analytai.in/launch-x`
+- `clickpath.analytai.in/launch-li`
+- `clickpath.analytai.in/launch-ig`
 
 All three can point to the same destination, but each one gives you isolated click data. You will know exactly which platform is pulling its weight without needing to rely on third-party analytics alone.
 
@@ -96,7 +96,7 @@ https://yoursite.com/launch?utm_source=twitter&utm_medium=social&utm_campaign=sp
 Then create a short link that points to it:
 
 ```
-https://ishortn.ink/launch-x
+https://clickpath.analytai.in/launch-x
 ```
 
 Your audience sees a clean link. Your analytics platform receives the full UTM data. Both sides win.
@@ -115,7 +115,7 @@ If your shortener supports custom domains, use one that aligns with your brand. 
 
 ### Choose Descriptive Aliases
 
-Avoid random character strings. An alias like `ishortn.ink/pricing` tells the user exactly where they are going, while `ishortn.ink/x7k9q` does not. Descriptive aliases improve click confidence and make your links more shareable.
+Avoid random character strings. An alias like `clickpath.analytai.in/pricing` tells the user exactly where they are going, while `clickpath.analytai.in/x7k9q` does not. Descriptive aliases improve click confidence and make your links more shareable.
 
 ### Maintain a Link-in-Bio Strategy
 
@@ -143,12 +143,12 @@ Always click your short link before sharing it publicly. A redirect to a broken 
 
 If a short link points to a page that no longer exists or a campaign that has ended, update the destination or disable the link. Users who encounter dead ends are unlikely to trust your links in the future.
 
-## How iShortn Helps Social Media Marketers
+## How ClickPath Helps Social Media Marketers
 
-iShortn is designed to fit naturally into a social media workflow. Creating a short link takes seconds: paste your destination URL, set a custom alias, and share. When you need to update where a link points — say, swapping out a seasonal landing page — you can change the destination without creating a new link or updating your social profiles.
+ClickPath is designed to fit naturally into a social media workflow. Creating a short link takes seconds: paste your destination URL, set a custom alias, and share. When you need to update where a link points — say, swapping out a seasonal landing page — you can change the destination without creating a new link or updating your social profiles.
 
 The analytics dashboard gives you real-time click data broken down by location, device, browser, and referral source. You can compare performance across links to see which platforms and campaigns are delivering results.
 
 For teams managing social media at scale, shared workspaces let everyone create and manage links in one place. QR code generation is built in as well, which is useful when bridging online campaigns with offline materials like event signage or printed collateral.
 
-Whether you are managing a single brand account or coordinating campaigns across multiple platforms and team members, iShortn gives you the short links, the data, and the flexibility to make every post count.
+Whether you are managing a single brand account or coordinating campaigns across multiple platforms and team members, ClickPath gives you the short links, the data, and the flexibility to make every post count.

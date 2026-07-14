@@ -70,10 +70,7 @@ export const retrieveDeviceAndGeolocationData = async (headers: Headers) => {
   };
 };
 
-function safeIncrement<T extends string>(
-  record: Record<T, number>,
-  key: T
-): void {
+function safeIncrement<T extends string>(record: Record<T, number>, key: T): void {
   record[key] = (record[key] || 0) + 1;
 }
 
@@ -84,7 +81,7 @@ type AggregateVisitsParams = {
 
 export const aggregateVisits = (
   visits: AggregateVisitsParams["visits"],
-  uniqueVisits: AggregateVisitsParams["uniqueVisits"]
+  uniqueVisits: AggregateVisitsParams["uniqueVisits"],
 ) => {
   const clicksPerDate: Record<string, number> = {};
   const uniqueClicksPerDate: Record<string, number> = {};

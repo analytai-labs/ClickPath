@@ -4,7 +4,12 @@ import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { getChangelogEntries } from "@/lib/changelog";
-import { createBreadcrumbSchema } from "@/lib/seo/structured-data";
+import {
+  createBreadcrumbSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
+} from "@/lib/seo/structured-data";
 
 import { Footer } from "../_components/footer";
 import { Header } from "../_components/header";
@@ -12,14 +17,20 @@ import { ChangelogHero } from "./_components/changelog-hero";
 import { ChangelogTimeline } from "./_components/changelog-timeline";
 
 export const metadata: Metadata = {
-  title: "Changelog — iShortn",
-  description:
-    "A public log of every iShortn release. New features, improvements, and fixes, written like letters — not press notes.",
+  title: resolveTitle("Changelog — ClickPath"),
+  description: resolveDescription(
+    "A public log of every ClickPath release. New features, improvements, and fixes, written like letters — not press notes.",
+  ),
+  alternates: {
+    canonical: resolveCanonical("/changelog"),
+  },
   openGraph: {
-    title: "Changelog — iShortn",
-    description:
-      "A public log of every iShortn release. New features, improvements, and fixes.",
+    title: resolveTitle("Changelog — ClickPath"),
+    description: resolveDescription(
+      "A public log of every ClickPath release. New features, improvements, and fixes.",
+    ),
     type: "website",
+    url: resolveCanonical("/changelog"),
   },
 };
 
@@ -30,8 +41,8 @@ export default async function ChangelogPage() {
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
       <JsonLd
         data={createBreadcrumbSchema([
-          { name: "Home", url: "https://ishortn.ink" },
-          { name: "Changelog", url: "https://ishortn.ink/changelog" },
+          { name: "Home", url: resolveCanonical("/") },
+          { name: "Changelog", url: resolveCanonical("/changelog") },
         ])}
       />
       <Header />

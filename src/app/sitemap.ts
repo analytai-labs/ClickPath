@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getAllPosts();
 
   const blogPostEntries: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `https://ishortn.ink/blog/${post.slug}`,
+    url: absoluteUrl(`/blog/${post.slug}`),
     lastModified: new Date(post.updated ?? post.date).toISOString(),
     changeFrequency: "monthly",
     priority: 0.8,

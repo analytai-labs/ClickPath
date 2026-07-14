@@ -20,7 +20,7 @@ export function PageQrDialog({ slug }: { slug: string }) {
   const url =
     typeof window !== "undefined"
       ? `${window.location.origin}/p/${slug}`
-      : `https://ishortn.ink/p/${slug}`;
+      : `https://clickpath.analytai.in/p/${slug}`;
 
   function download() {
     const canvas = ref.current?.querySelector("canvas");

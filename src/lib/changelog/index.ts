@@ -2,13 +2,9 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { remark } from "remark";
-import html from "remark-html";
 import gfm from "remark-gfm";
-import type {
-  ChangelogEntry,
-  ChangelogFrontmatter,
-  ChangelogManifest,
-} from "./types";
+import html from "remark-html";
+import type { ChangelogEntry, ChangelogFrontmatter, ChangelogManifest } from "./types";
 
 const changelogsDirectory = path.join(process.cwd(), "content/changelogs");
 
@@ -53,12 +49,10 @@ export async function getChangelogEntries(): Promise<ChangelogEntry[]> {
         shortDesc: String(data.shortDesc),
         category: data.category as ChangelogEntry["category"],
       } as ChangelogEntry;
-    })
+    }),
   );
 
-  return entries.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function getChangelogManifest(): Promise<ChangelogManifest> {
@@ -81,7 +75,7 @@ export async function getChangelogManifest(): Promise<ChangelogManifest> {
 }
 
 export async function getChangelogEntriesSince(
-  lastViewedSlug: string | null
+  lastViewedSlug: string | null,
 ): Promise<ChangelogEntry[]> {
   const entries = await getChangelogEntries();
 

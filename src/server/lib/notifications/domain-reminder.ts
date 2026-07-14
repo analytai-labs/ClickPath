@@ -1,5 +1,6 @@
 import DomainReminderEmail from "@/emails/domain-reminder";
 import { env } from "@/env.mjs";
+import { EMAIL_SENDER } from "@/lib/constants/app";
 import { logger } from "@/lib/logger";
 
 import { resend } from "./resend-client";
@@ -33,9 +34,9 @@ export async function sendDomainReminderEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: email,
-      subject: `${domain} needs configuration on iShortn`,
+      subject: `${domain} needs configuration on ClickPath`,
       react: DomainReminderEmail({
         recipientName,
         domain,

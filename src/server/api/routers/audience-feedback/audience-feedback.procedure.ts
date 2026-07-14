@@ -84,7 +84,7 @@ export const audienceFeedbackRouter = createTRPCRouter({
           userId: ctx.auth.userId,
           dismissedAt,
           dismissCount: 1,
-        }
+        },
       });
       return { success: true, dismissedAt };
     }
@@ -95,8 +95,8 @@ export const audienceFeedbackRouter = createTRPCRouter({
         dismissedAt,
         dismissCount: {
           increment: 1,
-        }
-      }
+        },
+      },
     });
 
     return { success: true, dismissedAt };
@@ -150,17 +150,17 @@ export const audienceFeedbackRouter = createTRPCRouter({
       };
 
       const existingFeedback = await ctx.prisma.audienceFeedback.findFirst({
-        where: { userId: ctx.auth.userId }
+        where: { userId: ctx.auth.userId },
       });
 
       if (existingFeedback) {
         await ctx.prisma.audienceFeedback.update({
           where: { id: existingFeedback.id },
-          data: values
+          data: values,
         });
       } else {
         await ctx.prisma.audienceFeedback.create({
-          data: values
+          data: values,
         });
       }
 
@@ -199,7 +199,7 @@ export const audienceFeedbackRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const where: any = {
-        submittedAt: { not: null }
+        submittedAt: { not: null },
       };
 
       if (input.plan) where.planSnapshot = input.plan;
@@ -212,11 +212,11 @@ export const audienceFeedbackRouter = createTRPCRouter({
       const items = await ctx.prisma.audienceFeedback.findMany({
         where,
         include: {
-          user: { select: { name: true, email: true, imageUrl: true } },
+          user: { select: { name: true, email: true, image: true } },
         },
-        orderBy: { submittedAt: 'desc' },
+        orderBy: { submittedAt: "desc" },
         take: input.limit + 1,
-        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {})
+        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       });
 
       let nextCursor: number | undefined;
@@ -231,7 +231,7 @@ export const audienceFeedbackRouter = createTRPCRouter({
   stats: adminProcedure.query(async ({ ctx }) => {
     const rows = await ctx.prisma.audienceFeedback.findMany({
       where: {
-        submittedAt: { not: null }
+        submittedAt: { not: null },
       },
       select: {
         planSnapshot: true,
@@ -240,7 +240,7 @@ export const audienceFeedbackRouter = createTRPCRouter({
         role: true,
         useCase: true,
         magicFeature: true,
-      }
+      },
     });
 
     const tally = (key: keyof (typeof rows)[number]) => {

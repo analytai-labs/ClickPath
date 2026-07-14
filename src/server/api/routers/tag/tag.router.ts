@@ -36,7 +36,7 @@ export const tagRouter = createTRPCRouter({
       z.object({
         linkId: z.number(),
         tagNames: z.array(z.string()),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       await associateTagsWithLink(ctx, input.linkId, input.tagNames);

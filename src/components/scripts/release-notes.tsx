@@ -16,11 +16,7 @@ export function ReleaseNotesScript() {
           `,
         }}
       />
-      <Script
-        id="headway-widget"
-        strategy="lazyOnload"
-        src="https://cdn.headwayapp.co/widget.js"
-      />
+      <Script id="headway-widget" strategy="lazyOnload" src="https://cdn.headwayapp.co/widget.js" />
     </>
   );
 }

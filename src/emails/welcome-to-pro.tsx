@@ -46,8 +46,8 @@ const planBenefits: Record<Exclude<Plan, "free">, string[]> = {
 export const WelcomeEmail = ({
   userName = "there",
   plan = "pro",
-  supportEmail = "support@ishortn.ink",
-  senderName = "Kelvin",
+  supportEmail = "support@clickpath.analytai.in",
+  senderName = "The ClickPath Team",
 }: WelcomeEmailProps) => {
   const displayName = planDisplayNames[plan];
   const benefits = planBenefits[plan];
@@ -55,18 +55,17 @@ export const WelcomeEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Welcome to iShortn {displayName}!</Preview>
+      <Preview>Welcome to ClickPath {displayName}!</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={section}>
-            <Text style={heading}>Welcome to iShortn {displayName}! 🎉</Text>
+            <Text style={heading}>Welcome to ClickPath {displayName}! 🎉</Text>
 
             <Text style={text}>Hi {userName},</Text>
 
             <Text style={text}>
-              Thank you for upgrading to iShortn {displayName}! Your account has
-              been successfully upgraded, and you now have access to all{" "}
-              {displayName} features.
+              Thank you for upgrading to ClickPath {displayName}! Your account has been successfully
+              upgraded, and you now have access to all {displayName} features.
             </Text>
 
             <Text style={subheading}>What's included in your plan:</Text>
@@ -80,7 +79,7 @@ export const WelcomeEmail = ({
             </Section>
 
             <Section style={ctaContainer}>
-              <Button style={button} href="https://ishortn.ink/dashboard">
+              <Button style={button} href="https://clickpath.analytai.in/dashboard">
                 Go to Dashboard
               </Button>
             </Section>
@@ -88,22 +87,20 @@ export const WelcomeEmail = ({
             <Hr style={hr} />
 
             <Text style={text}>
-              If you have any questions or need help getting started, feel free
-              to reply to this email or reach out at{" "}
+              If you have any questions or need help getting started, feel free to reply to this
+              email or reach out at{" "}
               <Link href={`mailto:${supportEmail}`} style={link}>
                 {supportEmail}
               </Link>
               .
             </Text>
 
-            <Text style={text}>
-              Thanks for choosing iShortn!
-            </Text>
+            <Text style={text}>Thanks for choosing ClickPath!</Text>
 
             <Text style={signature}>
               {senderName}
               <br />
-              <span style={signatureRole}>iShortn Team</span>
+              <span style={signatureRole}>ClickPath Team</span>
             </Text>
           </Section>
         </Container>

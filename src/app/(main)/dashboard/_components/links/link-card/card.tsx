@@ -1,13 +1,7 @@
 "use client";
 
+import { IconCheck, IconClick, IconCopy, IconEye, IconFolder } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  IconCheck,
-  IconCopy,
-  IconEye,
-  IconFolder,
-  IconClick,
-} from "@tabler/icons-react";
 import { useTransitionRouter } from "next-view-transitions";
 
 import { cn, copyToClipboard, daysSinceDate } from "@/lib/utils";
@@ -34,7 +28,7 @@ const Link = ({ link, onTagClick }: LinkProps) => {
   const createdBy = link.createdBy as {
     id: string;
     name: string | null;
-    imageUrl: string | null;
+    image: string | null;
   } | null;
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -100,9 +94,7 @@ const Link = ({ link, onTagClick }: LinkProps) => {
               onClick={(e) => {
                 if (!isSelectionMode) {
                   e.stopPropagation();
-                  router.push(
-                    `/dashboard/analytics/${link.alias}?domain=${link.domain}`,
-                  );
+                  router.push(`/dashboard/analytics/${link.alias}?domain=${link.domain}`);
                 }
               }}
             >
@@ -125,9 +117,7 @@ const Link = ({ link, onTagClick }: LinkProps) => {
           {/* Metadata row */}
           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px]">
             <span className="text-neutral-400">
-              {daysSinceLinkCreation === 0
-                ? "Today"
-                : `${daysSinceLinkCreation}d`}
+              {daysSinceLinkCreation === 0 ? "Today" : `${daysSinceLinkCreation}d`}
             </span>
             <span className="text-neutral-300">&middot;</span>
             <span
@@ -139,9 +129,7 @@ const Link = ({ link, onTagClick }: LinkProps) => {
                 }
               }}
             >
-              {link.url && link.url.length > 50
-                ? `${link.url.substring(0, 50)}...`
-                : link.url}
+              {link.url && link.url.length > 50 ? `${link.url.substring(0, 50)}...` : link.url}
             </span>
 
             {folderInfo && (
@@ -188,9 +176,9 @@ const Link = ({ link, onTagClick }: LinkProps) => {
               <>
                 <span className="text-neutral-300">&middot;</span>
                 <span className="inline-flex items-center gap-1 text-neutral-400">
-                  {createdBy.imageUrl ? (
+                  {createdBy.image ? (
                     <img
-                      src={createdBy.imageUrl}
+                      src={createdBy.image}
                       alt={createdBy.name ?? "User"}
                       className="h-3.5 w-3.5 rounded-full object-cover"
                     />
@@ -227,9 +215,7 @@ const Link = ({ link, onTagClick }: LinkProps) => {
             onClick={(e) => {
               if (!isSelectionMode) {
                 e.stopPropagation();
-                router.push(
-                  `/dashboard/analytics/${link.alias}?domain=${link.domain}`,
-                );
+                router.push(`/dashboard/analytics/${link.alias}?domain=${link.domain}`);
               }
             }}
           >

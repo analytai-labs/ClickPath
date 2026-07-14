@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,10 @@ export function CreateBioPageDialog({ trigger }: { trigger: React.ReactNode }) {
     onError: (error) => toast.error(error.message),
   });
 
-  const normalizedSlug = slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+  const normalizedSlug = slug
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "-");
   // Mirror the server's slug constraint (3–100 chars) to avoid failed submissions.
   const canCreate =
     normalizedSlug.length >= 3 && normalizedSlug.length <= MAX_SLUG_LENGTH && !create.isLoading;
@@ -57,7 +60,7 @@ export function CreateBioPageDialog({ trigger }: { trigger: React.ReactNode }) {
             <Label htmlFor="bio-slug">Handle</Label>
             <div className="flex h-9 items-center overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-border dark:bg-card dark:shadow-none">
               <span className="flex h-full select-none items-center border-r border-gray-200 bg-gray-50 px-3 text-[13px] text-gray-500 dark:border-border dark:bg-muted dark:text-gray-400">
-                ishortn.ink/p/
+                clickpath.analytai.in/p/
               </span>
               <input
                 id="bio-slug"
@@ -84,7 +87,9 @@ export function CreateBioPageDialog({ trigger }: { trigger: React.ReactNode }) {
 
         <DialogFooter>
           <Button
-            onClick={() => create.mutate({ slug: normalizedSlug, title: title.trim() || undefined })}
+            onClick={() =>
+              create.mutate({ slug: normalizedSlug, title: title.trim() || undefined })
+            }
             disabled={!canCreate}
           >
             {create.isLoading ? "Creating…" : "Create page"}

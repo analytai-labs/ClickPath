@@ -36,9 +36,7 @@ function validateApiKey(request: Request): boolean {
   }
 
   // Support both "Bearer <token>" and just "<token>"
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : authHeader;
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
   // Use timing-safe comparison to prevent timing attacks
   if (token.length !== cronSecret.length) {
@@ -68,10 +66,7 @@ export async function GET(request: Request) {
     const result = await cleanupDeletedTeams();
 
     const durationMs = Date.now() - startTime;
-    log.info(
-      { durationMs, teamsDeleted: result.teamsDeleted },
-      "cleanup complete",
-    );
+    log.info({ durationMs, teamsDeleted: result.teamsDeleted }, "cleanup complete");
 
     return NextResponse.json({
       success: true,

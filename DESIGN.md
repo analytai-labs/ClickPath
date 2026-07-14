@@ -1,6 +1,6 @@
-# iShortn Warm / Humanist Design System
+# ClickPath Warm / Humanist Design System
 
-This document describes the warm, humanist design system that powers the iShortn marketing surfaces (`/`, `/features`, `/pricing`, `/blog`, `/compare/[slug]`, `/changelog`, `/privacy`, `/terms`) and the Clerk-powered auth flow (`/auth/sign-in`, `/auth/sign-up`). The signed-in dashboard (`(main)/dashboard/**`) uses a different, unrelated theme; do not extend the warm theme into it.
+This document describes the warm, humanist design system that powers the ClickPath marketing surfaces (`/`, `/features`, `/pricing`, `/blog`, `/compare/[slug]`, `/changelog`, `/privacy`, `/terms`) and the Clerk-powered auth flow (`/auth/sign-in`, `/auth/sign-up`). The signed-in dashboard (`(main)/dashboard/**`) uses a different, unrelated theme; do not extend the warm theme into it.
 
 All tokens, utility classes, and component-scoped styles live behind the `[data-theme="warm"]` selector in `src/styles/globals.css`. Do not touch the warm theme outside that block.
 
@@ -475,7 +475,7 @@ A single SVG "swirl" mark (two stroked arcs + two dots). `size` drives both widt
 <Wordmark onInk={false} />
 ```
 
-Composes `Logo` + the text "iShortn" followed by a terracotta period. Used in the landing header, the landing footer (with `onInk`), and the auth layout header. Inline style block:
+Composes `Logo` + the text "ClickPath" followed by a terracotta period. Used in the landing header, the landing footer (with `onInk`), and the auth layout header. Inline style block:
 
 ```tsx
 fontFamily: "var(--font-warm-display)",
@@ -533,7 +533,7 @@ Gotcha: card stacking uses literal pixel offsets and `transform: rotate(...)` pe
     sizes="(min-width: 1280px) 1184px, 100vw"
   />
   ```
-- Chrome is a horizontal bar with three faux traffic lights, a URL pill (`app.ishortn.ink / dashboard`), and a "Live · synced 4s ago" tag.
+- Chrome is a horizontal bar with three faux traffic lights, a URL pill (`app.clickpath.analytai.in / dashboard`), and a "Live · synced 4s ago" tag.
 - Parent card uses `.warm-card` plus a custom shadow `0 40px 80px -40px rgba(43,31,23,0.2)`.
 
 ### Features (`features.tsx`)
@@ -551,15 +551,15 @@ Gotcha: card stacking uses literal pixel offsets and `transform: rotate(...)` pe
   - `milestones` — progress bars.
   - `cloaking` — verified-vs-bots progress bar.
   - `team` — stacked avatar pills.
-- `DynamicQRVisual` encodes `https://ishortn.ink` at ECC `H` so the center overlay doesn't break scans:
+- `DynamicQRVisual` encodes `https://clickpath.analytai.in` at ECC `H` so the center overlay doesn't break scans:
   ```ts
-  encode("https://ishortn.ink", { ecc: "H", border: 0 });
+  encode("https://clickpath.analytai.in", { ecc: "H", border: 0 });
   ```
 
 ### QR section (`qr-section.tsx`)
 
 - Client component. State: selected style (`"square" | "rounded" | "dot" | "squircle"`).
-- Encodes `https://ishortn.ink/dashboard` once (`useMemo`) at ECC `H`, border 0.
+- Encodes `https://clickpath.analytai.in/dashboard` once (`useMemo`) at ECC `H`, border 0.
 - Renders QR via a custom `QRCanvas` that maps each boolean module to either a `<circle>` (dot style) or a `<rect>` with variable `rx` (squircle 0.45, rounded 0.3, square 0).
 - Clickable 68×68 style-picker swatches; active state swaps bg to accent and inverts fg.
 - Right-side large preview: 32px radius paper card, aspect-ratio 1/1, 48px inset padding. Centered `Logo` overlay sits on an accent square with a 10px paper ring (`boxShadow: "0 0 0 10px var(--warm-paper)"`) so it reads as a sticker and preserves scan integrity.
@@ -573,7 +573,7 @@ Gotcha: card stacking uses literal pixel offsets and `transform: rotate(...)` pe
 - Button style selected by plan key: `ghost | accent | primary`.
 - Bullet list uses `Icon.Check` in sage-deep on paper cards, accent on the featured dark card.
 
-When you change pricing numbers, update `src/app/(landing)/_components/pricing.tsx` and `src/lib/billing/plans.ts` together — and the compare-page `ishortn` object in `src/app/(landing)/compare/[slug]/page.tsx`.
+When you change pricing numbers, update `src/app/(landing)/_components/pricing.tsx` and `src/lib/billing/plans.ts` together — and the compare-page `clickpath` object in `src/app/(landing)/compare/[slug]/page.tsx`.
 
 ### Testimonials (`testimonials.tsx`)
 
@@ -605,7 +605,7 @@ When you change pricing numbers, update `src/app/(landing)/_components/pricing.t
 - Ink background, paper text. 80px top padding, 40px bottom.
 - Four-column grid at ≥1024px (`1.4fr repeat(4, 1fr)`), two-column at ≥720px.
 - Links split into Product / Compare / Resources / Legal. External and `mailto:` links use `<a>` with `target="_blank"` (external only); internal links use `next-view-transitions`'s `Link`.
-- Oversized decorative "iShortn." at the bottom (20vw, 4% white opacity), italic, with the period in accent.
+- Oversized decorative "ClickPath." at the bottom (20vw, 4% white opacity), italic, with the period in accent.
 - Social chiclets: 36×36 outlined circles for 𝕏, GH, @.
 
 ---
@@ -880,7 +880,7 @@ Tailwind's `md:` (≥768px) is only used in `Header` for showing/hiding the nav 
 - DON'T use emojis in prose, UI copy, or commit messages.
 - DO give every custom SVG (Icon set, Logo, inline `<svg>` decorations) an explicit `width` and `height` default. Unsized SVGs inside flex containers expand to the cross-axis size.
 - DON'T put "500 links" / "free for X" specific quotas into hero, CTA, features, or footer marketing copy. Quotas belong in the Pricing cards and FAQ answers only, and must match `PLAN_CAPS` in `src/lib/billing/plans.ts`.
-- DO refer to the real domain `ishortn.ink`. `isht.ink` should not appear in user-facing copy.
+- DO refer to the real domain `clickpath.analytai.in`. `clk.path` should not appear in user-facing copy.
 - DO reuse `.warm-btn` + variant combos for any new CTA. Hand-rolling a new button class should be rare and requires a reason.
 - DO update Clerk hover/focus rules in `globals.css`, not in the `appearance` object — Clerk's runtime styles win over `elements` for interactive states.
 
@@ -900,7 +900,7 @@ Tailwind's `md:` (≥768px) is only used in `Header` for showing/hiding the nav 
 | Icon set / Logo / Wordmark | `src/app/(landing)/_components/warm-primitives.tsx` |
 | Header navigation links | `src/app/(landing)/_components/header.tsx` — `routes` array |
 | Footer columns / socials | `src/app/(landing)/_components/footer.tsx` — `columns` / `socials` arrays |
-| Pricing numbers | `src/app/(landing)/_components/pricing.tsx` AND `src/lib/billing/plans.ts` AND the `ishortn` object in `src/app/(landing)/compare/[slug]/page.tsx` |
+| Pricing numbers | `src/app/(landing)/_components/pricing.tsx` AND `src/lib/billing/plans.ts` AND the `clickpath` object in `src/app/(landing)/compare/[slug]/page.tsx` |
 | FAQ questions | `src/app/(landing)/_components/faq.tsx` — `defaultFaqs` |
 | Hero illustrated cards | `src/app/(landing)/_components/hero.tsx` — `heroCards` |
 | Feature cards / visuals | `src/app/(landing)/_components/features.tsx` — `items` array and `FeatureVisual` |

@@ -29,20 +29,11 @@ const redactPaths = [
 // PII. Keep the list to explicit email-typed names — a generic "recipient"
 // key could carry user IDs, phone numbers, or webhook URLs and produce
 // misleading output when run through maskEmail.
-const EMAIL_KEYS = [
-  "email",
-  "toEmail",
-  "fromEmail",
-  "recipientEmail",
-  "userEmail",
-] as const;
+const EMAIL_KEYS = ["email", "toEmail", "fromEmail", "recipientEmail", "userEmail"] as const;
 
-const maskEmailSerializer = (v: unknown) =>
-  typeof v === "string" ? maskEmail(v) : v;
+const maskEmailSerializer = (v: unknown) => (typeof v === "string" ? maskEmail(v) : v);
 
-const emailSerializers = Object.fromEntries(
-  EMAIL_KEYS.map((k) => [k, maskEmailSerializer]),
-);
+const emailSerializers = Object.fromEntries(EMAIL_KEYS.map((k) => [k, maskEmailSerializer]));
 
 const options: LoggerOptions = {
   level: process.env.LOG_LEVEL ?? (isProd ? "info" : "debug"),

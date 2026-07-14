@@ -6,7 +6,7 @@ shortDesc: Stay up to date with new features and improvements
 category: new
 ---
 
-We've added a dedicated changelog page to keep you informed about what's new in iShortn.
+We've added a dedicated changelog page to keep you informed about what's new in ClickPath.
 
 ## What's included
 

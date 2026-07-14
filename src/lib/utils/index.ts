@@ -53,7 +53,7 @@ export function formatPrice(price: number | string, options: Intl.NumberFormatOp
 }
 
 export function absoluteUrl(path: string) {
-  return new URL(path, env.NEXT_PUBLIC_APP_URL).href;
+  return new URL(path, env.NEXT_PUBLIC_APP_URL || "https://clickpath.analytai.in").href;
 }
 
 export function showSuccessToast() {

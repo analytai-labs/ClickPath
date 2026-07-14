@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   IconArchive,
   IconArchiveOff,
@@ -18,6 +17,7 @@ import {
   IconSpeakerphone,
   IconTrash,
 } from "@tabler/icons-react";
+import { motion } from "framer-motion";
 import { useTransitionRouter } from "next-view-transitions";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,8 +50,8 @@ import { MoveToFolderModal } from "@/app/(main)/dashboard/folders/_components/mo
 import { TransferToWorkspaceModal } from "../transfer-to-workspace-modal";
 
 import { AddToCampaignModal } from "./add-to-campaign-modal";
-import { ChangeLinkPasswordModal } from "./password-change-modal";
 import { EditLinkDrawer } from "./edit-link-drawer";
+import { ChangeLinkPasswordModal } from "./password-change-modal";
 import { QRCodeModal } from "./qrcode-modal";
 
 import type { RouterOutputs } from "@/trpc/shared";
@@ -66,8 +66,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
   const [openChangePasswordModal, setOpenChangePasswordModal] = useState(false);
   const [moveToFolderModal, setMoveToFolderModal] = useState(false);
   const [addToCampaignModal, setAddToCampaignModal] = useState(false);
-  const [transferToWorkspaceModal, setTransferToWorkspaceModal] =
-    useState(false);
+  const [transferToWorkspaceModal, setTransferToWorkspaceModal] = useState(false);
   const [resetStatsDialog, setResetStatsDialog] = useState(false);
   const [deleteLinkDialog, setDeleteLinkDialog] = useState(false);
   const isPublicStatsEnabled = link.publicStats!;
@@ -113,7 +112,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
 
   const copyPublicStatsLink = async () => {
     await copyToClipboard(
-      `https://ishortn.ink/analytics/${link.alias}?domain=${link.domain}`,
+      `https://clickpath.analytai.in/analytics/${link.alias}?domain=${link.domain}`,
     );
   };
 
@@ -128,9 +127,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
   const handlePublicStatsToggleMutation = async () => {
     toast.promise(togglePublicStatMutation.mutateAsync({ id: link.id }), {
       loading: "Updating...",
-      success: isPublicStatsEnabled
-        ? "Public stats disabled"
-        : "Public stats enabled",
+      success: isPublicStatsEnabled ? "Public stats disabled" : "Public stats enabled",
       error: "Failed to update",
     });
   };
@@ -169,22 +166,14 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             onClick={() => setOpenEditModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconPencil
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconPencil size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             Edit link
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setQrModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconQrcode
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconQrcode size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             QR code
           </DropdownMenuItem>
 
@@ -197,33 +186,21 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             onClick={() => setMoveToFolderModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconFolderShare
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconFolderShare size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             Move to folder
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setAddToCampaignModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconSpeakerphone
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconSpeakerphone size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             {link.campaignId ? "Move to campaign" : "Add to campaign"}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setTransferToWorkspaceModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconArrowsExchange
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconArrowsExchange size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             Transfer to workspace
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -232,20 +209,12 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
           >
             {link.archived ? (
               <>
-                <IconArchiveOff
-                  size={15}
-                  stroke={1.5}
-                  className="mr-2 text-neutral-400"
-                />
+                <IconArchiveOff size={15} stroke={1.5} className="mr-2 text-neutral-400" />
                 Restore from archive
               </>
             ) : (
               <>
-                <IconArchive
-                  size={15}
-                  stroke={1.5}
-                  className="mr-2 text-neutral-400"
-                />
+                <IconArchive size={15} stroke={1.5} className="mr-2 text-neutral-400" />
                 Archive
               </>
             )}
@@ -262,20 +231,12 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
           >
             {isLinkActive ? (
               <>
-                <IconLinkOff
-                  size={15}
-                  stroke={1.5}
-                  className="mr-2 text-neutral-400"
-                />
+                <IconLinkOff size={15} stroke={1.5} className="mr-2 text-neutral-400" />
                 Deactivate link
               </>
             ) : (
               <>
-                <IconLink
-                  size={15}
-                  stroke={1.5}
-                  className="mr-2 text-neutral-400"
-                />
+                <IconLink size={15} stroke={1.5} className="mr-2 text-neutral-400" />
                 Activate link
               </>
             )}
@@ -284,36 +245,22 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             onClick={() => setOpenChangePasswordModal(true)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconKey
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
+            <IconKey size={15} stroke={1.5} className="mr-2 text-neutral-400" />
             {link.passwordHash ? "Change password" : "Add password"}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={handlePublicStatsToggleMutation}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
-            <IconChartBar
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400"
-            />
-            {isPublicStatsEnabled
-              ? "Disable public stats"
-              : "Enable public stats"}
+            <IconChartBar size={15} stroke={1.5} className="mr-2 text-neutral-400" />
+            {isPublicStatsEnabled ? "Disable public stats" : "Enable public stats"}
           </DropdownMenuItem>
           {isPublicStatsEnabled && (
             <DropdownMenuItem
               onClick={copyPublicStatsLink}
               className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
             >
-              <IconCopy
-                size={15}
-                stroke={1.5}
-                className="mr-2 text-neutral-400"
-              />
+              <IconCopy size={15} stroke={1.5} className="mr-2 text-neutral-400" />
               Copy stats link
             </DropdownMenuItem>
           )}
@@ -337,11 +284,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditLinkDrawer
-        link={link}
-        open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
-      />
+      <EditLinkDrawer link={link} open={openEditModal} onClose={() => setOpenEditModal(false)} />
       <QRCodeModal
         open={qrModal}
         setOpen={setQrModal}
@@ -392,14 +335,11 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                toast.promise(
-                  resetLinksMutation.mutateAsync({ id: link.id }),
-                  {
-                    loading: "Resetting...",
-                    success: "Statistics reset",
-                    error: "Failed to reset",
-                  },
-                );
+                toast.promise(resetLinksMutation.mutateAsync({ id: link.id }), {
+                  loading: "Resetting...",
+                  success: "Statistics reset",
+                  error: "Failed to reset",
+                });
               }}
               disabled={resetLinksMutation.isLoading}
               className="h-9 bg-red-600 text-[13px] text-white hover:bg-red-700 disabled:opacity-50"
@@ -431,20 +371,17 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                toast.promise(
-                  deleteLinkMutation.mutateAsync({ id: link.id }),
-                  {
-                    loading: "Deleting...",
-                    success: () => {
-                      trackEvent(POSTHOG_EVENTS.LINK_DELETED, {
-                        alias: link.alias,
-                        domain: link.domain,
-                      });
-                      return "Link deleted";
-                    },
-                    error: "Failed to delete",
+                toast.promise(deleteLinkMutation.mutateAsync({ id: link.id }), {
+                  loading: "Deleting...",
+                  success: () => {
+                    trackEvent(POSTHOG_EVENTS.LINK_DELETED, {
+                      alias: link.alias,
+                      domain: link.domain,
+                    });
+                    return "Link deleted";
                   },
-                );
+                  error: "Failed to delete",
+                });
               }}
               disabled={deleteLinkMutation.isLoading}
               className="h-9 bg-red-600 text-[13px] text-white hover:bg-red-700 disabled:opacity-50"

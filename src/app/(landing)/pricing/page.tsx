@@ -4,6 +4,9 @@ import { JsonLd } from "@/components/seo/json-ld";
 import {
   createBreadcrumbSchema,
   createFaqSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
   softwareApplicationSchema,
 } from "@/lib/seo/structured-data";
 
@@ -15,20 +18,27 @@ import { Pricing } from "../_components/pricing";
 import { Icon } from "../_components/warm-primitives";
 
 export const metadata: Metadata = {
-  title: "Pricing — iShortn",
-  description:
+  title: resolveTitle("Pricing — ClickPath"),
+  description: resolveDescription(
     "Start free forever. Upgrade when you're ready. Cancel in one click. Pro and Ultra plans for solo makers and growing teams.",
+  ),
   keywords: [
     "url shortener pricing",
     "free url shortener",
     "link shortener plans",
     "url shortener cost",
+    "clickpath pricing",
   ],
+  alternates: {
+    canonical: resolveCanonical("/pricing"),
+  },
   openGraph: {
-    title: "Pricing — iShortn",
-    description:
+    title: resolveTitle("Pricing — ClickPath"),
+    description: resolveDescription(
       "Start free forever. Upgrade when you're ready. Cancel in one click. Pro and Ultra plans for solo makers and growing teams.",
+    ),
     type: "website",
+    url: resolveCanonical("/pricing"),
   },
 };
 
@@ -47,7 +57,7 @@ const pricingFaqs = [
   },
   {
     q: "Do I get a custom domain on the free plan?",
-    a: "Custom domains are on Pro (up to 3) and Ultra (unlimited). Free uses ishortn.ink/your-slug.",
+    a: "Custom domains are on Pro (up to 3) and Ultra (unlimited). Free uses clickpath.analytai.in/your-slug.",
   },
   {
     q: "Is the API available on every plan?",
@@ -60,33 +70,24 @@ export default function PricingPage() {
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
       <JsonLd
         data={createBreadcrumbSchema([
-          { name: "Home", url: "https://ishortn.ink" },
-          { name: "Pricing", url: "https://ishortn.ink/pricing" },
+          { name: "Home", url: resolveCanonical("/") },
+          { name: "Pricing", url: resolveCanonical("/pricing") },
         ])}
       />
       <JsonLd data={softwareApplicationSchema} />
-      <JsonLd
-        data={createFaqSchema(pricingFaqs.map((f) => ({ question: f.q, answer: f.a })))}
-      />
+      <JsonLd data={createFaqSchema(pricingFaqs.map((f) => ({ question: f.q, answer: f.a })))} />
       <Header />
 
       <section className="warm-subhero">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 24 }}>
-            <Icon.Heart
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Heart style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Pricing
           </div>
-          <h1
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}
-          >
+          <h1 className="warm-display" style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}>
             Fair prices,
             <br />
-            <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>
-              no surprises.
-            </em>
+            <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>no surprises.</em>
           </h1>
           <p
             style={{
@@ -97,8 +98,8 @@ export default function PricingPage() {
               maxWidth: 620,
             }}
           >
-            Start free forever. Upgrade when you need more. Cancel in one click
-            — no lock-in, no nagging emails.
+            Start free forever. Upgrade when you need more. Cancel in one click — no lock-in, no
+            nagging emails.
           </p>
         </div>
       </section>

@@ -20,7 +20,7 @@ async function autoDisableLink(linkId: number, cacheKey: string): Promise<void> 
   try {
     await prisma.link.update({
       where: { id: linkId },
-      data: { disabled: true }
+      data: { disabled: true },
     });
     await deleteFromCache(cacheKey);
   } catch (err) {
@@ -140,10 +140,10 @@ export async function resolveShortLink(
     if (!geoRules) {
       const rulesFromDb = await prisma.geoRule.findMany({
         where: { linkId: link.id },
-        orderBy: { priority: "asc" }
+        orderBy: { priority: "asc" },
       });
       if (rulesFromDb.length > 0) {
-        const typedRules = rulesFromDb.map(r => ({ ...r, values: r.values as string[] }));
+        const typedRules = rulesFromDb.map((r) => ({ ...r, values: r.values as string[] }));
         void runBackgroundTask(setGeoRulesInCache(link.id, typedRules));
         geoRules = typedRules;
       }

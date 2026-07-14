@@ -9,7 +9,7 @@ const columns = [
       { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
       { label: "Changelog", href: "/changelog" },
-      { label: "API docs", href: "https://docs.ishortn.ink/api" },
+      { label: "API docs", href: "https://clickpath.analytai.in/docs/api" },
       { label: "Open dashboard", href: "/dashboard" },
     ],
   },
@@ -27,9 +27,9 @@ const columns = [
     title: "Resources",
     links: [
       { label: "Blog", href: "/blog" },
-      { label: "Documentation", href: "https://ishortn.ink/docs" },
-      { label: "Support", href: "mailto:support@ishortn.ink" },
-      { label: "Status", href: "https://status.ishortn.ink" },
+      { label: "Documentation", href: "https://clickpath.analytai.in/docs" },
+      { label: "Support", href: "mailto:support@clickpath.analytai.in" },
+      { label: "Status", href: "https://status.clickpath.analytai.in" },
     ],
   },
   {
@@ -43,9 +43,8 @@ const columns = [
 ];
 
 const socials = [
-  { label: "𝕏", href: "https://twitter.com/kelamoaba" },
-  { label: "GH", href: "https://github.com/AmoabaKelvin/ishortn.ink" },
-  { label: "@", href: "mailto:support@ishortn.ink" },
+  { label: "GH", href: "https://github.com/Shlok-Zanwar/ClickPath" },
+  { label: "@", href: "mailto:support@clickpath.analytai.in" },
 ];
 
 export const Footer = () => {
@@ -79,8 +78,7 @@ export const Footer = () => {
                 lineHeight: 1.6,
               }}
             >
-              A quietly lovely URL shortener — for people who make things on the
-              internet.
+              A quietly lovely URL shortener — for people who make things on the internet.
             </p>
             <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
               {socials.map((s) => (
@@ -134,11 +132,7 @@ export const Footer = () => {
                       <a
                         href={l.href}
                         target={l.href.startsWith("http") ? "_blank" : undefined}
-                        rel={
-                          l.href.startsWith("http")
-                            ? "noopener noreferrer"
-                            : undefined
-                        }
+                        rel={l.href.startsWith("http") ? "noopener noreferrer" : undefined}
                         style={{
                           fontSize: 14,
                           color: "var(--warm-paper)",
@@ -178,15 +172,16 @@ export const Footer = () => {
           }}
         >
           <div>
-            © {new Date().getFullYear()} iShortn — built by{" "}
+            © {new Date().getFullYear()} ClickPath. Forked with gratitude from{" "}
             <a
-              href="https://twitter.com/kelamoaba"
+              href="https://github.com/AmoabaKelvin/iShortn"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "rgba(252,245,238,0.75)" }}
+              style={{ color: "rgba(252,245,238,0.75)", textDecoration: "underline" }}
             >
-              Amoaba Kelvin
+              iShortn by Amoaba Kelvin
             </a>
+            .
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
@@ -215,7 +210,7 @@ export const Footer = () => {
             whiteSpace: "nowrap",
           }}
         >
-          iShortn
+          ClickPath
           <span style={{ color: "var(--warm-accent)", opacity: 0.5 }}>.</span>
         </div>
       </div>

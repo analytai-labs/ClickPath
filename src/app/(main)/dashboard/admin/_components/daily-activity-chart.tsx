@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Bar,
-  BarChart as RechartsBarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, BarChart as RechartsBarChart, XAxis, YAxis } from "recharts";
 
 import { Card } from "@/components/ui/card";
 import {
@@ -67,15 +61,10 @@ export function ActivityChart({
           <h2 className="text-[14px] font-semibold tracking-tight text-neutral-900 dark:text-foreground">
             Activity
           </h2>
-          <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-            {description}
-          </p>
+          <p className="text-[12px] text-neutral-400 dark:text-neutral-500">{description}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Tabs
-            value={metricView}
-            onValueChange={(v) => setMetricView(v as MetricView)}
-          >
+          <Tabs value={metricView} onValueChange={(v) => setMetricView(v as MetricView)}>
             <TabsList className="h-7">
               <TabsTrigger value="links" className="px-2.5 text-[11px]">
                 Links
@@ -114,10 +103,7 @@ export function ActivityChart({
             <p className="text-[13px] text-neutral-400 dark:text-neutral-500">No data available</p>
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-64 w-full"
-          >
+          <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
             <RechartsBarChart data={data}>
               <CartesianGrid vertical={false} />
               <XAxis
@@ -126,9 +112,7 @@ export function ActivityChart({
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={
-                  granularity === "month" ? formatChartMonth : formatChartDate
-                }
+                tickFormatter={granularity === "month" ? formatChartMonth : formatChartDate}
               />
               <YAxis
                 tickLine={false}
@@ -150,11 +134,7 @@ export function ActivityChart({
                   />
                 }
               />
-              <Bar
-                dataKey={metricView}
-                fill={`var(--color-${metricView})`}
-                radius={4}
-              />
+              <Bar dataKey={metricView} fill={`var(--color-${metricView})`} radius={4} />
               <ChartLegend content={<ChartLegendContent />} />
             </RechartsBarChart>
           </ChartContainer>

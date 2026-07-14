@@ -1,23 +1,16 @@
+import * as crypto from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { addDays } from "date-fns";
-import * as crypto from "node:crypto";
 
-import { redis } from "@/lib/core/cache";
 import { getAppBaseDomain, isPlatformDomain } from "@/lib/constants/domains";
+import { redis } from "@/lib/core/cache";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { prisma } from "@/server/db";
 import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 import { sendTeamInviteEmail } from "@/server/lib/notifications/team-invite";
-import {
-  requireMinimumRole,
-  requirePermission
-} from "@/server/lib/workspace/permissions";
+import { requireMinimumRole, requirePermission } from "@/server/lib/workspace/permissions";
 
-import type {
-  ProtectedTRPCContext,
-  TeamTRPCContext,
-  WorkspaceTRPCContext,
-} from "../../trpc";
+import type { ProtectedTRPCContext, TeamTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
   AcceptInviteInput,
   CreateTeamInput,
@@ -37,10 +30,7 @@ import type {
 /**
  * Create a new team (requires Ultra plan - enforced by procedure)
  */
-export async function createTeam(
-  ctx: ProtectedTRPCContext,
-  input: CreateTeamInput
-) {
+export async function createTeam(ctx: ProtectedTRPCContext, input: CreateTeamInput) {
   // Normalize and validate slug
   const normalizedSlug = input.slug.trim().toLowerCase();
 
@@ -117,7 +107,8 @@ export async function updateTeam(ctx: TeamTRPCContext, input: UpdateTeamInput) {
     if (!validDomain) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Invalid domain. Only verified custom domains belonging to this team can be set as default.",
+        message:
+          "Invalid domain. Only verified custom domains belonging to this team can be set as default.",
       });
     }
   }
@@ -140,10 +131,7 @@ export async function updateTeam(ctx: TeamTRPCContext, input: UpdateTeamInput) {
 /**
  * Update team slug (subdomain)
  */
-export async function updateTeamSlug(
-  ctx: TeamTRPCContext,
-  input: UpdateTeamSlugInput
-) {
+export async function updateTeamSlug(ctx: TeamTRPCContext, input: UpdateTeamSlugInput) {
   requireMinimumRole(ctx.workspace, "owner", "change team slug");
 
   // Normalize and validate slug
@@ -237,10 +225,7 @@ export async function listUserTeams(ctx: ProtectedTRPCContext) {
  * Check if a team slug is available
  * Excludes soft-deleted teams so slugs can be reused after cleanup
  */
-export async function checkSlugAvailability(
-  ctx: ProtectedTRPCContext,
-  slug: string
-) {
+export async function checkSlugAvailability(ctx: ProtectedTRPCContext, slug: string) {
   // Check reserved slugs first
   if (RESERVED_TEAM_SLUGS.includes(slug)) {
     return { available: false, reason: "This slug is reserved and cannot be used" };
@@ -274,7 +259,7 @@ export async function listMembers(ctx: TeamTRPCContext) {
           id: true,
           name: true,
           email: true,
-          imageUrl: true,
+          image: true,
         },
       },
     },
@@ -292,10 +277,7 @@ export async function listMembers(ctx: TeamTRPCContext) {
 /**
  * Update a member's role
  */
-export async function updateMemberRole(
-  ctx: TeamTRPCContext,
-  input: UpdateMemberRoleInput
-) {
+export async function updateMemberRole(ctx: TeamTRPCContext, input: UpdateMemberRoleInput) {
   requirePermission(ctx.workspace, "team.settings", "update member role");
 
   // Cannot change owner's role
@@ -316,8 +298,7 @@ export async function updateMemberRole(
   if (targetMember.role === "owner") {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message:
-        "Cannot change the owner's role. Use transfer ownership instead.",
+      message: "Cannot change the owner's role. Use transfer ownership instead.",
     });
   }
 
@@ -334,7 +315,7 @@ export async function updateMemberRole(
       unique_team_user: {
         teamId: ctx.workspace.teamId,
         userId: input.userId,
-      }
+      },
     },
     data: { role: input.role },
   });
@@ -345,10 +326,7 @@ export async function updateMemberRole(
 /**
  * Remove a member from the team
  */
-export async function removeMember(
-  ctx: TeamTRPCContext,
-  input: RemoveMemberInput
-) {
+export async function removeMember(ctx: TeamTRPCContext, input: RemoveMemberInput) {
   requirePermission(ctx.workspace, "team.remove_member", "remove team member");
 
   // Cannot remove self if owner
@@ -394,7 +372,7 @@ export async function removeMember(
       unique_team_user: {
         teamId: ctx.workspace.teamId,
         userId: input.userId,
-      }
+      },
     },
   });
 
@@ -408,8 +386,7 @@ export async function leaveTeam(ctx: TeamTRPCContext) {
   if (ctx.workspace.role === "owner") {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message:
-        "Owner cannot leave the team. Transfer ownership first or delete the team.",
+      message: "Owner cannot leave the team. Transfer ownership first or delete the team.",
     });
   }
 
@@ -418,7 +395,7 @@ export async function leaveTeam(ctx: TeamTRPCContext) {
       unique_team_user: {
         teamId: ctx.workspace.teamId,
         userId: ctx.auth.userId,
-      }
+      },
     },
   });
 
@@ -428,10 +405,7 @@ export async function leaveTeam(ctx: TeamTRPCContext) {
 /**
  * Transfer team ownership to another member
  */
-export async function transferOwnership(
-  ctx: TeamTRPCContext,
-  input: TransferOwnershipInput
-) {
+export async function transferOwnership(ctx: TeamTRPCContext, input: TransferOwnershipInput) {
   requireMinimumRole(ctx.workspace, "owner", "transfer team ownership");
 
   // Check if new owner is a member
@@ -457,7 +431,7 @@ export async function transferOwnership(
         unique_team_user: {
           teamId: ctx.workspace.teamId,
           userId: ctx.auth.userId,
-        }
+        },
       },
       data: { role: "admin" },
     });
@@ -468,7 +442,7 @@ export async function transferOwnership(
         unique_team_user: {
           teamId: ctx.workspace.teamId,
           userId: input.newOwnerId,
-        }
+        },
       },
       data: { role: "owner" },
     });
@@ -490,10 +464,7 @@ export async function transferOwnership(
 /**
  * Create an invite to join the team
  */
-export async function createInvite(
-  ctx: TeamTRPCContext,
-  input: InviteMemberInput
-) {
+export async function createInvite(ctx: TeamTRPCContext, input: InviteMemberInput) {
   requirePermission(ctx.workspace, "team.invite", "invite team members");
 
   // Only owners can create admin invites
@@ -617,10 +588,7 @@ export async function listInvites(ctx: TeamTRPCContext) {
 /**
  * Revoke a pending invite
  */
-export async function revokeInvite(
-  ctx: TeamTRPCContext,
-  input: RevokeInviteInput
-) {
+export async function revokeInvite(ctx: TeamTRPCContext, input: RevokeInviteInput) {
   requirePermission(ctx.workspace, "team.invite", "revoke team invite");
 
   const invite = await prisma.teamInvite.findFirst({
@@ -647,10 +615,7 @@ export async function revokeInvite(
 /**
  * Accept a team invite (called from personal context)
  */
-export async function acceptInvite(
-  ctx: ProtectedTRPCContext,
-  input: AcceptInviteInput
-) {
+export async function acceptInvite(ctx: ProtectedTRPCContext, input: AcceptInviteInput) {
   const invite = await prisma.teamInvite.findFirst({
     where: { token: input.token },
     include: {
@@ -744,10 +709,7 @@ export async function acceptInvite(
 /**
  * Get invite details by token (public - for invite preview page)
  */
-export async function getInviteByToken(
-  ctx: ProtectedTRPCContext,
-  token: string
-) {
+export async function getInviteByToken(ctx: ProtectedTRPCContext, token: string) {
   const invite = await prisma.teamInvite.findFirst({
     where: { token },
     include: {

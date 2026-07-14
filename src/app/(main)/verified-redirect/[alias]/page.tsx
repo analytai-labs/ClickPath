@@ -38,17 +38,11 @@ function InvalidRedirect() {
   );
 }
 
-export default async function VerifiedRedirectPage(
-  props: VerifiedRedirectPageProps,
-) {
+export default async function VerifiedRedirectPage(props: VerifiedRedirectPageProps) {
   const searchParams = await props.searchParams;
-  const to = validateDestination(
-    typeof searchParams.to === "string" ? searchParams.to : null,
-  );
+  const to = validateDestination(typeof searchParams.to === "string" ? searchParams.to : null);
   const rawToken =
-    typeof searchParams.t === "string" && searchParams.t.length > 0
-      ? searchParams.t
-      : null;
+    typeof searchParams.t === "string" && searchParams.t.length > 0 ? searchParams.t : null;
 
   // `to` must match the destination signed into the token at issue time.
   // Without this guard the page is an open redirect — any attacker-crafted

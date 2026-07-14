@@ -11,16 +11,13 @@ function LinkPreview({
 }) {
   return (
     <div
-      className={cn(
-        "flex flex-col items-center gap-5 justify-center h-screen",
-        satoshi.className
-      )}
+      className={cn("flex flex-col items-center gap-5 justify-center h-screen", satoshi.className)}
     >
       <div className="leading-7 text-center">
-        <h1 className="text-4xl font-bold">iShortn Link Preview</h1>
+        <h1 className="text-4xl font-bold">ClickPath Link Preview</h1>
         <p className="text-muted-foreground max-w-lg">
-          The link you followed was shortened with iShortn.ink. Shortened links
-          can go anywhere on the internet, so be careful when clicking.
+          The link you followed was shortened with ClickPath.analytai.in. Shortened links can go
+          anywhere on the internet, so be careful when clicking.
         </p>
       </div>
 

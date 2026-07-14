@@ -1,6 +1,6 @@
-export { generateQRCode } from './generate';
-export { QRCodeProvider, useQRCode } from './context';
-export { defaultGeneratorState } from './state';
+export { generateQRCode } from "./generate";
+export { QRCodeProvider, useQRCode } from "./context";
+export { defaultGeneratorState } from "./state";
 export type {
   QRCodeGeneratorState,
   QRPixelStyle,
@@ -12,9 +12,9 @@ export type {
   PixelStyle,
   MarkerShape,
   MarkerInnerShape,
-} from './types';
+} from "./types";
 export {
   PixelStyles,
   MarkerShapes,
   MarkerInnerShapes,
-} from './types';
+} from "./types";

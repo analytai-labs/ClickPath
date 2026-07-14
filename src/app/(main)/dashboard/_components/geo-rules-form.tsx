@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import {
   IconCheck,
   IconChevronDown,
@@ -12,6 +11,7 @@ import {
   IconWorld,
   IconX,
 } from "@tabler/icons-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -24,19 +24,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -107,7 +97,7 @@ function MultiSelect({
         onChange([...selected, value]);
       }
     },
-    [selected, onChange]
+    [selected, onChange],
   );
 
   const handleRemove = useCallback(
@@ -115,7 +105,7 @@ function MultiSelect({
       e.stopPropagation();
       onChange(selected.filter((v) => v !== value));
     },
-    [selected, onChange]
+    [selected, onChange],
   );
 
   const selectedLabels = selected
@@ -131,7 +121,7 @@ function MultiSelect({
           aria-expanded={open}
           className={cn(
             "h-auto min-h-9 w-full justify-between border-neutral-200 dark:border-border bg-white dark:bg-card px-3 py-2 text-[13px]",
-            disabled && "cursor-not-allowed opacity-50"
+            disabled && "cursor-not-allowed opacity-50",
           )}
           disabled={disabled}
         >
@@ -182,7 +172,7 @@ function MultiSelect({
                       "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border transition-colors",
                       selected.includes(option.value)
                         ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-neutral-300"
+                        : "border-neutral-300",
                     )}
                   >
                     <AnimatePresence>
@@ -199,9 +189,7 @@ function MultiSelect({
                     </AnimatePresence>
                   </div>
                   <span className="text-[13px]">{option.label}</span>
-                  <span className="ml-auto text-[11px] text-neutral-400">
-                    {option.value}
-                  </span>
+                  <span className="ml-auto text-[11px] text-neutral-400">{option.value}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -253,7 +241,9 @@ function GeoRuleItem({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Type</label>
+          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+            Type
+          </label>
           <Select
             value={rule.type}
             onValueChange={(value: "country" | "continent") =>
@@ -282,12 +272,12 @@ function GeoRuleItem({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Condition</label>
+          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+            Condition
+          </label>
           <Select
             value={rule.condition}
-            onValueChange={(value: "in" | "not_in") =>
-              onChange({ ...rule, condition: value })
-            }
+            onValueChange={(value: "in" | "not_in") => onChange({ ...rule, condition: value })}
             disabled={disabled}
           >
             <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
@@ -315,12 +305,12 @@ function GeoRuleItem({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Action</label>
+        <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+          Action
+        </label>
         <Select
           value={rule.action}
-          onValueChange={(value: "redirect" | "block") =>
-            onChange({ ...rule, action: value })
-          }
+          onValueChange={(value: "redirect" | "block") => onChange({ ...rule, action: value })}
           disabled={disabled}
         >
           <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
@@ -348,9 +338,7 @@ function GeoRuleItem({
             </label>
             <Input
               value={rule.destination || ""}
-              onChange={(e) =>
-                onChange({ ...rule, destination: e.target.value })
-              }
+              onChange={(e) => onChange({ ...rule, destination: e.target.value })}
               placeholder="https://example.com/alternative"
               disabled={disabled}
               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
@@ -370,9 +358,7 @@ function GeoRuleItem({
             </label>
             <Input
               value={rule.blockMessage || ""}
-              onChange={(e) =>
-                onChange({ ...rule, blockMessage: e.target.value })
-              }
+              onChange={(e) => onChange({ ...rule, blockMessage: e.target.value })}
               placeholder="This content is not available in your region."
               disabled={disabled}
               className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
@@ -419,7 +405,7 @@ export function GeoRulesForm({
   const removeRule = (index: number) => {
     form.setValue(
       "geoRules",
-      geoRules.filter((_, i) => i !== index)
+      geoRules.filter((_, i) => i !== index),
     );
   };
 
@@ -467,7 +453,7 @@ export function GeoRulesForm({
             stroke={1.5}
             className={cn(
               "shrink-0 text-neutral-400 transition-transform duration-200",
-              isOpen && "rotate-180"
+              isOpen && "rotate-180",
             )}
           />
         </div>
@@ -490,8 +476,8 @@ export function GeoRulesForm({
                     Upgrade to Pro to use geotargeting rules
                   </p>
                   <p className="mt-1 text-[12px] text-neutral-400">
-                    Redirect visitors to different URLs or block access based on
-                    their country or continent.
+                    Redirect visitors to different URLs or block access based on their country or
+                    continent.
                   </p>
                 </div>
               ) : (
@@ -521,8 +507,7 @@ export function GeoRulesForm({
                         No geotargeting rules yet
                       </p>
                       <p className="mt-1 text-[12px] text-neutral-400">
-                        Add rules to redirect or block visitors based on their
-                        location.
+                        Add rules to redirect or block visitors based on their location.
                       </p>
                     </motion.div>
                   )}
@@ -537,15 +522,13 @@ export function GeoRulesForm({
                       "w-full gap-2 border-neutral-200 dark:border-border text-[13px] transition-all",
                       canAddMore
                         ? "hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400"
-                        : "opacity-50"
+                        : "opacity-50",
                     )}
                   >
                     <IconPlus size={14} stroke={1.5} />
                     Add Rule
                     {!canAddMore && (
-                      <span className="text-[11px] text-neutral-400">
-                        (limit reached)
-                      </span>
+                      <span className="text-[11px] text-neutral-400">(limit reached)</span>
                     )}
                   </Button>
                 </>

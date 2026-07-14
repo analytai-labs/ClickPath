@@ -1,5 +1,5 @@
-import { TRPCError } from "@trpc/server";
 import { canUseMilestones, getMilestonesPerLinkLimit } from "@/lib/billing/plans";
+import { TRPCError } from "@trpc/server";
 
 import { checkWorkspaceLinkLimit, verifyLinkOwnership } from "../link/utils";
 
@@ -10,10 +10,7 @@ import type {
   UpsertMilestonesInput,
 } from "./link-milestone.input";
 
-export async function upsertMilestones(
-  ctx: WorkspaceTRPCContext,
-  input: UpsertMilestonesInput,
-) {
+export async function upsertMilestones(ctx: WorkspaceTRPCContext, input: UpsertMilestonesInput) {
   await verifyLinkOwnership(ctx, input.linkId);
 
   const { plan } = await checkWorkspaceLinkLimit(ctx);
@@ -47,9 +44,7 @@ export async function upsertMilestones(
     },
   });
 
-  const existingMap = new Map(
-    existing.map((m) => [m.threshold, m.notifiedAt]),
-  );
+  const existingMap = new Map(existing.map((m) => [m.threshold, m.notifiedAt]));
 
   await ctx.prisma.$transaction(async (tx) => {
     await tx.linkMilestone.deleteMany({
@@ -71,10 +66,7 @@ export async function upsertMilestones(
   return { success: true };
 }
 
-export async function getLinkMilestones(
-  ctx: WorkspaceTRPCContext,
-  input: GetLinkMilestonesInput,
-) {
+export async function getLinkMilestones(ctx: WorkspaceTRPCContext, input: GetLinkMilestonesInput) {
   await verifyLinkOwnership(ctx, input.linkId);
 
   return ctx.prisma.linkMilestone.findMany({

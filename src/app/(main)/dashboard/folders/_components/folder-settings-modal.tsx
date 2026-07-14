@@ -24,11 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 
@@ -40,11 +36,7 @@ type FolderSettingsModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function FolderSettingsModal({
-  folder,
-  open,
-  onOpenChange,
-}: FolderSettingsModalProps) {
+export function FolderSettingsModal({ folder, open, onOpenChange }: FolderSettingsModalProps) {
   const [accessType, setAccessType] = useState<"all" | "specific">("all");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -57,7 +49,7 @@ export function FolderSettingsModal({
 
   const folderPermissions = api.folder.getPermissions.useQuery(
     { folderId: folder?.id ?? 0 },
-    { enabled: open && !!folder }
+    { enabled: open && !!folder },
   );
 
   const updatePermissions = api.folder.updatePermissions.useMutation({
@@ -71,16 +63,13 @@ export function FolderSettingsModal({
     },
   });
 
-  const regularMembers =
-    teamMembers.data?.filter((m) => m.role === "member") ?? [];
+  const regularMembers = teamMembers.data?.filter((m) => m.role === "member") ?? [];
 
   useEffect(() => {
     if (folderPermissions.data) {
       if (folderPermissions.data.isRestricted) {
         setAccessType("specific");
-        setSelectedUserIds(
-          folderPermissions.data.permittedUsers.map((u) => u.id)
-        );
+        setSelectedUserIds(folderPermissions.data.permittedUsers.map((u) => u.id));
       } else {
         setAccessType("all");
         setSelectedUserIds([]);
@@ -108,9 +97,7 @@ export function FolderSettingsModal({
 
   const toggleMember = (userId: string) => {
     setSelectedUserIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -131,9 +118,7 @@ export function FolderSettingsModal({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Folder Access</DialogTitle>
-          <DialogDescription>
-            Manage who can view &quot;{folder.name}&quot;
-          </DialogDescription>
+          <DialogDescription>Manage who can view &quot;{folder.name}&quot;</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -159,10 +144,12 @@ export function FolderSettingsModal({
                     "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all",
                     accessType === "all"
                       ? "border-neutral-900 bg-neutral-50 dark:bg-accent/50 ring-1 ring-neutral-900/10"
-                      : "border-neutral-200 dark:border-border hover:border-neutral-300 dark:hover:border-border hover:bg-neutral-50 dark:hover:bg-accent/50"
+                      : "border-neutral-200 dark:border-border hover:border-neutral-300 dark:hover:border-border hover:bg-neutral-50 dark:hover:bg-accent/50",
                   )}
                 >
-                  <span className="text-[13px] font-medium text-neutral-900 dark:text-foreground">All members</span>
+                  <span className="text-[13px] font-medium text-neutral-900 dark:text-foreground">
+                    All members
+                  </span>
                   <span className="text-[12px] text-neutral-400 dark:text-neutral-500">
                     Full team access
                   </span>
@@ -175,10 +162,12 @@ export function FolderSettingsModal({
                     "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all",
                     accessType === "specific"
                       ? "border-neutral-900 bg-neutral-50 dark:bg-accent/50 ring-1 ring-neutral-900/10"
-                      : "border-neutral-200 dark:border-border hover:border-neutral-300 dark:hover:border-border hover:bg-neutral-50 dark:hover:bg-accent/50"
+                      : "border-neutral-200 dark:border-border hover:border-neutral-300 dark:hover:border-border hover:bg-neutral-50 dark:hover:bg-accent/50",
                   )}
                 >
-                  <span className="text-[13px] font-medium text-neutral-900 dark:text-foreground">Restricted</span>
+                  <span className="text-[13px] font-medium text-neutral-900 dark:text-foreground">
+                    Restricted
+                  </span>
                   <span className="text-[12px] text-neutral-400 dark:text-neutral-500">
                     Selected members
                   </span>
@@ -215,7 +204,10 @@ export function FolderSettingsModal({
                           </span>
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start"
+                      >
                         <Command>
                           <CommandInput placeholder="Search..." className="h-9" />
                           <CommandList>
@@ -231,9 +223,7 @@ export function FolderSettingsModal({
                                   className="flex items-center gap-3 px-3 py-2.5"
                                 >
                                   <Avatar className="h-6 w-6">
-                                    <AvatarImage
-                                      src={member.user.imageUrl ?? undefined}
-                                    />
+                                    <AvatarImage src={member.user.image ?? undefined} />
                                     <AvatarFallback className="text-[10px] bg-neutral-100 dark:bg-muted text-neutral-600 dark:text-neutral-400">
                                       {member.user.name?.[0]?.toUpperCase() ??
                                         member.user.email?.[0]?.toUpperCase() ??
@@ -253,7 +243,7 @@ export function FolderSettingsModal({
                                       "flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] transition-colors",
                                       selectedUserIds.includes(member.userId)
                                         ? "border-blue-600 bg-blue-600"
-                                        : "border-neutral-300 dark:border-border"
+                                        : "border-neutral-300 dark:border-border",
                                     )}
                                   >
                                     {selectedUserIds.includes(member.userId) && (
@@ -277,9 +267,7 @@ export function FolderSettingsModal({
                             className="flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-border bg-white dark:bg-card py-0.5 pl-1 pr-1.5 text-[12px]"
                           >
                             <Avatar className="h-4 w-4">
-                              <AvatarImage
-                                src={member.user.imageUrl ?? undefined}
-                              />
+                              <AvatarImage src={member.user.image ?? undefined} />
                               <AvatarFallback className="text-[8px] bg-neutral-100 dark:bg-muted text-neutral-600 dark:text-neutral-400">
                                 {member.user.name?.[0]?.toUpperCase() ?? "U"}
                               </AvatarFallback>

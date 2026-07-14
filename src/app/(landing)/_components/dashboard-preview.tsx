@@ -17,24 +17,14 @@ export const DashboardPreview = () => {
             margin: "0 auto 72px",
           }}
         >
-          <div
-            className="warm-eyebrow"
-            style={{ marginBottom: 24, justifyContent: "center" }}
-          >
-            <Icon.Chart
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+          <div className="warm-eyebrow" style={{ marginBottom: 24, justifyContent: "center" }}>
+            <Icon.Chart style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             See what's working
           </div>
-          <h2
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(44px, 7vw, 80px)" }}
-          >
+          <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(44px, 7vw, 80px)" }}>
             Know who clicked,
             <br />
-            <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>
-              where from, when.
-            </em>
+            <em style={{ color: "var(--warm-accent)", fontStyle: "italic" }}>where from, when.</em>
           </h2>
           <p
             style={{
@@ -44,8 +34,8 @@ export const DashboardPreview = () => {
               lineHeight: 1.6,
             }}
           >
-            Every short link comes with its own dashboard. No extra setup, no
-            cookie banners to install, no reports to schedule.
+            Every short link comes with its own dashboard. No extra setup, no cookie banners to
+            install, no reports to schedule.
           </p>
         </div>
 
@@ -94,14 +84,14 @@ export const DashboardPreview = () => {
               }}
             >
               <Icon.Link style={{ width: 11, height: 11 }} />
-              ishortn.ink / dashboard
+              clickpath.analytai.in / dashboard
             </div>
             <div style={{ flex: 1 }} />
           </div>
 
           <Image
             src="/landing/dashboard-warm.png"
-            alt="iShortn dashboard — warm recolor"
+            alt="ClickPath dashboard — warm recolor"
             width={2400}
             height={1400}
             sizes="(min-width: 1280px) 1184px, 100vw"

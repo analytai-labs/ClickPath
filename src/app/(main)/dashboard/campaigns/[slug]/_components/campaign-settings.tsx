@@ -1,8 +1,8 @@
 "use client";
 
 import { IconLock } from "@tabler/icons-react";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,25 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trackUpgradeClick } from "@/lib/analytics/upgrade-prompt";
-import { normalizeCampaignSlug } from "@/lib/campaigns/slug";
 import type { Plan } from "@/lib/billing/plans";
+import { normalizeCampaignSlug } from "@/lib/campaigns/slug";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
 
 type CampaignData = RouterOutputs["campaign"]["get"];
 
 // GA4-recognized mediums so campaign traffic doesn't land in "Unassigned".
-const MEDIUM_SUGGESTIONS = [
-  "email",
-  "social",
-  "cpc",
-  "display",
-  "referral",
-  "affiliate",
-];
+const MEDIUM_SUGGESTIONS = ["email", "social", "cpc", "display", "referral", "affiliate"];
 
-const toDateInput = (date: Date | null): string =>
-  date ? date.toISOString().slice(0, 10) : "";
+const toDateInput = (date: Date | null): string => (date ? date.toISOString().slice(0, 10) : "");
 
 export function CampaignSettings({
   campaign,
@@ -91,8 +83,7 @@ export function CampaignSettings({
     });
   };
 
-  const canSave =
-    name.trim().length > 0 && normalizedSlug.length > 0 && !update.isLoading;
+  const canSave = name.trim().length > 0 && normalizedSlug.length > 0 && !update.isLoading;
 
   return (
     <div className="space-y-5">
@@ -160,8 +151,7 @@ export function CampaignSettings({
               </div>
             </div>
             <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-              Dates only affect how the campaign is labeled — links keep working
-              either way.
+              Dates only affect how the campaign is labeled — links keep working either way.
             </p>
           </div>
         </Card>
@@ -221,8 +211,7 @@ export function CampaignSettings({
                 ))}
               </datalist>
               <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                Lowercase; GA4 mediums like email, cpc, social keep reports
-                clean.
+                Lowercase; GA4 mediums like email, cpc, social keep reports clean.
               </p>
             </div>
             <div className="space-y-1.5">

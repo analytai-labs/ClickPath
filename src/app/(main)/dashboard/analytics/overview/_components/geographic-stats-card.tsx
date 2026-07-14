@@ -17,9 +17,9 @@ export function GeographicStatsCard({
   clicksPerContinent,
   totalClicks,
 }: GeographicStatsCardProps) {
-  const [currentView, setCurrentView] = useState<
-    "countries" | "cities" | "continents"
-  >("countries");
+  const [currentView, setCurrentView] = useState<"countries" | "cities" | "continents">(
+    "countries",
+  );
 
   const recordsMap = {
     countries: Object.entries(clicksPerCountry).map(([name, clicks]) => ({
@@ -49,9 +49,7 @@ export function GeographicStatsCard({
       <TabSwitcher
         currentView={currentView}
         views={views}
-        onChangeView={(view) =>
-          setCurrentView(view as "countries" | "cities" | "continents")
-        }
+        onChangeView={(view) => setCurrentView(view as "countries" | "cities" | "continents")}
       />
     </ColoredDistributionCard>
   );

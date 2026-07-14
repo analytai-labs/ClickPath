@@ -5,8 +5,8 @@ import {
   DM_Sans,
   Eagle_Lake,
   Fraunces,
-  Inter,
   Instrument_Serif,
+  Inter,
 } from "next/font/google";
 
 export const fontSans = DM_Sans({

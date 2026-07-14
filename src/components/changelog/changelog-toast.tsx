@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "next-view-transitions";
 import { api } from "@/trpc/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { Link } from "next-view-transitions";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "changelog-toast-dismissed";
 
@@ -73,9 +73,7 @@ export function ChangelogToast() {
             {/* Header */}
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-neutral-500">
-                  v{latestEntry.version}
-                </span>
+                <span className="text-xs font-medium text-neutral-500">v{latestEntry.version}</span>
                 <span className="h-1 w-1 rounded-full bg-neutral-300" />
                 <span className="text-xs text-neutral-400">New update</span>
               </div>
@@ -90,12 +88,8 @@ export function ChangelogToast() {
             </div>
 
             {/* Content */}
-            <h3 className="mb-1 text-sm font-medium text-neutral-900">
-              {latestEntry.title}
-            </h3>
-            <p className="mb-4 text-sm text-neutral-500">
-              {latestEntry.shortDesc}
-            </p>
+            <h3 className="mb-1 text-sm font-medium text-neutral-900">{latestEntry.title}</h3>
+            <p className="mb-4 text-sm text-neutral-500">{latestEntry.shortDesc}</p>
 
             {/* Action */}
             <Link

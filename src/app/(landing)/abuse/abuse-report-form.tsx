@@ -95,7 +95,7 @@ export function AbuseReportForm() {
           id="shortUrl"
           type="text"
           required
-          placeholder="ishortn.ink/abc"
+          placeholder="clickpath.analytai.in/abc"
           value={shortUrl}
           onChange={(e) => setShortUrl(e.target.value)}
           style={fieldStyle}

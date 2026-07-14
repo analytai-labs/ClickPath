@@ -81,19 +81,18 @@ export default function AdminDomainsPage() {
 
       {domains && domains.length === 0 && (
         <div className="rounded-lg border border-dashed border-neutral-300 dark:border-border bg-neutral-50/50 dark:bg-accent/50 px-4 py-12 text-center">
-          <IconWorld size={32} stroke={1.5} className="mx-auto mb-3 text-neutral-300 dark:text-neutral-600" />
+          <IconWorld
+            size={32}
+            stroke={1.5}
+            className="mx-auto mb-3 text-neutral-300 dark:text-neutral-600"
+          />
           <p className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400">
             No blocked domains yet
           </p>
           <p className="mt-1 text-[12px] text-neutral-400 dark:text-neutral-500">
             Add domains to prevent users from shortening URLs from those sites
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() => setIsAddOpen(true)}
-          >
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => setIsAddOpen(true)}>
             <IconPlus size={14} />
             Add your first domain
           </Button>
@@ -105,10 +104,18 @@ export default function AdminDomainsPage() {
           <table className="w-full text-left text-[13px]">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-border bg-neutral-50 dark:bg-accent/50">
-                <th className="px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400">Domain</th>
-                <th className="hidden px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400 md:table-cell">Reason</th>
-                <th className="hidden px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400 lg:table-cell">Added</th>
-                <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Action</th>
+                <th className="px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400">
+                  Domain
+                </th>
+                <th className="hidden px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400 md:table-cell">
+                  Reason
+                </th>
+                <th className="hidden px-4 py-3 font-medium text-neutral-500 dark:text-neutral-400 lg:table-cell">
+                  Added
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-border/50">
@@ -126,9 +133,7 @@ export default function AdminDomainsPage() {
                   </td>
                   <td className="hidden px-4 py-3 lg:table-cell">
                     <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
-                      {d.createdAt
-                        ? new Date(d.createdAt).toLocaleDateString()
-                        : "N/A"}
+                      {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "N/A"}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -150,7 +155,16 @@ export default function AdminDomainsPage() {
       )}
 
       {/* Add domain dialog */}
-      <Dialog open={isAddOpen} onOpenChange={(open) => { if (!open) { setNewDomain(""); setNewReason(""); } setIsAddOpen(open); }}>
+      <Dialog
+        open={isAddOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNewDomain("");
+            setNewReason("");
+          }
+          setIsAddOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Block a Domain</DialogTitle>
@@ -190,10 +204,7 @@ export default function AdminDomainsPage() {
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAdd}
-              disabled={!newDomain.trim() || addMutation.isLoading}
-            >
+            <Button onClick={handleAdd} disabled={!newDomain.trim() || addMutation.isLoading}>
               {addMutation.isLoading ? "Adding..." : "Block Domain"}
             </Button>
           </DialogFooter>

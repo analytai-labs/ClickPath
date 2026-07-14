@@ -2,7 +2,7 @@
 title: "URL Shortener API: How to Shorten Links Programmatically"
 description: "Learn how to use a URL shortener API to create short links programmatically. Complete developer guide with code examples and best practices."
 date: "2026-02-28"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["api", "developer", "url shortener api", "tutorial"]
 published: true
 ---
@@ -78,8 +78,8 @@ A typical integration with a URL shortener API follows three steps: authenticate
 Most APIs use a bearer token or API key passed in the request headers. You typically generate this key from the provider's dashboard and include it in every request.
 
 ```typescript
-const API_BASE = "https://ishortn.ink/api/v1";
-const API_KEY = process.env.ISHORTN_API_KEY;
+const API_BASE = "https://clickpath.analytai.in/api/v1";
+const API_KEY = process.env.CLICKPATH_API_KEY;
 
 const headers = {
   "Content-Type": "application/json",
@@ -122,7 +122,7 @@ const link = await createShortLink(
   "https://example.com/products/summer-2026?utm_source=email",
   "summer26"
 );
-console.log(link.shortUrl); // https://ishortn.ink/summer26
+console.log(link.shortUrl); // https://clickpath.analytai.in/summer26
 ```
 
 ### Step 3: Retrieve Analytics
@@ -194,11 +194,11 @@ Some link shortener API providers offer webhooks that notify your system when a 
 
 Store API keys in environment variables or a secrets manager, never in source code. Rotate keys periodically and use scoped keys with the minimum permissions your application requires.
 
-## iShortn API Overview
+## ClickPath API Overview
 
-iShortn provides a RESTful API that gives you programmatic access to link creation, management, and analytics. The API is available on the **Pro plan** and supports all the features you can access through the dashboard, including custom slugs, link expiration, and detailed click analytics.
+ClickPath provides a RESTful API that gives you programmatic access to link creation, management, and analytics. The API is available on the **Pro plan** and supports all the features you can access through the dashboard, including custom slugs, link expiration, and detailed click analytics.
 
-Key highlights of the iShortn API:
+Key highlights of the ClickPath API:
 
 - **RESTful JSON endpoints** for creating, updating, and deleting short links.
 - **Analytics endpoints** for retrieving click counts, geographic data, device breakdowns, and referrer information.
@@ -206,13 +206,13 @@ Key highlights of the iShortn API:
 - **Consistent error responses** with clear status codes and messages.
 - **Generous rate limits** designed for production workloads.
 
-Whether you are building a SaaS product that needs shareable links, an internal tool that generates tracking URLs, or a marketing platform that creates campaign links at scale, the iShortn API gives you the building blocks to integrate programmatic URL shortening into your stack.
+Whether you are building a SaaS product that needs shareable links, an internal tool that generates tracking URLs, or a marketing platform that creates campaign links at scale, the ClickPath API gives you the building blocks to integrate programmatic URL shortening into your stack.
 
 ## Getting Started
 
 Setting up your first API integration takes just a few minutes:
 
-1. **Sign up** for an account at [ishortn.ink](https://ishortn.ink) and upgrade to the Pro plan.
+1. **Sign up** for an account at [clickpath.analytai.in](https://clickpath.analytai.in) and upgrade to the Pro plan.
 2. **Generate an API key** from your account dashboard under the API settings section.
 3. **Make your first request** using the code examples above or your preferred HTTP client.
 4. **Explore the endpoints** to discover link management, bulk operations, and analytics capabilities.

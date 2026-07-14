@@ -6,10 +6,7 @@ interface ColorPickerProps {
   setSelectedColor: (color: string) => void;
 }
 
-export function ColorPicker({
-  selectedColor,
-  setSelectedColor,
-}: ColorPickerProps) {
+export function ColorPicker({ selectedColor, setSelectedColor }: ColorPickerProps) {
   return (
     <div>
       <span className="text-lg">Select color</span>
@@ -22,10 +19,7 @@ export function ColorPicker({
             })}
             onClick={() => setSelectedColor(color)}
           >
-            <div
-              className="size-11 rounded-full"
-              style={{ backgroundColor: color }}
-            />
+            <div className="size-11 rounded-full" style={{ backgroundColor: color }} />
           </div>
         ))}
       </div>

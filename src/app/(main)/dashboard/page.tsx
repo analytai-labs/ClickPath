@@ -13,7 +13,7 @@ import { Links } from "./_components/links/links";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(env.NEXT_PUBLIC_APP_URL),
+  metadataBase: new URL(env.NEXT_PUBLIC_APP_URL || "https://clickpath.analytai.in"),
   title: "Dashboard",
   description: "Manage your links and view analytics",
 };
@@ -29,26 +29,21 @@ export default async function DashboardPage(props: Props) {
   const orderBy = searchParams.orderBy as "createdAt" | "totalClicks";
   const orderDirection = searchParams.orderDirection as "desc" | "asc";
   const tag = searchParams.tag as string | undefined;
-  const archivedFilter = searchParams.archivedFilter as
-    | "active"
-    | "archived"
-    | "all"
-    | undefined;
+  const archivedFilter = searchParams.archivedFilter as "active" | "archived" | "all" | undefined;
   const search = searchParams.search as string | undefined;
   const campaignIdParam = Number.parseInt(searchParams.campaign as string);
   const campaignId = Number.isNaN(campaignIdParam) ? undefined : campaignIdParam;
 
-  const { links, totalLinks, totalPages, currentPage } =
-    await api.link.list.query({
-      page,
-      pageSize,
-      orderBy,
-      orderDirection,
-      tag,
-      campaignId,
-      archivedFilter,
-      search,
-    });
+  const { links, totalLinks, totalPages, currentPage } = await api.link.list.query({
+    page,
+    pageSize,
+    orderBy,
+    orderDirection,
+    tag,
+    campaignId,
+    archivedFilter,
+    search,
+  });
 
   return (
     <div>

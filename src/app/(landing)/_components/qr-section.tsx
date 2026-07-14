@@ -14,7 +14,7 @@ const STYLES: { value: QRStyle; label: string }[] = [
   { value: "squircle", label: "Squircle" },
 ];
 
-const QR_TEXT = "https://ishortn.ink/dashboard";
+const QR_TEXT = "https://clickpath.analytai.in/dashboard";
 
 const QRCanvas = ({
   data,
@@ -37,18 +37,9 @@ const QRCanvas = ({
 
   const renderModule = (x: number, y: number) => {
     if (style === "dot") {
-      return (
-        <circle
-          key={`${x}-${y}`}
-          cx={x + 0.5}
-          cy={y + 0.5}
-          r={0.45}
-          fill={fg}
-        />
-      );
+      return <circle key={`${x}-${y}`} cx={x + 0.5} cy={y + 0.5} r={0.45} fill={fg} />;
     }
-    const rx =
-      style === "squircle" ? 0.45 : style === "rounded" ? 0.3 : 0;
+    const rx = style === "squircle" ? 0.45 : style === "rounded" ? 0.3 : 0;
     return (
       <rect
         key={`${x}-${y}`}
@@ -103,15 +94,10 @@ export const QRSection = () => {
             className="warm-eyebrow"
             style={{ marginBottom: 20, background: "var(--warm-paper)" }}
           >
-            <Icon.QR
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.QR style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             QR codes
           </div>
-          <h2
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(40px, 6.4vw, 72px)" }}
-          >
+          <h2 className="warm-display" style={{ margin: 0, fontSize: "clamp(40px, 6.4vw, 72px)" }}>
             QR codes that look
             <br />
             <em style={{ fontStyle: "italic" }}>like your brand,</em>
@@ -128,14 +114,11 @@ export const QRSection = () => {
               textWrap: "pretty" as const,
             }}
           >
-            Pick a shape. Drop in your logo. Choose a colour from your palette.
-            Export as SVG or high-resolution PNG — for posters, packaging, or
-            that very stylish menu.
+            Pick a shape. Drop in your logo. Choose a colour from your palette. Export as SVG or
+            high-resolution PNG — for posters, packaging, or that very stylish menu.
           </p>
           <div style={{ marginTop: 32 }}>
-            <div
-              style={{ fontSize: 12, color: "var(--warm-mute)", marginBottom: 14 }}
-            >
+            <div style={{ fontSize: 12, color: "var(--warm-mute)", marginBottom: 14 }}>
               Styles included · tap to try
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -152,9 +135,7 @@ export const QRSection = () => {
                       width: 68,
                       height: 68,
                       padding: 10,
-                      background: active
-                        ? "var(--warm-accent)"
-                        : "var(--warm-paper)",
+                      background: active ? "var(--warm-accent)" : "var(--warm-paper)",
                       border: `1px solid ${active ? "var(--warm-accent)" : "var(--warm-line)"}`,
                       borderRadius: 14,
                       cursor: "pointer",
@@ -184,19 +165,11 @@ export const QRSection = () => {
               Now showing: {STYLES.find((s) => s.value === style)?.label}
             </div>
           </div>
-          <div
-            style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}
-          >
-            <a
-              href="/dashboard/qrcodes/create"
-              className="warm-btn warm-btn-accent warm-btn-lg"
-            >
+          <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <a href="/dashboard/qrcodes/create" className="warm-btn warm-btn-accent warm-btn-lg">
               Make a QR code <Icon.Arrow />
             </a>
-            <a
-              href="/features"
-              className="warm-btn warm-btn-ghost warm-btn-lg"
-            >
+            <a href="/features" className="warm-btn warm-btn-ghost warm-btn-lg">
               See examples
             </a>
           </div>
@@ -214,12 +187,7 @@ export const QRSection = () => {
               position: "relative",
             }}
           >
-            <QRCanvas
-              data={data}
-              style={style}
-              fg="#2B1F17"
-              bg="transparent"
-            />
+            <QRCanvas data={data} style={style} fg="#2B1F17" bg="transparent" />
             <div
               style={{
                 position: "absolute",
@@ -246,7 +214,7 @@ export const QRSection = () => {
               textAlign: "center",
             }}
           >
-            Scan to visit ishortn.ink/dashboard
+            Scan to visit clickpath.analytai.in/dashboard
           </div>
         </div>
       </div>

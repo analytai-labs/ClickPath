@@ -3,16 +3,22 @@ import { Link } from "next-view-transitions";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { getAllPosts } from "@/lib/blog";
-import { createBreadcrumbSchema } from "@/lib/seo/structured-data";
+import {
+  createBreadcrumbSchema,
+  resolveCanonical,
+  resolveDescription,
+  resolveTitle,
+} from "@/lib/seo/structured-data";
 
 import { Footer } from "../_components/footer";
 import { Header } from "../_components/header";
 import { Icon } from "../_components/warm-primitives";
 
 export const metadata: Metadata = {
-  title: "Blog — iShortn",
-  description:
+  title: resolveTitle("Blog — ClickPath"),
+  description: resolveDescription(
     "Tips, guides, and updates on URL shortening, link management, QR codes, and digital marketing.",
+  ),
   keywords: [
     "url shortener",
     "link management",
@@ -22,13 +28,18 @@ export const metadata: Metadata = {
     "digital marketing",
     "link tracking",
     "custom short URLs",
+    "clickpath blog",
   ],
+  alternates: {
+    canonical: resolveCanonical("/blog"),
+  },
   openGraph: {
-    title: "Blog — iShortn",
-    description:
+    title: resolveTitle("Blog — ClickPath"),
+    description: resolveDescription(
       "Tips, guides, and updates on URL shortening, link management, QR codes, and digital marketing.",
+    ),
     type: "website",
-    url: "https://ishortn.ink/blog",
+    url: resolveCanonical("/blog"),
   },
 };
 
@@ -47,8 +58,8 @@ export default async function BlogPage() {
     <main style={{ background: "var(--warm-bg)", color: "var(--warm-ink)" }}>
       <JsonLd
         data={createBreadcrumbSchema([
-          { name: "Home", url: "https://ishortn.ink" },
-          { name: "Blog", url: "https://ishortn.ink/blog" },
+          { name: "Home", url: resolveCanonical("/") },
+          { name: "Blog", url: resolveCanonical("/blog") },
         ])}
       />
       <Header />
@@ -56,19 +67,14 @@ export default async function BlogPage() {
       <section className="warm-subhero">
         <div className="warm-container">
           <div className="warm-eyebrow" style={{ marginBottom: 24 }}>
-            <Icon.Sparkle
-              style={{ width: 12, height: 12, color: "var(--warm-accent)" }}
-            />
+            <Icon.Sparkle style={{ width: 12, height: 12, color: "var(--warm-accent)" }} />
             Blog
           </div>
-          <h1
-            className="warm-display"
-            style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}
-          >
+          <h1 className="warm-display" style={{ margin: 0, fontSize: "clamp(44px, 11vw, 104px)" }}>
             Writing from
             <br />
             <em style={{ fontStyle: "italic", color: "var(--warm-accent)" }}>
-              the iShortn team.
+              the ClickPath team.
             </em>
           </h1>
           <p
@@ -80,8 +86,8 @@ export default async function BlogPage() {
               maxWidth: 620,
             }}
           >
-            Product updates, guides, and deep dives on link management,
-            analytics, and digital marketing.
+            Product updates, guides, and deep dives on link management, analytics, and digital
+            marketing.
           </p>
         </div>
       </section>
@@ -103,10 +109,7 @@ export default async function BlogPage() {
               No posts yet. Check back soon.
             </div>
           ) : (
-            <div
-              className="warm-blog-grid"
-              style={{ display: "grid", gap: 20 }}
-            >
+            <div className="warm-blog-grid" style={{ display: "grid", gap: 20 }}>
               {posts.map((post) => {
                 const primaryTag = post.tags[0];
                 return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Link } from "next-view-transitions";
 import { useEffect, useState } from "react";
 
@@ -18,6 +18,7 @@ const routes = [
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -47,7 +48,7 @@ export const Header = () => {
           height: 76,
         }}
       >
-        <Link href="/" aria-label="iShortn home">
+        <Link href="/" aria-label="ClickPath home">
           <Wordmark />
         </Link>
 
@@ -64,23 +65,24 @@ export const Header = () => {
         </div>
 
         <div className="hidden md:flex" style={{ gap: 10 }}>
-          <SignedOut>
-            <Link
-              href={Paths.Login}
-              className="warm-btn warm-btn-ghost"
-              style={{ padding: "10px 18px" }}
-            >
-              Sign in
-            </Link>
-            <Link
-              href={Paths.Signup}
-              className="warm-btn warm-btn-primary"
-              style={{ padding: "10px 18px" }}
-            >
-              Get started <Icon.Arrow />
-            </Link>
-          </SignedOut>
-          <SignedIn>
+          {!session ? (
+            <>
+              <Link
+                href={Paths.Login}
+                className="warm-btn warm-btn-ghost"
+                style={{ padding: "10px 18px" }}
+              >
+                Sign in
+              </Link>
+              <Link
+                href={Paths.Signup}
+                className="warm-btn warm-btn-primary"
+                style={{ padding: "10px 18px" }}
+              >
+                Get started <Icon.Arrow />
+              </Link>
+            </>
+          ) : (
             <Link
               href={Paths.Dashboard}
               className="warm-btn warm-btn-primary"
@@ -88,7 +90,7 @@ export const Header = () => {
             >
               Dashboard <Icon.Arrow />
             </Link>
-          </SignedIn>
+          )}
         </div>
 
         <button
@@ -113,17 +115,9 @@ export const Header = () => {
             strokeWidth="1.5"
           >
             {mobileOpen ? (
-              <path
-                d="M6 6l12 12M18 6L6 18"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
             ) : (
-              <path
-                d="M4 7h16M4 12h16M4 17h16"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" strokeLinejoin="round" />
             )}
           </svg>
         </button>
@@ -163,30 +157,31 @@ export const Header = () => {
                 margin: "8px 0",
               }}
             />
-            <SignedOut>
-              <Link
-                href={Paths.Login}
-                className="warm-btn warm-btn-ghost"
-                style={{
-                  justifyContent: "center",
-                  padding: "12px 16px",
-                }}
-              >
-                Sign in
-              </Link>
-              <Link
-                href={Paths.Signup}
-                className="warm-btn warm-btn-primary"
-                style={{
-                  justifyContent: "center",
-                  padding: "12px 16px",
-                  marginTop: 6,
-                }}
-              >
-                Get started <Icon.Arrow />
-              </Link>
-            </SignedOut>
-            <SignedIn>
+            {!session ? (
+              <>
+                <Link
+                  href={Paths.Login}
+                  className="warm-btn warm-btn-ghost"
+                  style={{
+                    justifyContent: "center",
+                    padding: "12px 16px",
+                  }}
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href={Paths.Signup}
+                  className="warm-btn warm-btn-primary"
+                  style={{
+                    justifyContent: "center",
+                    padding: "12px 16px",
+                    marginTop: 6,
+                  }}
+                >
+                  Get started <Icon.Arrow />
+                </Link>
+              </>
+            ) : (
               <Link
                 href={Paths.Dashboard}
                 className="warm-btn warm-btn-primary"
@@ -197,7 +192,7 @@ export const Header = () => {
               >
                 Dashboard <Icon.Arrow />
               </Link>
-            </SignedIn>
+            )}
           </div>
         </div>
       )}

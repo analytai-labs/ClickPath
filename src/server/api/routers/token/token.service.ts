@@ -1,5 +1,5 @@
-import { customAlphabet } from "nanoid";
 import crypto from "node:crypto";
+import { customAlphabet } from "nanoid";
 
 import type { ProtectedTRPCContext } from "../../trpc";
 
@@ -18,7 +18,7 @@ function hashToken(token: string) {
 
 export const getTokens = async (ctx: ProtectedTRPCContext) => {
   return await ctx.prisma.token.findMany({
-    where: { userId: ctx.auth.userId }
+    where: { userId: ctx.auth.userId },
   });
 };
 
@@ -30,7 +30,7 @@ export const createToken = async (ctx: ProtectedTRPCContext, input: CreateTokenI
       ...input,
       token: hashToken(generatedToken),
       userId: ctx.auth.userId,
-    }
+    },
   });
 
   return [{ ...newToken, token: generatedToken }];
@@ -41,6 +41,6 @@ export const deleteToken = async (ctx: ProtectedTRPCContext, input: DeleteTokenI
     where: {
       id: input.id,
       userId: ctx.auth.userId,
-    }
+    },
   });
 };

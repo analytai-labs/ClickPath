@@ -1,4 +1,5 @@
 import TeamInviteEmail from "@/emails/team-invite";
+import { EMAIL_SENDER } from "@/lib/constants/app";
 import { getAppBaseDomain } from "@/lib/constants/domains";
 import { logger } from "@/lib/logger";
 
@@ -32,9 +33,9 @@ export async function sendTeamInviteEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: email,
-      subject: `Join ${teamName} on iShortn`,
+      subject: `Join ${teamName} on ClickPath`,
       react: TeamInviteEmail({
         recipientName,
         teamName,

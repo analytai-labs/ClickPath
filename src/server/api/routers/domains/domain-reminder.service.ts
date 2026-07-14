@@ -147,16 +147,13 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
   const invalidDomains = await prisma.customDomain.findMany({
     where: {
       status: "invalid",
-      OR: [
-        { lastReminderSentAt: null },
-        { lastReminderSentAt: { lt: reminderCutoffDate } }
-      ]
+      OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: reminderCutoffDate } }],
     },
     include: {
       user: {
-        select: { email: true, name: true }
-      }
-    }
+        select: { email: true, name: true },
+      },
+    },
   });
 
   result.domainsChecked = invalidDomains.length;
@@ -179,14 +176,11 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
         // Domain is now valid according to Vercel, update our database and skip sending email
         await prisma.customDomain.update({
           where: { id: domainRecord.id },
-          data: { status: "active" }
+          data: { status: "active" },
         });
 
         result.domainsUpdatedToActive++;
-        log.info(
-          { domain: domainName },
-          "domain now valid, updated status to 'active'",
-        );
+        log.info({ domain: domainName }, "domain now valid, updated status to 'active'");
         continue;
       }
 
@@ -231,10 +225,7 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
       const challenges = parseVerificationDetails(domainRecord.verificationDetails);
 
       if (challenges.length === 0) {
-        log.warn(
-          { domain: domainName },
-          "no verification challenges found",
-        );
+        log.warn({ domain: domainName }, "no verification challenges found");
         result.errors.push({
           domain: domainName,
           error: "No verification challenges found",
@@ -259,19 +250,13 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
       // Update lastReminderSentAt after successful send
       await prisma.customDomain.update({
         where: { id: domainRecord.id },
-        data: { lastReminderSentAt: new Date() }
+        data: { lastReminderSentAt: new Date() },
       });
 
       result.remindersSent++;
-      log.info(
-        { domain: domainName, recipientEmail },
-        "reminder sent",
-      );
+      log.info({ domain: domainName, recipientEmail }, "reminder sent");
     } catch (error) {
-      log.error(
-        { err: error, domain: domainName },
-        "reminder processing failed",
-      );
+      log.error({ err: error, domain: domainName }, "reminder processing failed");
       result.errors.push({
         domain: domainName,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -293,24 +278,21 @@ export async function getDomainReminderStats() {
   const needingReminders = await prisma.customDomain.count({
     where: {
       status: "invalid",
-      OR: [
-        { lastReminderSentAt: null },
-        { lastReminderSentAt: { lt: reminderCutoffDate } }
-      ]
-    }
+      OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: reminderCutoffDate } }],
+    },
   });
 
   // Total invalid domains
   const totalInvalid = await prisma.customDomain.count({
-    where: { status: "invalid" }
+    where: { status: "invalid" },
   });
 
   // Recently reminded (within last 7 days)
   const recentlyReminded = await prisma.customDomain.count({
     where: {
       status: "invalid",
-      lastReminderSentAt: { gte: reminderCutoffDate }
-    }
+      lastReminderSentAt: { gte: reminderCutoffDate },
+    },
   });
 
   return {

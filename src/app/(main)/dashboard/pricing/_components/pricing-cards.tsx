@@ -14,10 +14,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 
 import { DowngradeFeedbackModal } from "./downgrade-feedback-modal";
-import {
-  buildPlanChangeCopy,
-  PlanChangeConfirmDialog,
-} from "./plan-change-confirm-dialog";
+import { PlanChangeConfirmDialog, buildPlanChangeCopy } from "./plan-change-confirm-dialog";
 
 import type { BillingInterval, Plan } from "@/lib/billing/plans";
 
@@ -73,9 +70,9 @@ export function PricingCards({ currentPlan, currentInterval }: PricingCardsProps
     kind: "switch" | "upgrade";
   } | null>(null);
 
-  const createCheckoutOrUpdateMutation = api.lemonsqueezy.createCheckoutOrUpdate.useMutation({
+  const createCheckoutOrUpdateMutation = api.stripe.createCheckoutOrUpdate.useMutation({
     onSuccess: (data) => {
-      if (data.status === "redirect" && data.url) {
+      if (data.url) {
         window.location.href = data.url;
       } else if (data.status === "updated") {
         trackEvent(POSTHOG_EVENTS.SUBSCRIPTION_UPGRADED, {
@@ -93,12 +90,10 @@ export function PricingCards({ currentPlan, currentInterval }: PricingCardsProps
     },
   });
 
-  const getSubscriptionDetails = api.lemonsqueezy.subscriptionDetails.useMutation({
+  const createPortalSession = api.stripe.createPortalSession.useMutation({
     onSuccess: (urls) => {
-      if (urls.customer_portal) {
-        window.location.href = urls.customer_portal;
-      } else if (urls.update_payment_method) {
-        window.location.href = urls.update_payment_method;
+      if (urls.url) {
+        window.location.href = urls.url;
       }
       setLoadingPlan(null);
     },
@@ -132,7 +127,7 @@ export function PricingCards({ currentPlan, currentInterval }: PricingCardsProps
 
   const handleManageSubscription = (planId: Plan) => {
     setLoadingPlan(planId);
-    getSubscriptionDetails.mutate();
+    createPortalSession.mutate();
   };
 
   const getPlanOrder = (plan: Plan) => {

@@ -5,7 +5,7 @@ import { Link } from "next-view-transitions";
 import { useRef } from "react";
 import { toast } from "sonner";
 
-import { BIO_PRESET_OPTIONS, BIO_PRESETS, resolveBioTheme } from "@/components/bio/theme";
+import { BIO_PRESETS, BIO_PRESET_OPTIONS, resolveBioTheme } from "@/components/bio/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +20,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Plan } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
-import { api } from "@/trpc/react";
 import type { BioPageTheme } from "@/server/db/types";
+import { api } from "@/trpc/react";
 
 export type BioSettingsDraft = {
   slug: string;
@@ -195,10 +195,7 @@ export function SettingsPanel({ value, onChange, plan, onSave, saving }: Props) 
                 )}
                 style={{ background: preset.background, color: preset.text }}
               >
-                <span
-                  className="h-4 w-10 rounded-full"
-                  style={{ background: preset.accent }}
-                />
+                <span className="h-4 w-10 rounded-full" style={{ background: preset.accent }} />
                 {presetId}
               </button>
             );
@@ -256,8 +253,10 @@ export function SettingsPanel({ value, onChange, plan, onSave, saving }: Props) 
 
       {/* Branding */}
       <section className="space-y-3">
-        <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-foreground">Branding</h3>
-        <PaidRow label='Remove "Made with iShortn"' isPaid={isPaid}>
+        <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-foreground">
+          Branding
+        </h3>
+        <PaidRow label='Remove "Made with ClickPath"' isPaid={isPaid}>
           <Switch
             checked={value.removeBranding}
             disabled={!isPaid}
@@ -268,7 +267,9 @@ export function SettingsPanel({ value, onChange, plan, onSave, saving }: Props) 
 
       {/* Advanced */}
       <section className="space-y-4">
-        <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-foreground">Advanced</h3>
+        <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-foreground">
+          Advanced
+        </h3>
 
         <div className="space-y-1.5">
           <Label className="flex items-center gap-1.5">
@@ -295,7 +296,7 @@ export function SettingsPanel({ value, onChange, plan, onSave, saving }: Props) 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_DOMAIN}>
-                    None — use ishortn.ink/p/{value.slug || "your-handle"}
+                    None — use clickpath.analytai.in/p/{value.slug || "your-handle"}
                   </SelectItem>
                   {domainOptions.map((domain) => (
                     <SelectItem key={domain} value={domain}>

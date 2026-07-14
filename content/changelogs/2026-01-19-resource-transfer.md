@@ -2,15 +2,15 @@
 date: 2026-01-19T12:00:00
 version: 1.9.0
 title: Resource Transfer
-shortDesc: Move all your links, domains, and resources to another iShortn account
+shortDesc: Move all your links, domains, and resources to another ClickPath account
 category: new
 ---
 
-Need to move your work to a different account? Resource transfer lets you migrate everything—links, custom domains, QR codes, folders, tags, and more—to another iShortn account in one smooth operation.
+Need to move your work to a different account? Resource transfer lets you migrate everything—links, custom domains, QR codes, folders, tags, and more—to another ClickPath account in one smooth operation.
 
 ## What's new?
 
-You can now transfer all your personal workspace resources to any other iShortn user. The transfer process is secure, requiring the recipient to explicitly accept the transfer before anything moves.
+You can now transfer all your personal workspace resources to any other ClickPath user. The transfer process is secure, requiring the recipient to explicitly accept the transfer before anything moves.
 
 ### What gets transferred
 

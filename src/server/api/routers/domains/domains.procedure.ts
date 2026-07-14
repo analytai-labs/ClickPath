@@ -23,12 +23,15 @@ export const customDomainRouter = createTRPCRouter({
       if (!isUnlimitedDomains(plan)) {
         const caps = getPlanCaps(plan);
         const domainCount = await ctx.prisma.customDomain.count({
-          where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }
+          where:
+            ctx.workspace.type === "team"
+              ? { teamId: ctx.workspace.teamId }
+              : { userId: ctx.workspace.userId, teamId: null },
         });
 
         if (domainCount >= (caps.domainLimit ?? 0)) {
-           throw new Error(
-            `You have reached the limit of ${caps.domainLimit} custom domains for your plan. Please upgrade to add more.`
+          throw new Error(
+            `You have reached the limit of ${caps.domainLimit} custom domains for your plan. Please upgrade to add more.`,
           );
         }
       }
@@ -145,12 +148,14 @@ export const customDomainRouter = createTRPCRouter({
           await ctx.prisma.customDomain.updateMany({
             where: {
               domain,
-              ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+              ...(ctx.workspace.type === "team"
+                ? { teamId: ctx.workspace.teamId }
+                : { userId: ctx.workspace.userId, teamId: null }),
             },
             data: {
               status,
               verificationDetails: verificationDetails.challenges,
-            }
+            },
           });
         }
 
@@ -165,9 +170,11 @@ export const customDomainRouter = createTRPCRouter({
         await ctx.prisma.customDomain.updateMany({
           where: {
             domain,
-            ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null })
+            ...(ctx.workspace.type === "team"
+              ? { teamId: ctx.workspace.teamId }
+              : { userId: ctx.workspace.userId, teamId: null }),
           },
-          data: { status: "active" }
+          data: { status: "active" },
         });
 
         return {

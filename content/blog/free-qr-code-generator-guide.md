@@ -2,7 +2,7 @@
 title: "Free QR Code Generator: How to Create QR Codes for Your Business"
 description: "Create free QR codes for your business with built-in analytics. Learn how to use QR codes for marketing, menus, events, and more."
 date: "2026-03-03"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["qr code", "qr code generator", "marketing", "guide"]
 published: true
 ---
@@ -61,7 +61,7 @@ For any business application, dynamic QR codes are the better choice. They give 
 
 Creating a QR code is straightforward. Here is the process from start to finish.
 
-1. **Choose a QR code generator.** Look for a tool that supports dynamic codes with built-in analytics. A free QR code generator like iShortn lets you create codes without upfront costs.
+1. **Choose a QR code generator.** Look for a tool that supports dynamic codes with built-in analytics. A free QR code generator like ClickPath lets you create codes without upfront costs.
 2. **Enter your destination URL.** This is the page, menu, form, or file you want the code to link to.
 3. **Customize the design.** Adjust colors, add a logo, or change the shape of the pattern. Keep scannability as your top priority.
 4. **Download the QR code.** Export in a high-resolution format such as PNG or SVG. SVG is ideal for print because it scales without losing quality.
@@ -115,16 +115,16 @@ Pairing a QR code with a short link gives you:
 
 This combination is powerful for multichannel campaigns. Print the QR code on physical materials and share the same short link digitally, with all interactions tracked in one place.
 
-## How iShortn's QR Code Generator Works
+## How ClickPath's QR Code Generator Works
 
-iShortn provides a free QR code generator tightly integrated with its link shortening and analytics platform. Create a short link and generate a QR code for it directly from the dashboard. Every scan is tracked alongside link clicks, giving you a unified view of engagement.
+ClickPath provides a free QR code generator tightly integrated with its link shortening and analytics platform. Create a short link and generate a QR code for it directly from the dashboard. Every scan is tracked alongside link clicks, giving you a unified view of engagement.
 
 Customize your QR code's appearance with colors and your logo. All codes are dynamic by default, so you can update the destination URL at any time without regenerating the code. The analytics dashboard surfaces scan counts, geographic data, device breakdowns, and time-based trends in one place.
 
-Sign up for a free account at [ishortn.ink](https://ishortn.ink), create a short link, and generate your QR code. You will have a scannable, trackable code ready in under a minute.
+Sign up for a free account at [clickpath.analytai.in](https://clickpath.analytai.in), create a short link, and generate your QR code. You will have a scannable, trackable code ready in under a minute.
 
 ## Start Creating QR Codes for Your Business
 
 QR codes are a practical, cost-effective tool for connecting the physical and digital worlds. Whether you need a QR code for a restaurant menu, product packaging, event tickets, or a marketing campaign, the process is simple and the benefits are immediate.
 
-Use dynamic QR codes paired with short links to retain full control over your destinations and full visibility into scan data. A free QR code generator with built-in analytics, like iShortn, gives you everything you need to create, customize, and track QR codes without any upfront investment.
+Use dynamic QR codes paired with short links to retain full control over your destinations and full visibility into scan data. A free QR code generator with built-in analytics, like ClickPath, gives you everything you need to create, customize, and track QR codes without any upfront investment.

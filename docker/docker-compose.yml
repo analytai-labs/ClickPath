@@ -1,28 +1,27 @@
 version: "3.8"
 
-name: ishortn
+name: clickpath
 services:
   database:
-    image: mysql:latest
-    container_name: ishortn_db
+    image: postgres:16-alpine
+    container_name: clickpath_db
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=ishortn_rewrite
-      - MYSQL_USER=ishortn
-      - MYSQL_PASSWORD=ishortn
+      - POSTGRES_DB=clickpath
+      - POSTGRES_USER=clickpath
+      - POSTGRES_PASSWORD=clickpath
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - ishortndb:/var/lib/postgresql/data
+      - clickpathdb:/var/lib/postgresql/data
 
   cache:
     image: redis:latest
-    container_name: ishortn_cache
+    container_name: clickpath_cache
     ports:
       - "6379:6379"
     volumes:
-      - ishortncache:/var/lib/redis/data
+      - clickpathcache:/var/lib/redis/data
 
 volumes:
-  ishortndb:
-  ishortncache:
+  clickpathdb:
+  clickpathcache:

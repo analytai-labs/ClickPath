@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { PLATFORM_DOMAINS } from "@/lib/constants/domains";
 
-export function isValidUrlAndNotIshortn(url: string) {
+export function isValidUrlAndNotClickPath(url: string) {
   const urlSchema = z.string().url();
   const result = urlSchema.safeParse(url);
   if (!result.success) return false;

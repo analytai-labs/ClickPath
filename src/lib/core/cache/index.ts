@@ -81,7 +81,8 @@ const linkSchema = z.object({
   blockedReason: z.string().nullable().default(null),
 });
 
-export const redis = new Redis(env.REDIS_URL, {
+export const redis = new Redis(env.REDIS_URL || "redis://localhost:6379", {
+  lazyConnect: true,
   retryStrategy: (times: number) => Math.min(times * 50, 2000),
   enableOfflineQueue: true,
   maxRetriesPerRequest: 3,
@@ -184,9 +185,7 @@ const geoRuleSchema = z.object({
 
 type CachedGeoRule = z.infer<typeof geoRuleSchema>;
 
-async function getGeoRulesFromCache(
-  linkId: number,
-): Promise<CachedGeoRule[] | null> {
+async function getGeoRulesFromCache(linkId: number): Promise<CachedGeoRule[] | null> {
   try {
     const key = `${GEO_RULES_CACHE_PREFIX}${linkId}`;
     const cached = await redis.get(key);

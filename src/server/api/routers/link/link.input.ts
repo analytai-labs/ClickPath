@@ -88,7 +88,7 @@ export const geoRuleInputSchema = z
     {
       message: "Destination URL is required for redirect action",
       path: ["destination"],
-    }
+    },
   );
 
 export const createLinkSchema = z.object({

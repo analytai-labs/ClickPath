@@ -1,11 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { IconBan } from "@tabler/icons-react";
 import { Funnel_Sans } from "next/font/google";
 
-import { cn } from "@/lib/utils";
-import { prisma } from "@/server/db";
 import { ChangelogBanner } from "@/components/changelog/changelog-banner";
 import { ChangelogToast } from "@/components/changelog/changelog-toast";
+import { cn } from "@/lib/utils";
+import { prisma } from "@/server/db";
 
 import { DashboardNav } from "./_components/navigation/header";
 import { SidebarWrapper } from "./_components/navigation/sidebar-wrapper";
@@ -26,9 +26,9 @@ export default async function DashboardLayout({ children }: Props) {
   const session = await auth();
   let isAdmin = false;
 
-  if (session?.userId) {
+  if (session?.user?.id) {
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.userId },
+      where: { id: session.user.id },
       select: { banned: true, bannedReason: true, isAdmin: true },
     });
 
@@ -36,7 +36,12 @@ export default async function DashboardLayout({ children }: Props) {
 
     if (currentUser?.banned) {
       return (
-        <div className={cn("flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-accent/50 px-4", funnelSans.className)}>
+        <div
+          className={cn(
+            "flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-accent/50 px-4",
+            funnelSans.className,
+          )}
+        >
           <div className="w-full max-w-md text-center">
             <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-500/10">
               <IconBan size={24} stroke={1.5} className="text-red-600 dark:text-red-400" />
@@ -49,14 +54,21 @@ export default async function DashboardLayout({ children }: Props) {
             </p>
             {currentUser.bannedReason && (
               <div className="mt-5 rounded-lg border border-neutral-200 dark:border-border bg-white dark:bg-card px-4 py-3">
-                <p className="text-[12px] font-medium text-neutral-400 dark:text-neutral-500">Reason</p>
-                <p className="mt-1 text-[13px] text-neutral-700 dark:text-neutral-300">{currentUser.bannedReason}</p>
+                <p className="text-[12px] font-medium text-neutral-400 dark:text-neutral-500">
+                  Reason
+                </p>
+                <p className="mt-1 text-[13px] text-neutral-700 dark:text-neutral-300">
+                  {currentUser.bannedReason}
+                </p>
               </div>
             )}
             <p className="mt-6 text-[12px] text-neutral-400 dark:text-neutral-500">
               If you believe this is a mistake, please contact us at{" "}
-              <a href="mailto:support@ishortn.ink" className="text-neutral-600 dark:text-neutral-400 underline underline-offset-2">
-                support@ishortn.ink
+              <a
+                href="mailto:support@clickpath.analytai.in"
+                className="text-neutral-600 dark:text-neutral-400 underline underline-offset-2"
+              >
+                support@clickpath.analytai.in
               </a>
             </p>
             <div className="mt-8">

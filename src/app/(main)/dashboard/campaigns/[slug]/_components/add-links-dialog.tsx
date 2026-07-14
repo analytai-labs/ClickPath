@@ -38,10 +38,7 @@ export function AddLinksDialog({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [applyUtmDefaults, setApplyUtmDefaults] = useState(campaign.canUseUtmDefaults);
 
-  const memberIds = useMemo(
-    () => new Set(campaign.links.map((l) => l.id)),
-    [campaign.links],
-  );
+  const memberIds = useMemo(() => new Set(campaign.links.map((l) => l.id)), [campaign.links]);
 
   const candidatesQuery = api.campaign.linkCandidates.useQuery(undefined, {
     enabled: open,
@@ -130,7 +127,9 @@ export function AddLinksDialog({
               </div>
             ) : candidates.length === 0 ? (
               <p className="p-4 text-center text-[13px] text-neutral-400 dark:text-neutral-500">
-                {search ? "Nothing matches your search." : "Everything is already in this campaign."}
+                {search
+                  ? "Nothing matches your search."
+                  : "Everything is already in this campaign."}
               </p>
             ) : (
               candidates.map((candidate) => {

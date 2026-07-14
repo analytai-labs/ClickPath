@@ -53,7 +53,7 @@ export const subscriptionsRouter = createTRPCRouter({
           where: {
             userId: userId,
             teamId: null,
-          }
+          },
         }),
       ]);
 
@@ -65,7 +65,7 @@ export const subscriptionsRouter = createTRPCRouter({
       const folderCountResult = await prisma.folder.count({
         where: {
           teamId: ctx.workspace.teamId,
-        }
+        },
       });
 
       folderCount = folderCountResult;

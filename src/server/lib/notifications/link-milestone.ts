@@ -1,4 +1,5 @@
 import LinkMilestoneEmail from "@/emails/link-milestone";
+import { EMAIL_SENDER } from "@/lib/constants/app";
 import { logger } from "@/lib/logger";
 
 import { resend } from "./resend-client";
@@ -26,7 +27,7 @@ export async function sendLinkMilestoneEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: email,
       subject: `Your link "${linkName || linkAlias}" hit ${milestone.toLocaleString()} clicks`,
       react: LinkMilestoneEmail({
@@ -38,9 +39,6 @@ export async function sendLinkMilestoneEmail({
       }),
     });
   } catch (error) {
-    log.error(
-      { err: error, email, linkAlias, milestone },
-      "failed to send link milestone email",
-    );
+    log.error({ err: error, email, linkAlias, milestone }, "failed to send link milestone email");
   }
 }

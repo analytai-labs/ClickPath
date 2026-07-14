@@ -26,7 +26,7 @@ export async function cleanupExpiredData(): Promise<ExpiredDataCleanupResult> {
   // Calculate cutoff date for invalid domains
   const invalidDomainCutoffDate = new Date();
   invalidDomainCutoffDate.setDate(
-    invalidDomainCutoffDate.getDate() - INVALID_DOMAIN_RETENTION_DAYS
+    invalidDomainCutoffDate.getDate() - INVALID_DOMAIN_RETENTION_DAYS,
   );
 
   // Delete expired team invites (expiresAt has passed and not accepted)
@@ -34,7 +34,7 @@ export async function cleanupExpiredData(): Promise<ExpiredDataCleanupResult> {
     where: {
       expiresAt: { lt: now },
       acceptedAt: null,
-    }
+    },
   });
   result.expiredInvitesDeleted = expiredInvitesResult.count;
 
@@ -43,8 +43,8 @@ export async function cleanupExpiredData(): Promise<ExpiredDataCleanupResult> {
   const invalidDomainsResult = await prisma.customDomain.deleteMany({
     where: {
       status: "invalid",
-      createdAt: { lt: invalidDomainCutoffDate }
-    }
+      createdAt: { lt: invalidDomainCutoffDate },
+    },
   });
   result.invalidDomainsDeleted = invalidDomainsResult.count;
 
@@ -59,7 +59,7 @@ export async function getExpiredDataCleanupStats() {
 
   const invalidDomainCutoffDate = new Date();
   invalidDomainCutoffDate.setDate(
-    invalidDomainCutoffDate.getDate() - INVALID_DOMAIN_RETENTION_DAYS
+    invalidDomainCutoffDate.getDate() - INVALID_DOMAIN_RETENTION_DAYS,
   );
 
   // Count expired invites
@@ -67,15 +67,15 @@ export async function getExpiredDataCleanupStats() {
     where: {
       expiresAt: { lt: now },
       acceptedAt: null,
-    }
+    },
   });
 
   // Count invalid domains older than retention period
   const invalidDomains = await prisma.customDomain.count({
     where: {
       status: "invalid",
-      createdAt: { lt: invalidDomainCutoffDate }
-    }
+      createdAt: { lt: invalidDomainCutoffDate },
+    },
   });
 
   // Count all pending invites (not yet expired)
@@ -83,7 +83,7 @@ export async function getExpiredDataCleanupStats() {
     where: {
       expiresAt: { gte: now },
       acceptedAt: null,
-    }
+    },
   });
 
   return {

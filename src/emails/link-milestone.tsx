@@ -20,15 +20,17 @@ export const LinkMilestoneEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Your link &quot;{displayName}&quot; just hit {milestone.toLocaleString()} clicks</Preview>
+      <Preview>
+        Your link &quot;{displayName}&quot; just hit {milestone.toLocaleString()} clicks
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={section}>
             <Text style={text}>Hi {userName || "there"},</Text>
 
             <Text style={text}>
-              Your link <strong>{displayName}</strong> (ishortn.ink/{linkAlias}) just reached{" "}
-              <strong>{totalClicks.toLocaleString()} clicks</strong>, passing your{" "}
+              Your link <strong>{displayName}</strong> (clickpath.analytai.in/{linkAlias}) just
+              reached <strong>{totalClicks.toLocaleString()} clicks</strong>, passing your{" "}
               {milestone.toLocaleString()}-click milestone.
             </Text>
 
@@ -36,8 +38,8 @@ export const LinkMilestoneEmail = ({
               You can view detailed analytics for this link in your dashboard.
             </Text>
 
-            <Text style={text}>Thanks for using iShortn!</Text>
-            <Text style={{ ...text, fontWeight: 500 }}>Kelvin & the iShortn team</Text>
+            <Text style={text}>Thanks for using ClickPath!</Text>
+            <Text style={{ ...text, fontWeight: 500 }}>The ClickPath team</Text>
           </Section>
         </Container>
       </Body>

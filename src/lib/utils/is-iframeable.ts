@@ -34,7 +34,7 @@ export async function isIframeable({
       method: "GET",
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; iShortn/1.0; +https://ishortn.ink)",
+        "User-Agent": "Mozilla/5.0 (compatible; ClickPath/1.0; +https://clickpath.analytai.in)",
       },
       redirect: "follow",
     });

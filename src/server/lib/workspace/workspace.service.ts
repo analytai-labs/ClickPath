@@ -1,25 +1,25 @@
+import type { PrismaClient, Team } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { PrismaClient, Team } from "@prisma/client";
 
 import { resolvePlan } from "@/lib/billing/plans";
 import { extractPlatformSubdomain } from "@/lib/constants/domains";
 import { prisma } from "@/server/db";
 import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 
-import type { WorkspaceContext, PersonalWorkspaceContext, TeamWorkspaceContext } from "./types";
+import type { PersonalWorkspaceContext, TeamWorkspaceContext, WorkspaceContext } from "./types";
 
 type DbClient = PrismaClient;
 
 /**
  * Extracts the subdomain from a hostname.
  *
- * Any catalogue platform domain is accepted, so `acme.isht.ink` and
- * `acme.ishortn.ink` both resolve to team slug `acme`.
+ * Any catalogue platform domain is accepted, so `acme.clk.path` and
+ * `acme.clickpath.analytai.in` both resolve to team slug `acme`.
  *
  * Examples:
- * - "acme.isht.ink" -> "acme"
- * - "acme.ishortn.ink" -> "acme"
- * - "isht.ink" -> null
+ * - "acme.clk.path" -> "acme"
+ * - "acme.clickpath.analytai.in" -> "acme"
+ * - "clk.path" -> null
  * - "localhost:3000" -> null
  * - "acme.localhost:3000" -> "acme" (for local development)
  *
@@ -63,7 +63,7 @@ export function extractSubdomain(hostname: string): string | null {
 export async function resolveWorkspaceContext(
   userId: string,
   hostname: string,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<WorkspaceContext> {
   const subdomain = extractSubdomain(hostname);
 
@@ -81,7 +81,7 @@ export async function resolveWorkspaceContext(
  */
 async function getPersonalWorkspaceContext(
   userId: string,
-  dbClient: DbClient
+  dbClient: DbClient,
 ): Promise<PersonalWorkspaceContext> {
   // Fetch user with subscription to determine plan
   const userRecord = await dbClient.user.findFirst({
@@ -116,7 +116,7 @@ async function getPersonalWorkspaceContext(
 async function getTeamWorkspaceContext(
   userId: string,
   teamSlug: string,
-  dbClient: DbClient
+  dbClient: DbClient,
 ): Promise<TeamWorkspaceContext> {
   // Fetch team by slug (exclude soft-deleted teams)
   const teamRecord = await dbClient.team.findFirst({
@@ -160,7 +160,7 @@ async function getTeamWorkspaceContext(
 export async function getTeamWorkspaceContextById(
   userId: string,
   teamId: number,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<TeamWorkspaceContext> {
   // Fetch team by ID (exclude soft-deleted teams)
   const teamRecord = await dbClient.team.findFirst({
@@ -204,7 +204,7 @@ export async function getTeamWorkspaceContextById(
  */
 export async function userHasUltraPlan(
   userId: string,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<boolean> {
   const userRecord = await dbClient.user.findFirst({
     where: { id: userId },
@@ -226,7 +226,7 @@ export async function userHasUltraPlan(
  */
 export async function getUserTeams(
   userId: string,
-  dbClient: DbClient = prisma
+  dbClient: DbClient = prisma,
 ): Promise<Array<{ team: Team; role: string }>> {
   const memberships = await dbClient.teamMember.findMany({
     where: { userId: userId },

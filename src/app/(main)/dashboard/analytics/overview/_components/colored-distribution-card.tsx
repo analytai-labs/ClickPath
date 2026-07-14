@@ -65,7 +65,8 @@ export function ColoredDistributionCard({
         ) : (
           sortedItems.map((item) => {
             const percentage = maxClicks > 0 ? (item.clicks / maxClicks) * 100 : 0;
-            const percentOfTotal = totalClicks > 0 ? ((item.clicks / totalClicks) * 100).toFixed(0) : "0";
+            const percentOfTotal =
+              totalClicks > 0 ? ((item.clicks / totalClicks) * 100).toFixed(0) : "0";
 
             return (
               <div
@@ -76,7 +77,7 @@ export function ColoredDistributionCard({
                 <div
                   className={cn(
                     "absolute inset-y-0 left-0 rounded-lg transition-all duration-300 ease-out",
-                    colorMap[color].bg
+                    colorMap[color].bg,
                   )}
                   style={{ width: `${percentage}%` }}
                 />
@@ -113,11 +114,7 @@ type TabSwitcherProps = {
   onChangeView: (view: string) => void;
 };
 
-export function TabSwitcher({
-  currentView,
-  views,
-  onChangeView,
-}: TabSwitcherProps) {
+export function TabSwitcher({ currentView, views, onChangeView }: TabSwitcherProps) {
   return (
     <div className="mb-4 flex items-center gap-1 border-b border-neutral-100 dark:border-border/50 pb-2">
       {views.map((name) => (
@@ -128,7 +125,7 @@ export function TabSwitcher({
             "relative rounded-md px-3 py-1.5 text-[12px] font-medium transition-all duration-150",
             currentView === name.toLowerCase()
               ? "bg-neutral-100 dark:bg-muted text-neutral-900 dark:text-foreground"
-              : "text-neutral-400 dark:text-neutral-500 hover:bg-neutral-50 dark:hover:bg-accent/50 hover:text-neutral-600 dark:hover:text-neutral-300"
+              : "text-neutral-400 dark:text-neutral-500 hover:bg-neutral-50 dark:hover:bg-accent/50 hover:text-neutral-600 dark:hover:text-neutral-300",
           )}
         >
           {name.charAt(0).toUpperCase() + name.slice(1)}

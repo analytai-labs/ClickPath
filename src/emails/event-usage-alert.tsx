@@ -40,8 +40,8 @@ export const EventUsageAlertEmail = ({
               If this doesn&apos;t look right, reply to this email and we&apos;ll help out.
             </Text>
 
-            <Text style={text}>Thanks for using iShortn!</Text>
-            <Text style={{ ...text, fontWeight: 500 }}>Kelvin & the iShortn team</Text>
+            <Text style={text}>Thanks for using ClickPath!</Text>
+            <Text style={{ ...text, fontWeight: 500 }}>The ClickPath team</Text>
           </Section>
         </Container>
       </Body>

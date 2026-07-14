@@ -1,12 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  IconCheck,
-  IconLoader2,
-  IconSettings,
-  IconX,
-} from "@tabler/icons-react";
+import { IconCheck, IconLoader2, IconSettings, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -25,13 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { APP_BASE_DOMAIN, getAppBaseDomain } from "@/lib/constants/domains";
 import { api } from "@/trpc/react";
@@ -47,10 +36,7 @@ const updateSlugSchema = z.object({
     .string()
     .min(3, "Team URL must be at least 3 characters")
     .max(50)
-    .regex(
-      slugRegex,
-      "Only lowercase letters, numbers, and hyphens allowed"
-    ),
+    .regex(slugRegex, "Only lowercase letters, numbers, and hyphens allowed"),
 });
 
 type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
@@ -66,13 +52,10 @@ export default function TeamSettingsPage() {
   });
 
   const isTeamWorkspace = currentWorkspace.data?.type === "team";
-  const isOwner =
-    currentWorkspace.data?.type === "team" &&
-    currentWorkspace.data?.role === "owner";
+  const isOwner = currentWorkspace.data?.type === "team" && currentWorkspace.data?.role === "owner";
   const isAdmin =
     currentWorkspace.data?.type === "team" &&
-    (currentWorkspace.data?.role === "owner" ||
-      currentWorkspace.data?.role === "admin");
+    (currentWorkspace.data?.role === "owner" || currentWorkspace.data?.role === "admin");
 
   const teamForm = useForm<UpdateTeamInput>({
     resolver: zodResolver(updateTeamSchema),
@@ -102,10 +85,8 @@ export default function TeamSettingsPage() {
     { slug: debouncedSlug },
     {
       enabled:
-        !!debouncedSlug &&
-        debouncedSlug.length >= 3 &&
-        debouncedSlug !== teamData.data?.slug,
-    }
+        !!debouncedSlug && debouncedSlug.length >= 3 && debouncedSlug !== teamData.data?.slug,
+    },
   );
 
   const baseDomain = getAppBaseDomain();
@@ -179,7 +160,11 @@ export default function TeamSettingsPage() {
   if (currentWorkspace.isLoading || teamData.isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <IconLoader2 size={20} stroke={1.5} className="animate-spin text-neutral-400 dark:text-neutral-500" />
+        <IconLoader2
+          size={20}
+          stroke={1.5}
+          className="animate-spin text-neutral-400 dark:text-neutral-500"
+        />
       </div>
     );
   }
@@ -226,10 +211,7 @@ export default function TeamSettingsPage() {
           </h2>
           <div className="rounded-xl border border-neutral-200 dark:border-border p-5">
             <Form {...teamForm}>
-              <form
-                onSubmit={teamForm.handleSubmit(onUpdateTeam)}
-                className="space-y-4"
-              >
+              <form onSubmit={teamForm.handleSubmit(onUpdateTeam)} className="space-y-4">
                 <FormField
                   control={teamForm.control}
                   name="name"
@@ -277,10 +259,7 @@ export default function TeamSettingsPage() {
             </h2>
             <div className="rounded-xl border border-neutral-200 dark:border-border p-5">
               <Form {...slugForm}>
-                <form
-                  onSubmit={slugForm.handleSubmit(onUpdateSlug)}
-                  className="space-y-4"
-                >
+                <form onSubmit={slugForm.handleSubmit(onUpdateSlug)} className="space-y-4">
                   <FormField
                     control={slugForm.control}
                     name="slug"
@@ -298,9 +277,7 @@ export default function TeamSettingsPage() {
                               placeholder="acme"
                               className="h-9 rounded-none border-x-0 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
                               {...field}
-                              onChange={(e) =>
-                                field.onChange(e.target.value.toLowerCase())
-                              }
+                              onChange={(e) => field.onChange(e.target.value.toLowerCase())}
                             />
                             <span className="inline-flex h-9 items-center rounded-r-lg border border-l-0 border-neutral-200 dark:border-border bg-neutral-50 dark:bg-accent/50 px-3 text-[13px] text-neutral-400 dark:text-neutral-500">
                               .{APP_BASE_DOMAIN}
@@ -342,8 +319,7 @@ export default function TeamSettingsPage() {
                       disabled={
                         updateSlugMutation.isLoading ||
                         slugCheck.isLoading ||
-                        (debouncedSlug !== teamData.data?.slug &&
-                          !slugCheck.data?.available)
+                        (debouncedSlug !== teamData.data?.slug && !slugCheck.data?.available)
                       }
                       className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 dark:border-border px-4 py-2 text-[13px] font-medium text-neutral-700 dark:text-neutral-300 transition-colors hover:bg-neutral-50 dark:hover:bg-accent/50 disabled:opacity-50"
                     >
@@ -368,7 +344,9 @@ export default function TeamSettingsPage() {
             {!isOwner ? (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[13px] font-medium text-neutral-900 dark:text-foreground">Leave team</p>
+                  <p className="text-[13px] font-medium text-neutral-900 dark:text-foreground">
+                    Leave team
+                  </p>
                   <p className="mt-0.5 text-[12px] text-neutral-400 dark:text-neutral-500">
                     Remove yourself from this team.
                   </p>
@@ -415,7 +393,9 @@ export default function TeamSettingsPage() {
             ) : (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[13px] font-medium text-neutral-900 dark:text-foreground">Delete team</p>
+                  <p className="text-[13px] font-medium text-neutral-900 dark:text-foreground">
+                    Delete team
+                  </p>
                   <p className="mt-0.5 text-[12px] text-neutral-400 dark:text-neutral-500">
                     Permanently delete this team and all resources.
                   </p>
@@ -459,8 +439,7 @@ export default function TeamSettingsPage() {
                         onClick={handleDeleteTeam}
                         className="rounded-lg bg-red-600 text-[13px] text-white hover:bg-red-700"
                         disabled={
-                          deleteConfirmation !== teamData.data?.name ||
-                          deleteTeamMutation.isLoading
+                          deleteConfirmation !== teamData.data?.name || deleteTeamMutation.isLoading
                         }
                       >
                         {deleteTeamMutation.isLoading ? (

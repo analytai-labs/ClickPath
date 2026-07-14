@@ -4,9 +4,7 @@ import { z } from "zod";
 export const geoRuleBaseSchema = z.object({
   type: z.enum(["country", "continent"]),
   condition: z.enum(["in", "not_in"]).default("in"),
-  values: z
-    .array(z.string().length(2).toUpperCase())
-    .min(1, "At least one value is required"),
+  values: z.array(z.string().length(2).toUpperCase()).min(1, "At least one value is required"),
   action: z.enum(["redirect", "block"]),
   destination: z.string().url().max(2048).optional().nullable(),
   blockMessage: z.string().max(500).optional().nullable(),
@@ -19,7 +17,7 @@ export const geoRuleInputSchema = geoRuleBaseSchema.refine(
   {
     message: "Destination URL is required for redirect actions",
     path: ["destination"],
-  }
+  },
 );
 
 // Schema for creating a geo rule

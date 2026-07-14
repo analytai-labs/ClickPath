@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 import {
-    createTRPCRouter,
-    protectedProcedure,
-    publicProcedure,
-    workspaceProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+  workspaceProcedure,
 } from "../../trpc";
 
 import * as inputs from "./link.input";
@@ -14,19 +14,17 @@ import * as transferServices from "./transfer.service";
 import type { PublicTRPCContext } from "../../trpc";
 
 export const linkRouter = createTRPCRouter({
-  retrieveOriginalUrl: publicProcedure
-    .input(inputs.retrieveOriginalUrlSchema)
-    .query(
-      ({
-        ctx,
-        input,
-      }: {
-        ctx: PublicTRPCContext;
-        input: inputs.RetrieveOriginalUrlInput;
-      }) => {
-        return services.retrieveOriginalUrl(ctx, input);
-      }
-    ),
+  retrieveOriginalUrl: publicProcedure.input(inputs.retrieveOriginalUrlSchema).query(
+    ({
+      ctx,
+      input,
+    }: {
+      ctx: PublicTRPCContext;
+      input: inputs.RetrieveOriginalUrlInput;
+    }) => {
+      return services.retrieveOriginalUrl(ctx, input);
+    },
+  ),
 
   list: workspaceProcedure
     .input(inputs.listLinksSchema)
@@ -35,40 +33,32 @@ export const linkRouter = createTRPCRouter({
       return services.getLinks(ctx, input);
     }),
 
-  get: workspaceProcedure
-    .input(inputs.getLinkSchema)
-    .query(({ ctx, input }) => {
-      return services.getLink(ctx, input);
-    }),
+  get: workspaceProcedure.input(inputs.getLinkSchema).query(({ ctx, input }) => {
+    return services.getLink(ctx, input);
+  }),
 
   getLinkByAlias: publicProcedure
     .input(
       z.object({
         alias: z.string(),
         domain: z.string(),
-      })
+      }),
     )
     .query(({ input }) => {
       return services.getLinkByAlias(input);
     }),
 
-  create: workspaceProcedure
-    .input(inputs.createLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.createLink(ctx, input);
-    }),
+  create: workspaceProcedure.input(inputs.createLinkSchema).mutation(({ ctx, input }) => {
+    return services.createLink(ctx, input);
+  }),
 
-  update: workspaceProcedure
-    .input(inputs.updateLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.updateLink(ctx, input);
-    }),
+  update: workspaceProcedure.input(inputs.updateLinkSchema).mutation(({ ctx, input }) => {
+    return services.updateLink(ctx, input);
+  }),
 
-  delete: workspaceProcedure
-    .input(inputs.getLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.deleteLink(ctx, input);
-    }),
+  delete: workspaceProcedure.input(inputs.getLinkSchema).mutation(({ ctx, input }) => {
+    return services.deleteLink(ctx, input);
+  }),
 
   quickShorten: workspaceProcedure
     .input(inputs.quickLinkShorteningSchema)
@@ -94,41 +84,31 @@ export const linkRouter = createTRPCRouter({
             "all",
           ])
           .default("7d"),
-      })
+      }),
     )
     .query(({ ctx, input }) => {
       return services.getLinkVisits(ctx, input);
     }),
 
-  allAnalytics: workspaceProcedure
-    .input(inputs.allAnalyticsSchema)
-    .query(({ ctx, input }) => {
-      return services.getAllUserAnalytics(ctx, input);
-    }),
+  allAnalytics: workspaceProcedure.input(inputs.allAnalyticsSchema).query(({ ctx, input }) => {
+    return services.getAllUserAnalytics(ctx, input);
+  }),
 
-  toggleLinkStatus: workspaceProcedure
-    .input(inputs.getLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.toggleLinkStatus(ctx, input);
-    }),
+  toggleLinkStatus: workspaceProcedure.input(inputs.getLinkSchema).mutation(({ ctx, input }) => {
+    return services.toggleLinkStatus(ctx, input);
+  }),
 
-  togglePublicStats: workspaceProcedure
-    .input(inputs.getLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.togglePublicStats(ctx, input);
-    }),
+  togglePublicStats: workspaceProcedure.input(inputs.getLinkSchema).mutation(({ ctx, input }) => {
+    return services.togglePublicStats(ctx, input);
+  }),
 
-  toggleArchive: workspaceProcedure
-    .input(inputs.ToggleArchiveInput)
-    .mutation(({ ctx, input }) => {
-      return services.toggleArchive(ctx, input);
-    }),
+  toggleArchive: workspaceProcedure.input(inputs.ToggleArchiveInput).mutation(({ ctx, input }) => {
+    return services.toggleArchive(ctx, input);
+  }),
 
-  resetLinkStatistics: workspaceProcedure
-    .input(inputs.getLinkSchema)
-    .mutation(({ ctx, input }) => {
-      return services.resetLinkStatistics(ctx, input);
-    }),
+  resetLinkStatistics: workspaceProcedure.input(inputs.getLinkSchema).mutation(({ ctx, input }) => {
+    return services.resetLinkStatistics(ctx, input);
+  }),
 
   verifyLinkPassword: protectedProcedure
     .input(inputs.verifyLinkPasswordSchema)

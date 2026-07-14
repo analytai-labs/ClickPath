@@ -1,11 +1,7 @@
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
-import {
-  createTRPCProxyClient,
-  loggerLink,
-  TRPCClientError
-} from "@trpc/client";
+import { auth } from "@/auth";
+import { TRPCClientError, createTRPCProxyClient, loggerLink } from "@trpc/client";
 import { callProcedure } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { headers } from "next/headers";
@@ -25,7 +21,7 @@ import type { TRPCErrorResponse } from "@trpc/server/rpc";
 const createContext = cache(async () => {
   const heads = new Headers(await headers());
   return createTRPCContext({
-    auth: await auth(),
+    auth: (await auth()) || null,
     headers: heads,
   });
 });

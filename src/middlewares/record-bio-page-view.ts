@@ -21,11 +21,13 @@ type RecordBioPageViewOptions = {
  * concurrent inserts silently collapse to a no-op.
  */
 async function recordUniqueView(ipHash: string, bioPageId: number) {
-  await prisma.uniqueBioPageView.create({
-    data: { ipHash, bioPageId }
-  }).catch(() => {
-    // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
-  });
+  await prisma.uniqueBioPageView
+    .create({
+      data: { ipHash, bioPageId },
+    })
+    .catch(() => {
+      // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
+    });
 }
 
 /**
@@ -73,7 +75,7 @@ export async function recordBioPageView(opts: RecordBioPageViewOptions): Promise
         country: countryName,
         city: cityName,
         continent: continentName,
-      }
+      },
     }),
     recordUniqueView(ipHash, bioPageId),
   ]);

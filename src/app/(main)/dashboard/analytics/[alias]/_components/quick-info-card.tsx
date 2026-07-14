@@ -13,10 +13,7 @@ type QuickInfoCardProps = {
 
 type GrowthDirection = "up" | "down" | "flat";
 
-const GROWTH_VARIANTS: Record<
-  GrowthDirection,
-  { icon: React.ReactNode; className: string }
-> = {
+const GROWTH_VARIANTS: Record<GrowthDirection, { icon: React.ReactNode; className: string }> = {
   up: {
     icon: <IconArrowUpRight size={12} stroke={2} />,
     className: "text-emerald-600 dark:text-emerald-400",

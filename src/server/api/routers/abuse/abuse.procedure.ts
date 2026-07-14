@@ -1,14 +1,14 @@
-import { TRPCError } from "@trpc/server";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { sendAbuseReportNotification } from "@/server/lib/notifications/discord";
+import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, publicProcedure } from "../../trpc";
 import { ABUSE_CATEGORY_LABELS, reportAbuseSchema } from "./abuse.input";
 
 /**
  * Parse a user-submitted short link into a domain + alias pair.
- * Accepts forms like `https://ishortn.ink/abc`, `ishortn.ink/abc`,
- * `www.ishortn.ink/abc!`, with optional query/fragment.
+ * Accepts forms like `https://clickpath.analytai.in/abc`, `clk.path/abc`,
+ * `www.clickpath.analytai.in/abc!`, with optional query/fragment.
  */
 function parseShortUrl(raw: string): { domain: string; alias: string } | null {
   let s = raw.trim().replace(/^(https?:\/\/)?(www\.)?/i, "");
@@ -31,7 +31,7 @@ export const abuseRouter = createTRPCRouter({
     if (!parsed) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "That doesn't look like a valid short link. Use a format like ishortn.ink/abc.",
+        message: "That doesn't look like a valid short link. Use a format like clk.path/abc.",
       });
     }
 

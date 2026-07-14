@@ -5,19 +5,19 @@ import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
-import {
-  insertHiddenTrackingLink,
-  prepareHiddenTrackingLink,
-} from "@/server/lib/tracking-link";
-import {
-  workspaceOwnership,
-} from "@/server/lib/workspace";
+import { insertHiddenTrackingLink, prepareHiddenTrackingLink } from "@/server/lib/tracking-link";
+import { workspaceOwnership } from "@/server/lib/workspace";
 
 import { updateLink } from "../link/link.service";
 
-import type { WorkspaceTRPCContext } from "../../trpc";
-import type { QRCodeInput, QRCodeUpdateInput, QRPresetCreateInput, QRPresetUpdateInput } from "./qrcode.input";
 import type { z } from "zod";
+import type { WorkspaceTRPCContext } from "../../trpc";
+import type {
+  QRCodeInput,
+  QRCodeUpdateInput,
+  QRPresetCreateInput,
+  QRPresetUpdateInput,
+} from "./qrcode.input";
 import type { qrcodeSaveImageInput } from "./qrcode.input";
 
 const log = logger.child({ component: "qrcode.service" });
@@ -80,11 +80,7 @@ export const createQrCode = userFacing(
         kind: "qr",
       });
     } catch (error) {
-      if (
-        error instanceof TRPCError &&
-        error.code === "FORBIDDEN" &&
-        /link/i.test(error.message)
-      ) {
+      if (error instanceof TRPCError && error.code === "FORBIDDEN" && /link/i.test(error.message)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message:
@@ -121,15 +117,14 @@ export const createQrCode = userFacing(
 export const saveQrCodeImage = userFacing(
   "saveQrCodeImage",
   "Something went wrong while saving your QR code image. Please try again.",
-  async (
-    ctx: WorkspaceTRPCContext,
-    input: z.infer<typeof qrcodeSaveImageInput>,
-  ) => {
+  async (ctx: WorkspaceTRPCContext, input: z.infer<typeof qrcodeSaveImageInput>) => {
     const record = await ctx.prisma.qrCode.findFirst({
       where: {
         id: input.id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
-      }
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
+      },
     });
 
     if (!record) {
@@ -147,19 +142,19 @@ export const saveQrCodeImage = userFacing(
 
     // Upload to R2
     try {
-      const imageUrl = await uploadImage(ctx, {
+      const image = await uploadImage(ctx, {
         image: input.qrCodeBase64,
         resourceId: input.id,
         imageType: "qr-code",
       });
 
-      if (imageUrl && imageUrl !== input.qrCodeBase64) {
+      if (image && image !== input.qrCodeBase64) {
         await ctx.prisma.qrCode.update({
           where: { id: input.id },
-          data: { qrCode: imageUrl },
+          data: { qrCode: image },
         });
 
-        return imageUrl;
+        return image;
       }
     } catch (error) {
       log.error({ err: error, qrCodeId: input.id }, "failed to upload QR code image to R2");
@@ -176,7 +171,9 @@ export const getQrCode = userFacing(
     const qrCode = await ctx.prisma.qrCode.findFirst({
       where: {
         id: id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
       include: {
         link: true,
@@ -199,7 +196,10 @@ export const retrieveUserQrCodes = userFacing(
   "Something went wrong while loading your QR codes. Please try again.",
   async (ctx: WorkspaceTRPCContext) => {
     const qrCodes = await ctx.prisma.qrCode.findMany({
-      where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null },
+      where:
+        ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null },
       include: {
         link: true,
       },
@@ -207,17 +207,19 @@ export const retrieveUserQrCodes = userFacing(
 
     // Get visit counts in a single aggregation query instead of loading all visit rows.
     // Combine raw visits with archived clicks rolled up by the analytics cleanup job.
-    const linkIds = qrCodes.map((qr) => qr.linkId).filter((id): id is number => id != null && id > 0);
+    const linkIds = qrCodes
+      .map((qr) => qr.linkId)
+      .filter((id): id is number => id != null && id > 0);
     const [visitCounts, archivedCounts] =
       linkIds.length > 0
         ? await Promise.all([
             ctx.prisma.linkVisit.groupBy({
-              by: ['linkId'],
+              by: ["linkId"],
               _count: true,
               where: { linkId: { in: linkIds } },
             }),
             ctx.prisma.linkVisitDailySummary.groupBy({
-              by: ['linkId'],
+              by: ["linkId"],
               _sum: { clicks: true },
               where: { linkId: { in: linkIds } },
             }),
@@ -243,7 +245,9 @@ export const deleteQrCode = userFacing(
     const qrCode = await ctx.prisma.qrCode.findFirst({
       where: {
         id: id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
       },
       include: { link: true },
     });
@@ -301,7 +305,9 @@ async function fetchQrCodeWithLink(ctx: WorkspaceTRPCContext, id: number) {
   const qrCode = await ctx.prisma.qrCode.findFirst({
     where: {
       id: id,
-      ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
+      ...(ctx.workspace.type === "team"
+        ? { teamId: ctx.workspace.teamId }
+        : { userId: ctx.workspace.userId, teamId: null }),
     },
     include: { link: true },
   });
@@ -419,7 +425,7 @@ export const createQrPreset = userFacing(
         logoSize: input.logoSize,
         logoMargin: input.logoMargin,
         logoBorderRadius: input.logoBorderRadius,
-      }
+      },
     });
 
     const insertedId = insertResult.id;
@@ -427,17 +433,17 @@ export const createQrPreset = userFacing(
     // Upload logo image to R2 if it's base64
     if (input.logoImage) {
       try {
-        const imageUrl = await uploadImage(ctx, {
+        const image = await uploadImage(ctx, {
           image: input.logoImage,
           resourceId: insertedId,
           imageType: "qr-logo",
         });
 
         // Update preset with the R2 URL if upload was successful and URL changed
-        if (imageUrl && imageUrl !== input.logoImage) {
+        if (image && image !== input.logoImage) {
           await ctx.prisma.qrPreset.update({
             where: { id: insertedId },
-            data: { logoImage: imageUrl },
+            data: { logoImage: image },
           });
         }
       } catch (error) {
@@ -460,7 +466,10 @@ export const listQrPresets = userFacing(
   "Something went wrong while loading your presets. Please try again.",
   async (ctx: WorkspaceTRPCContext) => {
     return ctx.prisma.qrPreset.findMany({
-      where: ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null },
+      where:
+        ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null },
       orderBy: { createdAt: "desc" },
     });
   },
@@ -473,8 +482,10 @@ export const deleteQrPreset = userFacing(
     const preset = await ctx.prisma.qrPreset.findFirst({
       where: {
         id: id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
-      }
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
+      },
     });
 
     if (!preset) {
@@ -509,8 +520,10 @@ export const updateQrPreset = userFacing(
     const preset = await ctx.prisma.qrPreset.findFirst({
       where: {
         id: input.id,
-        ...(ctx.workspace.type === "team" ? { teamId: ctx.workspace.teamId } : { userId: ctx.workspace.userId, teamId: null }),
-      }
+        ...(ctx.workspace.type === "team"
+          ? { teamId: ctx.workspace.teamId }
+          : { userId: ctx.workspace.userId, teamId: null }),
+      },
     });
 
     if (!preset) {
@@ -545,13 +558,13 @@ export const updateQrPreset = userFacing(
     } else {
       // New image provided - upload to R2
       try {
-        const imageUrl = await uploadImage(ctx, {
+        const image = await uploadImage(ctx, {
           image: input.logoImage,
           resourceId: input.id,
           imageType: "qr-logo",
         });
 
-        logoImageUrl = imageUrl ?? input.logoImage;
+        logoImageUrl = image ?? input.logoImage;
 
         // Delete old logo from R2 if it's being replaced
         if (preset.logoImage && preset.logoImage !== logoImageUrl) {

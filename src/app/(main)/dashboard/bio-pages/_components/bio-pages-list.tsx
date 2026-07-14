@@ -106,7 +106,10 @@ export function BioPagesList({ pages, bioPageLimit }: BioPagesListProps) {
                       {page.title || `/${page.slug}`}
                     </span>
                     {page.isPublished ? (
-                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                      >
                         Live
                       </Badge>
                     ) : (
@@ -114,7 +117,7 @@ export function BioPagesList({ pages, bioPageLimit }: BioPagesListProps) {
                     )}
                   </span>
                   <span className="mt-0.5 block truncate text-[12px] text-neutral-400 dark:text-neutral-500">
-                    ishortn.ink/p/{page.slug} · {page.blockCount}{" "}
+                    clickpath.analytai.in/p/{page.slug} · {page.blockCount}{" "}
                     {page.blockCount === 1 ? "block" : "blocks"}
                   </span>
                 </span>

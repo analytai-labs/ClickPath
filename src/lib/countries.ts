@@ -505,8 +505,7 @@ const ContinentNames = {
 };
 
 export function getContinentName(code: string): string {
-  const continentCode =
-    ContinentCodes[code.toUpperCase() as keyof typeof ContinentCodes];
+  const continentCode = ContinentCodes[code.toUpperCase() as keyof typeof ContinentCodes];
 
   if (!continentCode) {
     throw new Error(`"${code}" is an invalid ISO country code`);
@@ -524,9 +523,5 @@ export function getCountryFullName(code: string): string {
  * Unlike getContinentName, this returns null for invalid codes instead of throwing.
  */
 export function getCountryContinentCode(countryCode: string): string | null {
-  return (
-    ContinentCodes[
-      countryCode.toUpperCase() as keyof typeof ContinentCodes
-    ] ?? null
-  );
+  return ContinentCodes[countryCode.toUpperCase() as keyof typeof ContinentCodes] ?? null;
 }

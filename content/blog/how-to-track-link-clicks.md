@@ -2,7 +2,7 @@
 title: "How to Track Link Clicks: The Complete Guide to Link Analytics"
 description: "Learn how to track link clicks, measure campaign performance, and understand your audience with link analytics. Step-by-step guide with practical examples."
 date: "2026-03-05"
-author: "Kelvin Amoaba"
+author: "ClickPath Team"
 tags: ["link analytics", "click tracking", "marketing", "guide"]
 published: true
 ---
@@ -61,7 +61,7 @@ When someone clicks this link, your web analytics tool (such as Google Analytics
 
 URL shorteners solve the UTM ugliness problem while adding their own layer of tracking. When you create a short link, the shortener records data about every click before redirecting the visitor to the destination. This means you get click tracking without needing analytics installed on the destination page, which is particularly useful when linking to third-party sites you do not control.
 
-A short link like `ishortn.ink/spring26` is clean enough for any channel and automatically tracks clicks, locations, devices, referrers, and timestamps behind the scenes.
+A short link like `clickpath.analytai.in/spring26` is clean enough for any channel and automatically tracks clicks, locations, devices, referrers, and timestamps behind the scenes.
 
 ### Dedicated Link Analytics Platforms
 
@@ -77,7 +77,7 @@ Setting up link tracking with a URL shortener is straightforward. Here is a prac
 
 ### 1. Choose Your URL Shortener
 
-Pick a shortener that offers the analytics depth you need. At a minimum, look for click counts, geographic data, device breakdowns, and referrer tracking. Services like iShortn provide all of these out of the box.
+Pick a shortener that offers the analytics depth you need. At a minimum, look for click counts, geographic data, device breakdowns, and referrer tracking. Services like ClickPath provide all of these out of the box.
 
 ### 2. Create Your Destination URL
 
@@ -147,12 +147,12 @@ Be transparent with your audience about tracking. Link analytics tools typically
 
 Over time, your dashboard will accumulate links from past campaigns. Archive or organize old links so your active campaigns remain easy to find. A cluttered dashboard makes it harder to spot the insights that matter.
 
-## How iShortn Makes Link Tracking Simple
+## How ClickPath Makes Link Tracking Simple
 
-iShortn is designed to make click tracking accessible without requiring any technical setup. When you create a short link on iShortn, analytics are enabled automatically. Every click is recorded along with the visitor's location, device, browser, and referrer, and all of it is presented in a clean, real-time dashboard.
+ClickPath is designed to make click tracking accessible without requiring any technical setup. When you create a short link on ClickPath, analytics are enabled automatically. Every click is recorded along with the visitor's location, device, browser, and referrer, and all of it is presented in a clean, real-time dashboard.
 
 You can create custom-branded links that build trust with your audience, generate QR codes for offline use, and manage all of your links from a single workspace. If you work with a team, shared workspaces let everyone see link performance and collaborate on campaigns without needing separate accounts.
 
-For developers and teams with automated workflows, the iShortn API lets you create tracked links programmatically, making it easy to embed link analytics into your existing tools and processes.
+For developers and teams with automated workflows, the ClickPath API lets you create tracked links programmatically, making it easy to embed link analytics into your existing tools and processes.
 
-Getting started takes less than a minute. Sign up at [ishortn.ink](https://ishortn.ink), create your first short link, share it, and watch the data flow in. Every click tells you something about your audience. The question is whether you are listening.
+Getting started takes less than a minute. Sign up at [clickpath.analytai.in](https://clickpath.analytai.in), create your first short link, share it, and watch the data flow in. Every click tells you something about your audience. The question is whether you are listening.

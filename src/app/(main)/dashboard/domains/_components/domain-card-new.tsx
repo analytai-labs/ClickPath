@@ -1,14 +1,11 @@
 "use client";
 
+import { IconChevronDown, IconLink, IconTrash } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  IconChevronDown,
-  IconLink,
-  IconTrash,
-} from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { revalidateRoute } from "@/app/(main)/dashboard/revalidate-homepage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { revalidateRoute } from "@/app/(main)/dashboard/revalidate-homepage";
 import { POSTHOG_EVENTS, trackEvent } from "@/lib/analytics/events";
 import { daysSinceDate } from "@/lib/utils";
 import { api } from "@/trpc/react";
@@ -48,7 +44,7 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
   let verificationChallenges: VerificationDetails = [];
   try {
     verificationChallenges = JSON.parse(
-      (domain.verificationDetails as string) ?? "[]"
+      (domain.verificationDetails as string) ?? "[]",
     ) as VerificationDetails;
   } catch (_error) {
     verificationChallenges = domain.verificationDetails as VerificationDetails;
@@ -56,7 +52,7 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
 
   const { data: stats } = api.customDomain.getStats.useQuery(
     { domain: domain.domain! },
-    { enabled: !!domain.domain }
+    { enabled: !!domain.domain },
   );
 
   const deleteMutation = api.customDomain.delete.useMutation({
@@ -72,9 +68,7 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
     },
   });
 
-  const handleStatusChange = async (
-    newStatus: "pending" | "active" | "invalid"
-  ) => {
+  const handleStatusChange = async (newStatus: "pending" | "active" | "invalid") => {
     setStatus(newStatus);
     if (newStatus === "active" || newStatus === "invalid") {
       await revalidateRoute("/dashboard/domains");
@@ -91,8 +85,7 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
     invalid: { color: "bg-red-500", label: "Invalid" },
   };
 
-  const currentStatus =
-    statusConfig[status as keyof typeof statusConfig] ?? statusConfig.pending;
+  const currentStatus = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.pending;
 
   return (
     <motion.div
@@ -110,18 +103,14 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
                 {domain.domain}
               </span>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
-                <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${currentStatus.color}`}
-                />
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${currentStatus.color}`} />
                 {currentStatus.label}
               </span>
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px]">
               <span className="text-neutral-400 dark:text-neutral-500">
-                {daysSinceCreation === 0
-                  ? "Today"
-                  : `${daysSinceCreation}d`}
+                {daysSinceCreation === 0 ? "Today" : `${daysSinceCreation}d`}
               </span>
               <span className="text-neutral-300">&middot;</span>
               <span className="inline-flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
@@ -181,9 +170,7 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
                     onStatusChange={handleStatusChange}
                   />
                 </div>
-                <DNSRecordsSection
-                  verificationChallenges={verificationChallenges}
-                />
+                <DNSRecordsSection verificationChallenges={verificationChallenges} />
               </div>
             </motion.div>
           )}
@@ -193,18 +180,14 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[14px]">
-              Delete domain
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-[14px]">Delete domain</AlertDialogTitle>
             <AlertDialogDescription className="text-[12px]">
-              This will permanently delete {domain.domain} and all associated
-              links. This action cannot be undone.
+              This will permanently delete {domain.domain} and all associated links. This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="h-9 text-[13px]">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel className="h-9 text-[13px]">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteMutation.mutate({ id: domain.id })}
               className="h-9 bg-red-600 text-[13px] hover:bg-red-700"

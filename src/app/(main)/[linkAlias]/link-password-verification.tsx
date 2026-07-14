@@ -41,10 +41,8 @@ export const LinkPasswordVerification = ({ id }: { id: number }) => {
   };
 
   return (
-    <div
-      className={`flex h-screen flex-col items-center justify-center ${satoshi.className}`}
-    >
-      <h1 className="mb-10 text-4xl font-bold">iShortn</h1>
+    <div className={`flex h-screen flex-col items-center justify-center ${satoshi.className}`}>
+      <h1 className="mb-10 text-4xl font-bold">ClickPath</h1>
 
       <h1 className="text-2xl font-bold">This link is password protected</h1>
       <form

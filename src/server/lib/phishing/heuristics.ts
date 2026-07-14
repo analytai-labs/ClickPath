@@ -26,7 +26,7 @@ const HOMOGLYPH_MAP: Record<string, string> = {
   "1": "l",
   "!": "i",
   "@": "a",
-  "$": "s",
+  $: "s",
   "3": "e",
   "4": "a",
   "5": "s",

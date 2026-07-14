@@ -1,4 +1,5 @@
 import EventUsageAlertEmail from "@/emails/event-usage-alert";
+import { EMAIL_SENDER } from "@/lib/constants/app";
 import { logger } from "@/lib/logger";
 
 import type { Plan } from "@/lib/billing/plans";
@@ -28,7 +29,7 @@ export async function sendEventUsageEmail({
 
   try {
     await resend.emails.send({
-      from: "Kelvin from iShortn <kelvin@ishortn.ink>",
+      from: EMAIL_SENDER,
       to: email,
       subject: `You're ${threshold}% through your monthly analytics cap`,
       react: EventUsageAlertEmail({
@@ -40,9 +41,6 @@ export async function sendEventUsageEmail({
       }),
     });
   } catch (error) {
-    log.error(
-      { err: error, email, threshold, plan },
-      "failed to send event usage email",
-    );
+    log.error({ err: error, email, threshold, plan }, "failed to send event usage email");
   }
 }

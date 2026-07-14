@@ -5,17 +5,15 @@ import { workspaceOwnership } from "@/server/lib/workspace";
 import type { WorkspaceContext } from "@/server/lib/workspace";
 
 import type { WorkspaceTRPCContext } from "../../trpc";
-import type {
-  CreateUtmTemplateInput,
-  UpdateUtmTemplateInput,
-} from "./utm-template.input";
+import type { CreateUtmTemplateInput, UpdateUtmTemplateInput } from "./utm-template.input";
 
 const ensureUltraPlan = (ctx: WorkspaceTRPCContext) => {
   // Use workspace plan - team workspaces inherit Ultra features
   if (ctx.workspace.plan !== "ultra") {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "UTM templates are only available on the Ultra plan. Please upgrade to use this feature.",
+      message:
+        "UTM templates are only available on the Ultra plan. Please upgrade to use this feature.",
     });
   }
 };
@@ -33,10 +31,7 @@ export const getUserUtmTemplates = async (ctx: WorkspaceTRPCContext) => {
   });
 };
 
-export const getUtmTemplateById = async (
-  ctx: WorkspaceTRPCContext,
-  id: number
-) => {
+export const getUtmTemplateById = async (ctx: WorkspaceTRPCContext, id: number) => {
   return prisma.utmTemplate.findFirst({
     where: {
       id,
@@ -47,7 +42,7 @@ export const getUtmTemplateById = async (
 
 export const createUtmTemplate = async (
   ctx: WorkspaceTRPCContext,
-  input: CreateUtmTemplateInput
+  input: CreateUtmTemplateInput,
 ) => {
   ensureUltraPlan(ctx);
 
@@ -71,7 +66,7 @@ export const createUtmTemplate = async (
 
 export const updateUtmTemplate = async (
   ctx: WorkspaceTRPCContext,
-  input: UpdateUtmTemplateInput
+  input: UpdateUtmTemplateInput,
 ) => {
   ensureUltraPlan(ctx);
 
@@ -99,10 +94,7 @@ export const updateUtmTemplate = async (
   return updated;
 };
 
-export const deleteUtmTemplate = async (
-  ctx: WorkspaceTRPCContext,
-  id: number
-) => {
+export const deleteUtmTemplate = async (ctx: WorkspaceTRPCContext, id: number) => {
   ensureUltraPlan(ctx);
 
   const existing = await prisma.utmTemplate.findFirst({
