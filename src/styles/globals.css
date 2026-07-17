@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 6%;
 
-    --primary: 217.2 91.2% 53.3%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 5% 96%;
@@ -30,11 +30,11 @@
 
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 240 5% 65%;
+    --ring: 262.1 83.3% 57.8%;
 
     --radius: 0.625rem;
 
-    --chart-1: 12 76% 61%;
+    --chart-1: 262.1 83.3% 57.8%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
@@ -62,7 +62,7 @@
     --popover-foreground: 213 10% 90%;
 
     /* Keep blue primary — brand identity stays in dark mode */
-    --primary: 217 91% 60%;
+    --primary: 263.4 70% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 13% 17%;
@@ -79,9 +79,9 @@
 
     --border: 222 13% 19%;
     --input: 222 13% 19%;
-    --ring: 217 91% 60%;
+    --ring: 263.4 70% 65%;
 
-    --chart-1: 217 80% 56%;
+    --chart-1: 263.4 70% 65%;
     --chart-2: 160 55% 48%;
     --chart-3: 30 75% 58%;
     --chart-4: 270 60% 62%;
@@ -166,7 +166,7 @@
 }
 
 .dark ::selection {
-  @apply bg-blue-500/30 text-white;
+  @apply bg-violet-500/30 text-white;
 }
 
 /* Smooth scroll */
@@ -228,6 +228,8 @@ html {
   --warm-cream: #fcecd4;
   --warm-butter: #f5e1b0;
   --warm-plum: #6b4b5e;
+  --warm-purple: #7C3AED;
+  --warm-purple-deep: #5B2C6F;
 
   --warm-accent: var(--warm-terracotta);
   --warm-accent-deep: var(--warm-terracotta-deep);
@@ -247,6 +249,14 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+[data-theme="warm"] input,
+[data-theme="warm"] textarea,
+[data-theme="warm"] select {
+  background-color: var(--warm-paper);
+  color: var(--warm-ink);
+  border-color: var(--warm-line);
+}
+
 [data-theme="warm"][data-accent="sage"] {
   --warm-accent: var(--warm-sage);
   --warm-accent-deep: var(--warm-sage-deep);
@@ -254,6 +264,11 @@ html {
 [data-theme="warm"][data-accent="plum"] {
   --warm-accent: var(--warm-plum);
   --warm-accent-deep: #4f3545;
+}
+[data-theme="warm"][data-accent="purple"] {
+  --warm-accent: var(--warm-purple);
+  --warm-accent-deep: var(--warm-purple-deep);
+  --warm-accent-ink: #ffffff;
 }
 
 [data-theme="warm"] .warm-display {

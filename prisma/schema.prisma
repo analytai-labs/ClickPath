@@ -58,8 +58,12 @@ enum PatternStyle {
   rounded
   tile
   stripe
-  fluid_line   @map("fluid-line")
+  fluid_line    @map("fluid-line")
   stripe_column @map("stripe-column")
+  dot
+  squircle
+  row
+  column
 }
 
 enum CornerStyle {
@@ -70,6 +74,12 @@ enum CornerStyle {
   rounded_circle @map("rounded-circle")
   rounded
   circle_star    @map("circle-star")
+  plus
+  box
+  octagon
+  random
+  tiny_plus      @map("tiny-plus")
+  auto
 }
 
 enum DomainStatus {
@@ -136,7 +146,7 @@ model Team {
   updatedAt     DateTime? @updatedAt
   deletedAt     DateTime?
 
-  owner         User      @relation(fields: [ownerId], references: [id])
+  owner         User           @relation(fields: [ownerId], references: [id])
   members       TeamMember[]
   invites       TeamInvite[]
   links         Link[]
@@ -149,6 +159,7 @@ model Team {
   siteSettings  SiteSettings[]
   bioPages      BioPage[]
   qrPresets     QrPreset[]
+  qrLogoAssets  QrLogoAsset[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -162,8 +173,8 @@ model TeamMember {
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
 
-  team      Team      @relation(fields: [teamId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([teamId, userId], name: "unique_team_user")
   @@index([teamId, userId])
@@ -181,8 +192,8 @@ model TeamInvite {
   acceptedAt DateTime?
   createdAt  DateTime?  @default(now())
 
-  team       Team       @relation(fields: [teamId], references: [id])
-  inviter    User       @relation(fields: [invitedBy], references: [id])
+  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter User @relation(fields: [invitedBy], references: [id])
 
   @@index([teamId])
 }
@@ -209,49 +220,50 @@ model User {
   bannedAt                DateTime?
   bannedReason            String?   @db.VarChar(255)
 
-  links             Link[]
-  tokens            Token[]
-  qrcodes           QrCode[]
-  subscription      Subscription?
-  customDomains     CustomDomain[]
-  siteSettings      SiteSettings?
-  tags              Tag[]
-  folders           Folder[]
-  folderPermissions FolderPermission[]
-  utmTemplates      UtmTemplate[]
-  teamMemberships   TeamMember[]
-  ownedTeams        Team[]
-  outgoingTransfers AccountTransfer[] @relation("outgoingTransfers")
-  incomingTransfers AccountTransfer[] @relation("incomingTransfers")
-  feedbacks         Feedback[]
-  audienceFeedback  AudienceFeedback?
-  teamInvitesSent   TeamInvite[]
-  flaggedLinksResolved FlaggedLink[]
+  links                 Link[]
+  tokens                Token[]
+  qrcodes               QrCode[]
+  subscription          Subscription?
+  customDomains         CustomDomain[]
+  siteSettings          SiteSettings?
+  tags                  Tag[]
+  folders               Folder[]
+  folderPermissions     FolderPermission[]
+  utmTemplates          UtmTemplate[]
+  teamMemberships       TeamMember[]
+  ownedTeams            Team[]
+  outgoingTransfers     AccountTransfer[]  @relation("outgoingTransfers")
+  incomingTransfers     AccountTransfer[]  @relation("incomingTransfers")
+  feedbacks             Feedback[]
+  audienceFeedback      AudienceFeedback?
+  teamInvitesSent       TeamInvite[]
+  flaggedLinksResolved  FlaggedLink[]
   blockedDomainsCreated BlockedDomain[]
-  qrPresets         QrPreset[]
-  campaigns         Campaign[]
-  bioPages          BioPage[]
+  qrPresets             QrPreset[]
+  campaigns             Campaign[]
+  bioPages              BioPage[]
+  qrLogoAssets          QrLogoAsset[]
 
-  accounts          Account[]
-  sessions          Session[]
+  accounts Account[]
+  sessions Session[]
 
   @@index([deletedAt])
   @@index([createdAt])
 }
 
 model Account {
-  userId            String  @db.VarChar(32)
-  type              String
-  provider          String
-  providerAccountId String
+  userId                   String  @db.VarChar(32)
+  type                     String
+  provider                 String
+  providerAccountId        String
   refresh_token            String? @db.Text
   access_token             String? @db.Text
   expires_at               Int?
   refresh_token_expires_in Int?
   token_type               String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -283,21 +295,21 @@ model VerificationToken {
 }
 
 model Subscription {
-  id               Int               @id @default(autoincrement())
-  userId           String            @unique @db.VarChar(32)
-  stripeCustomerId String?           @db.VarChar(255)
-  stripeSubscriptionId String?       @db.VarChar(255)
-  stripePriceId    String?           @db.VarChar(255)
-  renewsAt         DateTime?         
-  createdAt        DateTime?
-  endsAt           DateTime?         
-  status           String?           @default("") @db.VarChar(255)
-  plan             SubscriptionPlan? @default(free)
-  billingInterval  BillingInterval?  @default(monthly)
-  cardBrand        String?           @default("") @db.VarChar(255)
-  cardLastFour     String?           @default("") @db.VarChar(4)
+  id                   Int               @id @default(autoincrement())
+  userId               String            @unique @db.VarChar(32)
+  stripeCustomerId     String?           @db.VarChar(255)
+  stripeSubscriptionId String?           @db.VarChar(255)
+  stripePriceId        String?           @db.VarChar(255)
+  renewsAt             DateTime?
+  createdAt            DateTime?
+  endsAt               DateTime?
+  status               String?           @default("") @db.VarChar(255)
+  plan                 SubscriptionPlan? @default(free)
+  billingInterval      BillingInterval?  @default(monthly)
+  cardBrand            String?           @default("") @db.VarChar(255)
+  cardLastFour         String?           @default("") @db.VarChar(4)
 
-  user             User              @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -310,7 +322,7 @@ model Link {
   domain                 String    @default("clickpath.analytai.in") @db.VarChar(255)
   createdAt              DateTime? @default(now())
   disableLinkAfterClicks Int?
-  disableLinkAfterDate   DateTime? 
+  disableLinkAfterDate   DateTime?
   disabled               Boolean?  @default(false)
   publicStats            Boolean?  @default(false)
   userId                 String    @db.VarChar(32)
@@ -332,19 +344,19 @@ model Link {
   blockedAt              DateTime?
   blockedReason          String?   @db.VarChar(255)
 
-  user                   User               @relation(fields: [userId], references: [id])
-  team                   Team?              @relation(fields: [teamId], references: [id])
-  folder                 Folder?            @relation(fields: [folderId], references: [id])
-  campaign               Campaign?          @relation(fields: [campaignId], references: [id])
-  linkVisits             LinkVisit[]
-  uniqueLinkVisits       UniqueLinkVisit[]
-  linkTags               LinkTag[]
-  geoRules               GeoRule[]
-  flaggedLinks           FlaggedLink[]
-  milestones             LinkMilestone[]
-  qrCodes                QrCode[]
-  dailySummaries         LinkVisitDailySummary[]
-  bioBlocks              BioBlock[]
+  user             User                    @relation(fields: [userId], references: [id])
+  team             Team?                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  folder           Folder?                 @relation(fields: [folderId], references: [id])
+  campaign         Campaign?               @relation(fields: [campaignId], references: [id])
+  linkVisits       LinkVisit[]
+  uniqueLinkVisits UniqueLinkVisit[]
+  linkTags         LinkTag[]
+  geoRules         GeoRule[]
+  flaggedLinks     FlaggedLink[]
+  milestones       LinkMilestone[]
+  qrCodes          QrCode[]
+  dailySummaries   LinkVisitDailySummary[]
+  bioBlocks        BioBlock[]
 
   @@unique([alias, domain], name: "unique_alias_domain")
   @@index([userId])
@@ -370,8 +382,8 @@ model GeoRule {
   priority     Int              @default(0)
   createdAt    DateTime?        @default(now())
 
-  link         Link             @relation(fields: [linkId], references: [id])
-  linkVisits   LinkVisit[]
+  link       Link        @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  linkVisits LinkVisit[]
 
   @@index([linkId])
   @@index([linkId, priority])
@@ -393,8 +405,8 @@ model LinkVisit {
   verifiedAt       DateTime?
   createdAt        DateTime? @default(now())
 
-  link             Link      @relation(fields: [linkId], references: [id])
-  matchedGeoRule   GeoRule?  @relation(fields: [matchedGeoRuleId], references: [id])
+  link           Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  matchedGeoRule GeoRule? @relation(fields: [matchedGeoRuleId], references: [id])
 
   @@index([linkId])
   @@index([matchedGeoRuleId])
@@ -408,7 +420,7 @@ model UniqueLinkVisit {
   ipHash    String    @db.Char(64)
   createdAt DateTime? @default(now())
 
-  link      Link      @relation(fields: [linkId], references: [id])
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@unique([linkId, ipHash], name: "unique_visit_idx")
   @@index([linkId])
@@ -423,7 +435,7 @@ model LinkVisitDailySummary {
   clicks       Int    @default(0)
   uniqueClicks Int    @default(0)
 
-  link         Link   @relation(fields: [linkId], references: [id])
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@unique([linkId, date], name: "link_date_unique")
 }
@@ -436,7 +448,7 @@ model LinkMilestone {
   notifiedAt DateTime?
   createdAt  DateTime? @default(now())
 
-  link       Link      @relation(fields: [linkId], references: [id])
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@unique([linkId, threshold], name: "link_threshold_unique")
   @@index([linkId])
@@ -448,29 +460,34 @@ model Token {
   createdAt DateTime? @default(now())
   userId    String    @db.VarChar(32)
 
-  user      User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([token])
 }
 
 model QrCode {
-  id           Int           @id @default(autoincrement())
-  qrCode       String?       @db.Text
-  title        String?       @default("") @db.VarChar(255)
-  createdAt    DateTime?     @default(now())
-  userId       String        @db.VarChar(32)
-  teamId       Int?
-  linkId       Int?          @default(0)
-  contentType  QrContentType
-  content      String        @db.Text
-  patternStyle PatternStyle
-  cornerStyle  CornerStyle
-  color        String        @db.VarChar(7)
+  id               Int           @id @default(autoincrement())
+  qrCode           String?       @db.Text
+  title            String?       @default("") @db.VarChar(255)
+  createdAt        DateTime?     @default(now())
+  userId           String        @db.VarChar(32)
+  teamId           Int?
+  linkId           Int?          @default(0)
+  contentType      QrContentType
+  content          String        @db.Text
+  patternStyle     PatternStyle
+  cornerStyle      CornerStyle
+  color            String        @db.VarChar(9)
+  lightColor       String?       @default("#ffffff") @db.VarChar(9)
+  logoImage        String?       @db.Text
+  effect           String?       @default("none") @db.VarChar(50)
+  marginNoise      Boolean?      @default(false)
+  markerInnerShape String?       @default("auto") @db.VarChar(50)
 
-  user         User          @relation(fields: [userId], references: [id])
-  team         Team?         @relation(fields: [teamId], references: [id])
-  link         Link?         @relation(fields: [linkId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  link Link? @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([teamId])
@@ -498,8 +515,8 @@ model QrPreset {
   createdAt        DateTime? @default(now())
   updatedAt        DateTime? @updatedAt
 
-  user             User      @relation(fields: [userId], references: [id])
-  team             Team?     @relation(fields: [teamId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([teamId])
@@ -513,8 +530,8 @@ model SiteSettings {
   createdAt     DateTime? @default(now())
   updatedAt     DateTime? @updatedAt
 
-  user          User      @relation(fields: [userId], references: [id])
-  team          Team?     @relation(fields: [teamId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
 }
@@ -526,9 +543,9 @@ model Tag {
   userId    String    @db.VarChar(32)
   teamId    Int?
 
-  user      User      @relation(fields: [userId], references: [id])
-  team      Team?     @relation(fields: [teamId], references: [id])
-  linkTags  LinkTag[]
+  user     User      @relation(fields: [userId], references: [id])
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  linkTags LinkTag[]
 
   @@unique([name, teamId], name: "unique_tag_team")
   @@index([name])
@@ -546,10 +563,10 @@ model Folder {
   createdAt    DateTime? @default(now())
   updatedAt    DateTime? @updatedAt
 
-  user         User      @relation(fields: [userId], references: [id])
-  team         Team?     @relation(fields: [teamId], references: [id])
-  links        Link[]
-  permissions  FolderPermission[]
+  user        User               @relation(fields: [userId], references: [id])
+  team        Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  links       Link[]
+  permissions FolderPermission[]
 
   @@index([userId])
   @@index([teamId])
@@ -560,8 +577,8 @@ model FolderPermission {
   userId    String    @db.VarChar(32)
   createdAt DateTime? @default(now())
 
-  folder    Folder    @relation(fields: [folderId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
 
   @@id([folderId, userId])
   @@index([userId])
@@ -572,8 +589,8 @@ model LinkTag {
   tagId     Int
   createdAt DateTime? @default(now())
 
-  link      Link      @relation(fields: [linkId], references: [id])
-  tag       Tag       @relation(fields: [tagId], references: [id])
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id])
 
   @@id([linkId, tagId])
   @@index([tagId])
@@ -586,39 +603,39 @@ model BlockedDomain {
   createdAt       DateTime? @default(now())
   createdByUserId String?   @db.VarChar(32)
 
-  createdBy       User?     @relation(fields: [createdByUserId], references: [id])
+  createdBy User? @relation(fields: [createdByUserId], references: [id])
 }
 
 model FlaggedLink {
-  id               Int         @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   linkId           Int
-  reason           String?     @db.VarChar(255)
-  reporterEmail    String?     @db.VarChar(320)
-  details          String?     @db.Text
-  status           FlagStatus  @default(pending)
-  flaggedAt        DateTime?   @default(now())
+  reason           String?    @db.VarChar(255)
+  reporterEmail    String?    @db.VarChar(320)
+  details          String?    @db.Text
+  status           FlagStatus @default(pending)
+  flaggedAt        DateTime?  @default(now())
   resolvedAt       DateTime?
-  resolvedByUserId String?     @db.VarChar(32)
+  resolvedByUserId String?    @db.VarChar(32)
 
-  link             Link        @relation(fields: [linkId], references: [id])
-  resolvedBy       User?       @relation(fields: [resolvedByUserId], references: [id])
+  link       Link  @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation(fields: [resolvedByUserId], references: [id])
 
   @@index([linkId])
   @@index([status])
 }
 
 model CustomDomain {
-  id                  Int          @id @default(autoincrement())
-  domain              String?      @db.VarChar(255)
-  userId              String       @db.VarChar(32)
+  id                  Int           @id @default(autoincrement())
+  domain              String?       @db.VarChar(255)
+  userId              String        @db.VarChar(32)
   teamId              Int?
-  createdAt           DateTime?    @default(now())
+  createdAt           DateTime?     @default(now())
   status              DomainStatus? @default(pending)
   verificationDetails Json?
   lastReminderSentAt  DateTime?
 
-  user                User         @relation(fields: [userId], references: [id])
-  team                Team?        @relation(fields: [teamId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([domain, userId, teamId], name: "domain_workspace_unique")
   @@index([userId])
@@ -639,8 +656,8 @@ model UtmTemplate {
   createdAt   DateTime? @default(now())
   updatedAt   DateTime? @updatedAt
 
-  user        User      @relation(fields: [userId], references: [id])
-  team        Team?     @relation(fields: [teamId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([teamId])
@@ -664,9 +681,9 @@ model Campaign {
   createdAt       DateTime?      @default(now())
   updatedAt       DateTime?      @updatedAt
 
-  user            User           @relation(fields: [userId], references: [id])
-  team            Team?          @relation(fields: [teamId], references: [id])
-  links           Link[]
+  user  User   @relation(fields: [userId], references: [id])
+  team  Team?  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  links Link[]
 
   @@unique([slug, userId, teamId], name: "campaign_slug_workspace_unique")
   @@index([userId])
@@ -692,8 +709,8 @@ model AccountTransfer {
   acceptedAt         DateTime?
   createdAt          DateTime?      @default(now())
 
-  fromUser           User           @relation("outgoingTransfers", fields: [fromUserId], references: [id])
-  toUser             User?          @relation("incomingTransfers", fields: [toUserId], references: [id])
+  fromUser User  @relation("outgoingTransfers", fields: [fromUserId], references: [id])
+  toUser   User? @relation("incomingTransfers", fields: [toUserId], references: [id])
 
   @@index([fromUserId])
   @@index([toEmail])
@@ -701,15 +718,15 @@ model AccountTransfer {
 }
 
 model Feedback {
-  id         Int            @id @default(autoincrement())
-  userId     String         @db.VarChar(32)
-  type       FeedbackType
-  message    String         @db.Text
-  imageUrls  Json?          @default("[]")
-  status     FeedbackStatus @default(open)
-  createdAt  DateTime?      @default(now())
+  id        Int            @id @default(autoincrement())
+  userId    String         @db.VarChar(32)
+  type      FeedbackType
+  message   String         @db.Text
+  imageUrls Json?          @default("[]")
+  status    FeedbackStatus @default(open)
+  createdAt DateTime?      @default(now())
 
-  user       User           @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])
@@ -736,7 +753,7 @@ model AudienceFeedback {
   createdAt          DateTime?     @default(now())
   updatedAt          DateTime?     @updatedAt
 
-  user               User          @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([submittedAt])
@@ -761,10 +778,10 @@ model BioPage {
   createdAt       DateTime? @default(now())
   updatedAt       DateTime? @updatedAt
 
-  user            User      @relation(fields: [userId], references: [id])
-  team            Team?     @relation(fields: [teamId], references: [id])
-  blocks          BioBlock[]
-  dailySummaries  BioPageViewDailySummary[]
+  user           User                      @relation(fields: [userId], references: [id])
+  team           Team?                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  blocks         BioBlock[]
+  dailySummaries BioPageViewDailySummary[]
 
   @@index([userId])
   @@index([teamId])
@@ -786,8 +803,8 @@ model BioBlock {
   createdAt      DateTime?    @default(now())
   updatedAt      DateTime?    @updatedAt
 
-  bioPage        BioPage      @relation(fields: [bioPageId], references: [id])
-  link           Link?        @relation(fields: [linkId], references: [id])
+  bioPage BioPage @relation(fields: [bioPageId], references: [id], onDelete: Cascade)
+  link    Link?   @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@index([bioPageId])
   @@index([bioPageId, position])
@@ -795,17 +812,17 @@ model BioBlock {
 }
 
 model BioPageView {
-  id          Int       @id @default(autoincrement())
-  bioPageId   Int
-  device      String?   @db.VarChar(255)
-  browser     String?   @db.VarChar(255)
-  os          String?   @db.VarChar(255)
-  model       String?   @default("") @db.VarChar(255)
-  referer     String?   @db.VarChar(255)
-  country     String?   @db.VarChar(255)
-  city        String?   @db.VarChar(255)
-  continent   String?   @default("N/A") @db.VarChar(255)
-  createdAt   DateTime? @default(now())
+  id        Int       @id @default(autoincrement())
+  bioPageId Int
+  device    String?   @db.VarChar(255)
+  browser   String?   @db.VarChar(255)
+  os        String?   @db.VarChar(255)
+  model     String?   @default("") @db.VarChar(255)
+  referer   String?   @db.VarChar(255)
+  country   String?   @db.VarChar(255)
+  city      String?   @db.VarChar(255)
+  continent String?   @default("N/A") @db.VarChar(255)
+  createdAt DateTime? @default(now())
 
   @@index([bioPageId])
   @@index([bioPageId, createdAt])
@@ -830,7 +847,22 @@ model BioPageViewDailySummary {
   views       Int    @default(0)
   uniqueViews Int    @default(0)
 
-  bioPage     BioPage @relation(fields: [bioPageId], references: [id])
+  bioPage BioPage @relation(fields: [bioPageId], references: [id], onDelete: Cascade)
 
   @@unique([bioPageId, date], name: "bio_page_date_unique")
+}
+
+model QrLogoAsset {
+  id        Int       @id @default(autoincrement())
+  url       String    @db.Text
+  name      String?   @db.VarChar(255)
+  userId    String    @db.VarChar(32)
+  teamId    Int?
+  createdAt DateTime? @default(now())
+
+  user User  @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([teamId])
 }

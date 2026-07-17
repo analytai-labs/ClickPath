@@ -42,13 +42,12 @@ import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 const navigationItems = [
-  { name: "Dashboard", href: "/dashboard", icon: IconLayoutDashboard },
+  { name: "Links & QR Codes", href: "/dashboard", icon: IconLayoutDashboard },
   {
     name: "Analytics",
     href: "/dashboard/analytics/overview",
     icon: IconChartBar,
   },
-  { name: "QR Codes", href: "/dashboard/qrcodes", icon: IconQrcode },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: IconSpeakerphone },
   { name: "Bio Pages", href: "/dashboard/bio-pages", icon: IconLayoutList },
   { name: "Domains", href: "/dashboard/domains", icon: IconWorld },

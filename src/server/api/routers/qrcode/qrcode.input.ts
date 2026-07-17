@@ -115,3 +115,16 @@ export const qrPresetUpdateInput = z.object({
 
 export type QRPresetCreateInput = z.infer<typeof qrPresetCreateInput>;
 export type QRPresetUpdateInput = z.infer<typeof qrPresetUpdateInput>;
+
+// Logo Asset schemas
+export const logoAssetCreateInput = z.object({
+  name: z.string().max(255).optional(),
+  image: z.string().regex(
+    /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/]+=*$/,
+    "Image must be a valid base64 data URI",
+  ),
+});
+
+export const logoAssetIdInput = z.object({
+  id: z.number(),
+});

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconLink, IconQrcode } from "@tabler/icons-react";
 import { Link } from "next-view-transitions";
 
 import { env } from "@/env.mjs";
@@ -9,6 +9,12 @@ import { api } from "@/trpc/server";
 import { AudienceFeedbackCard } from "./_components/audience-feedback-card";
 import { BulkLinkActions } from "./_components/bulk-actions/bulk-actions";
 import { Links } from "./_components/links/links";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +56,7 @@ export default async function DashboardPage(props: Props) {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-foreground">
-            Links
+            Links & QR Codes
           </h2>
           {totalLinks > 0 && (
             <p className="mt-1 text-[13px] text-neutral-400 dark:text-neutral-500">
@@ -59,13 +65,28 @@ export default async function DashboardPage(props: Props) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/link/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
-          >
-            <IconPlus size={16} stroke={2} />
-            New Link
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-blue-700">
+                <IconPlus size={16} stroke={2} />
+                Create New
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36 font-medium">
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/link/new?tab=link" className="flex cursor-pointer items-center">
+                  <IconLink size={16} className="mr-2 text-neutral-500" stroke={2} />
+                  Link
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/link/new?tab=qr" className="flex cursor-pointer items-center">
+                  <IconQrcode size={16} className="mr-2 text-neutral-500" stroke={2} />
+                  QR Code
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <BulkLinkActions />
         </div>
       </div>

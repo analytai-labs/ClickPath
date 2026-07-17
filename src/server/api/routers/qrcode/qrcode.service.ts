@@ -6,7 +6,7 @@ import { runBackgroundTask } from "@/lib/utils/background";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import { insertHiddenTrackingLink, prepareHiddenTrackingLink } from "@/server/lib/tracking-link";
-import { workspaceOwnership } from "@/server/lib/workspace";
+import { workspaceOwnership, workspaceFilter } from "@/server/lib/workspace";
 
 import { updateLink } from "../link/link.service";
 
@@ -21,9 +21,6 @@ import type {
 import type { qrcodeSaveImageInput } from "./qrcode.input";
 
 const log = logger.child({ component: "qrcode.service" });
-
-// Free tier QR code limit
-const FREE_QR_CODE_LIMIT = 5;
 
 function userFacing<A extends unknown[], R>(
   operation: string,
@@ -48,25 +45,6 @@ export const createQrCode = userFacing(
   "createQrCode",
   "Something went wrong while creating your QR code. Please try again.",
   async (ctx: WorkspaceTRPCContext, input: QRCodeInput) => {
-    // Use workspace plan - team workspaces have Ultra features (unlimited QR codes)
-    const workspacePlan = ctx.workspace.plan;
-    const isTeamWorkspace = ctx.workspace.type === "team";
-
-    // Only check limits for free plan personal workspaces
-    if (workspacePlan === "free" && !isTeamWorkspace) {
-      // Count QR codes in the personal workspace (exclude team QR codes)
-      const currentCount = await ctx.prisma.qrCode.count({
-        where: { userId: ctx.workspace.userId, teamId: null },
-      });
-
-      if (currentCount >= FREE_QR_CODE_LIMIT) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `You've reached the free plan limit of ${FREE_QR_CODE_LIMIT} QR codes. Upgrade to Pro to create more.`,
-        });
-      }
-    }
-
     const ownership = workspaceOwnership(ctx.workspace);
 
     // Prepare the hidden tracking link (quota check + URL safety + domain +
@@ -610,5 +588,89 @@ export const updateQrPreset = userFacing(
     return ctx.prisma.qrPreset.findUnique({
       where: { id: input.id },
     });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Logo Assets
+// ---------------------------------------------------------------------------
+
+export const createLogoAsset = userFacing(
+  "createLogoAsset",
+  "Something went wrong while uploading your logo asset.",
+  async (ctx: WorkspaceTRPCContext, input: z.infer<typeof import("./qrcode.input").logoAssetCreateInput>) => {
+    // Only allow for paid plans
+    if (ctx.workspace.plan === "free") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Logo Asset Library is a premium feature. Please upgrade your plan.",
+      });
+    }
+
+    const ownership = workspaceOwnership(ctx.workspace);
+    const resourceId = Date.now(); // Simple unique ID for the asset image
+
+    // Upload to R2
+    const url = await uploadImage(ctx, {
+      image: input.image,
+      resourceId,
+      imageType: "qr-logo" as any,
+    });
+
+    if (!url || url === input.image) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to upload logo to R2",
+      });
+    }
+
+    // Save to DB
+    const asset = await ctx.prisma.qrLogoAsset.create({
+      data: {
+        userId: ownership.userId,
+        teamId: ownership.teamId,
+        name: input.name,
+        url,
+      },
+    });
+
+    return asset;
+  },
+);
+
+export const listLogoAssets = userFacing(
+  "listLogoAssets",
+  "Something went wrong while fetching your logo assets.",
+  async (ctx: WorkspaceTRPCContext) => {
+    return ctx.prisma.qrLogoAsset.findMany({
+      where: workspaceFilter(ctx.workspace),
+      orderBy: { createdAt: "desc" },
+    });
+  },
+);
+
+export const deleteLogoAsset = userFacing(
+  "deleteLogoAsset",
+  "Something went wrong while deleting your logo asset.",
+  async (ctx: WorkspaceTRPCContext, id: number) => {
+    const asset = await ctx.prisma.qrLogoAsset.findFirst({
+      where: {
+        id,
+        ...workspaceFilter(ctx.workspace),
+      },
+    });
+
+    if (!asset) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+    }
+
+    // Delete from DB only (Soft Delete for R2)
+    // We intentionally leave the image in R2 to prevent breaking any live QR codes 
+    // that might be referencing this logo URL.
+    await ctx.prisma.qrLogoAsset.delete({
+      where: { id: asset.id },
+    });
+
+    return { success: true };
   },
 );

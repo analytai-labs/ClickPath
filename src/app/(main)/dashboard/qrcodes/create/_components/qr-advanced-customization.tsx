@@ -336,7 +336,7 @@ export function QRAdvancedCustomization({
               </div>
             </div>
           ) : (
-            <LogoUploader setLogoImage={(image) => setLogoImage(image ?? undefined)} />
+            <LogoUploader setLogoImage={(image) => setLogoImage(image ?? undefined)} currentLogoImage={logoImage || null} />
           )}
         </div>
       </div>

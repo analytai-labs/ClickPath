@@ -34,12 +34,15 @@ import {
   workspaceOwnership,
 } from "@/server/lib/workspace";
 import { Prisma } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { parse } from "csv-parse/sync";
 import { endOfYear, startOfMonth, startOfYear, subDays } from "date-fns";
 import { mergeCampaignUtm } from "../campaign/utils";
 
 import { associateTagsWithLink, getTagsForLink } from "../tag/tag.service";
+
+const FREE_QR_CODE_LIMIT = 5;
 
 import {
   assertDomainAllowed,
@@ -207,6 +210,7 @@ export const getLinks = async (ctx: WorkspaceTRPCContext, input: ListLinksInput)
           select: { id: true, name: true, image: true },
         },
         campaign: true,
+        qrCodes: true,
       },
       take: pageSize,
       skip: (page - 1) * pageSize,
@@ -218,7 +222,7 @@ export const getLinks = async (ctx: WorkspaceTRPCContext, input: ListLinksInput)
     const archivedClicks = l.dailySummaries.reduce((sum, s) => sum + s.clicks, 0);
 
     // Clean up prisma specific relation returns to match previous drizzle return format somewhat
-    const { _count, dailySummaries, linkTags, user, ...rest } = l;
+    const { _count, dailySummaries, linkTags, user, qrCodes, ...rest } = l;
 
     return {
       ...rest,
@@ -231,6 +235,7 @@ export const getLinks = async (ctx: WorkspaceTRPCContext, input: ListLinksInput)
             image: user.image,
           }
         : null,
+      qrCode: qrCodes[0] ?? null,
     };
   });
 
@@ -373,63 +378,92 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
   const name = input.name ?? fetchedMetadata.title ?? "Untitled Link";
   const tagNames = input.tags ?? [];
 
-  // Create link without tags and geoRules fields
-  const { tags, geoRules, ...linkData } = input;
+  // Create link without tags, geoRules, and qrCode fields
+  const { tags, geoRules, qrCode, ...linkData } = input;
   const ownership = workspaceOwnership(ctx.workspace);
-  const createdLink = await prisma.link.create({
-    data: {
-      ...linkData,
-      name,
-      alias,
-      userId: ownership.userId,
-      teamId: ownership.teamId,
-      createdByUserId: ctx.auth.userId, // Track the actual user who created the link
-      passwordHash: input.password,
-      domain,
-      note: input.note,
-      metadata: input.metadata ? (input.metadata as any) : Prisma.JsonNull,
-      cloaking: input.cloaking ?? false,
-      verifiedClicksEnabled: input.verifiedClicksEnabled ?? false,
-    },
+
+  const { linkId, qrCodeId } = await prisma.$transaction(async (tx) => {
+    const createdLink = await tx.link.create({
+      data: {
+        ...linkData,
+        name,
+        alias,
+        isQrCode: qrCode?.isQrCodeOnly ?? false,
+        userId: ownership.userId,
+        teamId: ownership.teamId,
+        createdByUserId: ctx.auth.userId, // Track the actual user who created the link
+        passwordHash: input.password || null,
+        domain,
+        note: input.note,
+        metadata: input.metadata ? (input.metadata as any) : Prisma.JsonNull,
+        cloaking: input.cloaking ?? false,
+        verifiedClicksEnabled: input.verifiedClicksEnabled ?? false,
+      },
+    });
+
+    const linkId = createdLink.id;
+    let qrCodeId: number | undefined;
+    if (qrCode && (qrCode.enabled || qrCode.patternStyle || qrCode.selectedColor)) {
+
+      const createdQrCode = await tx.qrCode.create({
+        data: {
+          userId: ownership.userId,
+          teamId: ownership.teamId,
+          title: qrCode.title || name || "Untitled QR Code",
+          color: qrCode.selectedColor || "#000000",
+          lightColor: qrCode.lightColor || "#ffffff",
+          content: input.url,
+          cornerStyle: (qrCode.cornerStyle || "rounded") as any,
+          patternStyle: (qrCode.patternStyle || "rounded") as any,
+          logoImage: qrCode.logoImage ?? null,
+          effect: qrCode.effect || "none",
+          marginNoise: qrCode.marginNoise ?? false,
+          markerInnerShape: qrCode.markerInnerShape || "auto",
+          linkId: linkId,
+          contentType: "link",
+        },
+      });
+      qrCodeId = createdQrCode.id;
+    }
+
+    // Handle geo rules if provided
+    const geoRulesInput = input.geoRules;
+    if (geoRulesInput && geoRulesInput.length > 0) {
+      // Check plan limits
+      if (!canUseGeoRules(plan)) {
+        throw new Error(
+          "Geotargeting is only available on Pro and Ultra plans. Please upgrade to use this feature.",
+        );
+      }
+
+      const geoLimit = getGeoRulesLimit(plan);
+      if (!isUnlimitedGeoRules(plan) && geoLimit !== undefined && geoRulesInput.length > geoLimit) {
+        throw new Error(
+          `Your plan allows a maximum of ${geoLimit} geo rules per link. Please upgrade to Ultra for unlimited rules.`,
+        );
+      }
+
+      // Insert geo rules
+      await tx.geoRule.createMany({
+        data: geoRulesInput.map((rule, index) => ({
+          linkId,
+          type: rule.type,
+          condition: rule.condition,
+          values: rule.values ? (rule.values as any) : Prisma.JsonNull,
+          action: rule.action,
+          destination: rule.action === "redirect" ? rule.destination : null,
+          blockMessage: rule.action === "block" ? rule.blockMessage : null,
+          priority: index,
+        })),
+      });
+    }
+
+    return { linkId, qrCodeId };
   });
 
-  // Associate tags with the link
-  const linkId = createdLink.id;
-  const result = { insertId: linkId };
+  const result = { insertId: linkId, qrCodeId };
   if (tagNames.length > 0) {
     await associateTagsWithLink(ctx, linkId, tagNames);
-  }
-
-  // Handle geo rules if provided
-  const geoRulesInput = input.geoRules;
-  if (geoRulesInput && geoRulesInput.length > 0) {
-    // Check plan limits
-    if (!canUseGeoRules(plan)) {
-      throw new Error(
-        "Geotargeting is only available on Pro and Ultra plans. Please upgrade to use this feature.",
-      );
-    }
-
-    const geoLimit = getGeoRulesLimit(plan);
-    if (!isUnlimitedGeoRules(plan) && geoLimit !== undefined && geoRulesInput.length > geoLimit) {
-      throw new Error(
-        `Your plan allows a maximum of ${geoLimit} geo rules per link. Please upgrade to Ultra for unlimited rules.`,
-      );
-    }
-
-    // Insert geo rules
-    await prisma.geoRule.createMany({
-      data: geoRulesInput.map((rule, index) => ({
-        linkId,
-        type: rule.type,
-        condition: rule.condition,
-        values: rule.values ? (rule.values as any) : Prisma.JsonNull,
-        action: rule.action,
-        destination: rule.action === "redirect" ? rule.destination : null,
-        blockMessage: rule.action === "block" ? rule.blockMessage : null,
-        priority: index,
-      })),
-    });
   }
 
   // Upload OG image to R2 if it's base64
@@ -487,6 +521,10 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
   // Use workspace plan - team workspaces have Ultra features
   const workspacePlan = ctx.workspace.plan;
   const isPaidUser = workspacePlan !== "free";
+
+  if (input.url !== undefined && input.url !== existingLink.url) {
+    await assertUrlSafe(input.url);
+  }
 
   // If domain is being changed, it must be platform-owned or a verified
   // custom domain for this workspace.
@@ -547,8 +585,8 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
     }
   }
 
-  // Extract tags and geoRules from input
-  const { tags: tagNames, geoRules: geoRulesInput, ...linkData } = input;
+  // Extract tags, geoRules, and qrCode from input
+  const { tags: tagNames, geoRules: geoRulesInput, qrCode, ...linkData } = input;
 
   // Upload OG image to R2 if it's base64
   if (linkData.metadata?.image) {
@@ -577,6 +615,51 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
     where: { id: input.id },
     data: linkData as any,
   });
+
+  let qrCodeId: number | undefined;
+  if (qrCode) {
+    const existingQr = await prisma.qrCode.findFirst({
+      where: { linkId: input.id },
+    });
+    if (existingQr) {
+      await prisma.qrCode.update({
+        where: { id: existingQr.id },
+        data: {
+          title: qrCode.title || existingLink.name || "Untitled QR Code",
+          color: qrCode.selectedColor || existingQr.color,
+          lightColor: qrCode.lightColor || existingQr.lightColor || "#ffffff",
+          cornerStyle: (qrCode.cornerStyle || existingQr.cornerStyle) as any,
+          patternStyle: (qrCode.patternStyle || existingQr.patternStyle) as any,
+          logoImage: qrCode.logoImage !== undefined ? qrCode.logoImage : existingQr.logoImage,
+          effect: qrCode.effect || existingQr.effect || "none",
+          marginNoise: qrCode.marginNoise !== undefined ? qrCode.marginNoise : existingQr.marginNoise,
+          markerInnerShape: qrCode.markerInnerShape || existingQr.markerInnerShape || "auto",
+        },
+      });
+      qrCodeId = existingQr.id;
+    } else if (qrCode.enabled || qrCode.patternStyle || qrCode.selectedColor) {
+
+      const createdQr = await prisma.qrCode.create({
+        data: {
+          userId: existingLink.userId,
+          teamId: existingLink.teamId,
+          title: qrCode.title || existingLink.name || "Untitled QR Code",
+          color: qrCode.selectedColor || "#000000",
+          lightColor: qrCode.lightColor || "#ffffff",
+          content: existingLink.url || "https://clickpath.analytai.in",
+          cornerStyle: (qrCode.cornerStyle || "rounded") as any,
+          patternStyle: (qrCode.patternStyle || "rounded") as any,
+          logoImage: qrCode.logoImage ?? null,
+          effect: qrCode.effect || "none",
+          marginNoise: qrCode.marginNoise ?? false,
+          markerInnerShape: qrCode.markerInnerShape || "auto",
+          linkId: input.id,
+          contentType: "link",
+        },
+      });
+      qrCodeId = createdQr.id;
+    }
+  }
 
   // Update tags if provided
   if (tagNames) {
@@ -637,6 +720,7 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
         ? { teamId: ctx.workspace.teamId }
         : { userId: ctx.workspace.userId, teamId: null }),
     },
+    include: { qrCodes: true },
   });
 
   if (!updatedLink) {
@@ -645,9 +729,11 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
 
   // Get tags for the updated link
   const tagRecords = await getTagsForLink(ctx, input.id);
+  const { qrCodes, ...restUpdated } = updatedLink;
   const updatedLinkWithTags = {
-    ...updatedLink,
+    ...restUpdated,
     tags: tagRecords.map((tagRecord) => tagRecord.name),
+    qrCode: qrCodes[0] ?? null,
   };
 
   // If alias or domain changed, delete the OLD cache key (existingLink has the old values)
@@ -656,6 +742,8 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
   }
   // Always set the new cache entry with updated values
   await setInCache(buildCacheKey(updatedLink.domain, updatedLink.alias!), updatedLinkWithTags);
+
+  return updatedLinkWithTags;
 };
 
 export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) => {
@@ -1478,7 +1566,7 @@ export const changeLinkPassword = async (
   ctx: WorkspaceTRPCContext,
   input: { id: number; password: string },
 ) => {
-  const passwordHash = await bcrypt.hash(input.password, 10);
+  const passwordHash = input.password ? await bcrypt.hash(input.password, 10) : null;
 
   await prisma.link.updateMany({
     where: {

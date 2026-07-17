@@ -14,12 +14,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTransitionRouter } from "next-view-transitions";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { defaultGeneratorState, generateQRCode } from "@/lib/qr-generator";
+import type { QRCodeGeneratorState } from "@/lib/qr-generator";
+import { QRAdvancedCustomization } from "../../qrcodes/create/_components/qr-advanced-customization";
+import { IconQrcode, IconSettings, IconRoute } from "@tabler/icons-react";
 import {
   Form,
   FormControl,
@@ -100,6 +105,18 @@ export default function CreateLinkPage() {
   const [isCheckingIframeable, setIsCheckingIframeable] = useState(false);
   const [iframeableResult, setIframeableResult] = useState<boolean | null>(null);
   const [isVerifiedClicksOpen, setIsVerifiedClicksOpen] = useState(false);
+
+  const activeTabParam = searchParams.get("tab") as "settings" | "routing" | "qr" | null;
+  const isQrCodeOnlyParam = searchParams.get("isQrCodeOnly") === "true";
+  const [activeTab, setActiveTab] = useState<"settings" | "routing" | "qr">(
+    activeTabParam === "qr" || activeTabParam === "routing" ? activeTabParam : "settings",
+  );
+  const [qrState, setQrState] = useState<QRCodeGeneratorState>(defaultGeneratorState);
+  const [qrCodeTitle, setQrCodeTitle] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { data: presets } = api.qrCode.listPresets.useQuery();
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+  const qrCodeSaveImageMutation = api.qrCode.saveImage.useMutation();
 
   const userSubscription = api.subscriptions.get.useQuery();
   const customDomainsQuery = api.customDomain.list.useQuery();
@@ -201,8 +218,6 @@ export default function CreateLinkPage() {
   const formUpdateMutation = api.link.create.useMutation({
     onSuccess: async () => {
       await revalidateHomepage();
-      toast.success("Link updated successfully");
-      router.push("/dashboard");
     },
     onError: (error) => {
       if (error.data?.code === "FORBIDDEN" || /upgrade/i.test(error.message)) {
@@ -265,9 +280,108 @@ export default function CreateLinkPage() {
         .map((tag) => tag.name)
     : [];
 
+  const [debouncedQrState] = useDebounce(qrState, 100);
+  const regenerateQRCode = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      await generateQRCode(canvasRef.current, {
+        ...qrState,
+        text: destinationURL || "https://clickpath.analytai.in",
+      });
+    } catch (err) {
+      console.error("Failed to generate QR code preview:", err);
+    }
+  }, [qrState, destinationURL]);
+
+  useEffect(() => {
+    if (activeTab === "qr") {
+      void regenerateQRCode();
+    }
+  }, [debouncedQrState, destinationURL, activeTab, regenerateQRCode]);
+
+  const updateQrState = useCallback((updates: Partial<QRCodeGeneratorState>) => {
+    setQrState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const loadPreset = useCallback(
+    (presetId: number) => {
+      const preset = presets?.find((p) => p.id === presetId);
+      if (!preset) return;
+      setSelectedPresetId(presetId);
+      setQrState((prev) => ({
+        ...prev,
+        pixelStyle: preset.pixelStyle as any,
+        markerShape: preset.markerShape as any,
+        markerInnerShape: preset.markerInnerShape as any,
+        darkColor: preset.darkColor,
+        lightColor: preset.lightColor,
+        effect: preset.effect as any,
+        effectCrystalizeRadius: preset.effectRadius,
+        effectLiquidifyRadius: preset.effectRadius,
+        marginNoise: preset.marginNoise,
+        marginNoiseRate: Number.parseFloat(preset.marginNoiseRate),
+        logoImage: preset.logoImage ?? undefined,
+        logoSize: Math.min(preset.logoSize ?? 25, 30),
+        logoMargin: preset.logoMargin ?? 4,
+        logoBorderRadius: preset.logoBorderRadius ?? 8,
+      }));
+    },
+    [presets],
+  );
+
   async function onSubmit(values: z.infer<typeof createLinkSchema>) {
     values.tags = tags;
-    await formUpdateMutation.mutateAsync(values);
+    if (
+      activeTab === "qr" ||
+      activeTabParam === "qr" ||
+      isQrCodeOnlyParam ||
+      selectedPresetId ||
+      qrState.pixelStyle !== "rounded" ||
+      qrState.darkColor !== "#000000"
+    ) {
+      values.qrCode = {
+        enabled: true,
+        title: qrCodeTitle || values.name || "Untitled QR Code",
+        patternStyle: qrState.pixelStyle,
+        cornerStyle: qrState.markerShape,
+        selectedColor: qrState.darkColor,
+        lightColor: qrState.lightColor,
+        logoImage: qrState.logoImage,
+        effect: qrState.effect,
+        marginNoise: qrState.marginNoise,
+        markerInnerShape: qrState.markerInnerShape,
+        isQrCodeOnly: isQrCodeOnlyParam,
+      };
+    }
+
+    try {
+      const result = await formUpdateMutation.mutateAsync(values);
+
+      if (result?.qrCodeId) {
+        try {
+          const finalCanvas = document.createElement("canvas");
+          await generateQRCode(finalCanvas, {
+            ...qrState,
+            text: values.url,
+            scale: 20,
+          });
+          const qrCodeBase64 = finalCanvas.toDataURL("image/png", 1.0);
+          await qrCodeSaveImageMutation.mutateAsync({
+            id: result.qrCodeId,
+            qrCodeBase64,
+          });
+        } catch (err) {
+          console.error("Failed to upload QR code high-res image:", err);
+          toast.warning("Link created, but failed to save high-res QR code image.");
+        }
+      }
+
+      toast.success(isQrCodeOnlyParam ? "QR Code created successfully" : "Link created successfully");
+      router.push("/dashboard");
+    } catch (err) {
+      // Error handled by mutation onError
+      return;
+    }
 
     // Track events only after successful mutation
     if (values.password) {
@@ -605,467 +719,573 @@ export default function CreateLinkPage() {
                   </FormItem>
                 )}
               />
+            </div>
 
-              {/* Note */}
-              <FormField
-                control={form.control}
-                name="note"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Note
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Add a note to your link
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+            <div className="flex rounded-xl bg-neutral-100 dark:bg-muted p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("settings")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition-all",
+                  activeTab === "settings"
+                    ? "bg-white dark:bg-card text-neutral-900 dark:text-foreground shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-foreground",
                 )}
-              />
+              >
+                <IconSettings size={16} stroke={1.5} />
+                Link Settings
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("routing")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition-all",
+                  activeTab === "routing"
+                    ? "bg-white dark:bg-card text-neutral-900 dark:text-foreground shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-foreground",
+                )}
+              >
+                <IconRoute size={16} stroke={1.5} />
+                Advanced Routing
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("qr")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition-all",
+                  activeTab === "qr"
+                    ? "bg-white dark:bg-card text-neutral-900 dark:text-foreground shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-foreground",
+                )}
+              >
+                <IconQrcode size={16} stroke={1.5} />
+                QR Code Design
+              </button>
+            </div>
 
-              {/* Tags */}
-              <FormField
-                control={form.control}
-                name="tags"
-                render={() => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Tags
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <div className="mb-2 flex flex-wrap gap-2">
-                          {tags.map((tag) => (
-                            <div
-                              key={tag}
-                              className="flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-muted px-2 py-1 text-[12px] text-neutral-600 dark:text-neutral-400"
-                            >
-                              <span>{tag}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                aria-label={`Remove tag ${tag}`}
-                                className="text-neutral-400 hover:text-neutral-600"
-                              >
-                                <IconX size={12} stroke={1.5} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="relative">
+            {activeTab === "settings" && (
+              <div className="space-y-4">
+                <div className="space-y-4 rounded-lg border border-neutral-200 dark:border-border p-4">
+                  {/* Note */}
+                  <FormField
+                    control={form.control}
+                    name="note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Note
+                        </FormLabel>
+                        <FormControl>
                           <Input
-                            placeholder="Add tags (press Enter to add)"
                             className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
-                            value={tagInput}
-                            onChange={(e) => {
-                              setTagInput(e.target.value);
-                              setShowTagDropdown(true);
-                            }}
-                            onKeyDown={handleTagKeyDown}
-                            onBlur={() => {
-                              setTimeout(() => setShowTagDropdown(false), 200);
-                            }}
-                            onFocus={() => {
-                              setShowTagDropdown(true);
-                            }}
+                            {...field}
                           />
+                        </FormControl>
+                        <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                          Add a note to your link
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                          {/* Tag dropdown */}
-                          {showTagDropdown && filteredTags.length > 0 && (
-                            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-neutral-200 dark:border-border bg-white dark:bg-card shadow-md">
-                              {filteredTags.map((tag) => (
+                  {/* Tags */}
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Tags
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <div className="mb-2 flex flex-wrap gap-2">
+                              {tags.map((tag) => (
                                 <div
                                   key={tag}
-                                  className="cursor-pointer px-4 py-2 text-[13px] hover:bg-neutral-50 dark:hover:bg-accent/50"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault(); // Prevent input blur
-                                    addTag(tag);
-                                  }}
+                                  className="flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-muted px-2 py-1 text-[12px] text-neutral-600 dark:text-neutral-400"
                                 >
-                                  {tag}
+                                  <span>{tag}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTag(tag)}
+                                    aria-label={`Remove tag ${tag}`}
+                                    className="text-neutral-400 hover:text-neutral-600"
+                                  >
+                                    <IconX size={12} stroke={1.5} />
+                                  </button>
                                 </div>
                               ))}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Add tags to categorize your links. Press Enter to add a tag or select from
-                      existing tags.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                            <div className="relative">
+                              <Input
+                                placeholder="Add tags (press Enter to add)"
+                                className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
+                                value={tagInput}
+                                onChange={(e) => {
+                                  setTagInput(e.target.value);
+                                  setShowTagDropdown(true);
+                                }}
+                                onKeyDown={handleTagKeyDown}
+                                onBlur={() => {
+                                  setTimeout(() => setShowTagDropdown(false), 200);
+                                }}
+                                onFocus={() => {
+                                  setShowTagDropdown(true);
+                                }}
+                              />
 
-              {/* Campaign */}
-              <FormField
-                control={form.control}
-                name="campaignId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Campaign
-                    </FormLabel>
-                    <Select
-                      value={field.value != null ? field.value.toString() : "none"}
-                      onValueChange={(value) => {
-                        field.onChange(value === "none" ? null : Number(value));
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] text-neutral-900 dark:text-foreground">
-                          <SelectValue placeholder="No campaign" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No campaign</SelectItem>
-                        {campaigns?.map((campaign) => (
-                          <SelectItem key={campaign.id} value={campaign.id.toString()}>
-                            {campaign.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {isProUser && selectedCampaign ? (
-                      <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                        Will stamp{" "}
-                        <code className="rounded bg-neutral-100 dark:bg-muted px-1 py-0.5 text-[11px]">
-                          utm_campaign={selectedCampaign.slug}
-                          {selectedCampaign.utmSource &&
-                            `, utm_source=${selectedCampaign.utmSource}`}
-                          {selectedCampaign.utmMedium &&
-                            `, utm_medium=${selectedCampaign.utmMedium}`}
-                        </code>{" "}
-                        onto this link. Values you enter yourself are kept.
-                      </FormDescription>
-                    ) : (
-                      <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                        Group this link into a campaign (optional)
-                      </FormDescription>
+                              {/* Tag dropdown */}
+                              {showTagDropdown && filteredTags.length > 0 && (
+                                <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-neutral-200 dark:border-border bg-white dark:bg-card shadow-md">
+                                  {filteredTags.map((tag) => (
+                                    <div
+                                      key={tag}
+                                      className="cursor-pointer px-4 py-2 text-[13px] hover:bg-neutral-50 dark:hover:bg-accent/50"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault(); // Prevent input blur
+                                        addTag(tag);
+                                      }}
+                                    >
+                                      {tag}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                          Add tags to categorize your links. Press Enter to add a tag or select from
+                          existing tags.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  />
 
-            {/* Custom Metadata Section */}
-            <SectionToggle
-              title="Custom Social Media Previews"
-              description="Personalize your link previews with custom metadata settings"
-              isOpen={isCustomMetadataOpen}
-              onToggle={() => setIsCustomMetadataOpen(!isCustomMetadataOpen)}
-              badge={!isProUser ? <PlanBadge plan="Pro" /> : undefined}
-            >
-              <FormField
-                control={form.control}
-                name="metadata.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Custom Title
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Custom title for your link"
-                        className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setMetaData((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }));
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="metadata.description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Custom Description
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Custom description for your link"
-                        className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setMetaData((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }));
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="metadata.image"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Custom Image
-                    </FormLabel>
-                    <FormControl>
-                      <OgImageUploader
-                        value={field.value}
-                        onChange={(image) => {
-                          field.onChange(image);
-                          setMetaData((prev) => ({
-                            ...prev,
-                            image: image || "",
-                          }));
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </SectionToggle>
-
-            {/* UTM Parameters Section */}
-            <SectionToggle
-              title="UTM Parameters"
-              description="Add UTM parameters for campaign tracking"
-              isOpen={isUtmParamsOpen}
-              onToggle={() => setIsUtmParamsOpen(!isUtmParamsOpen)}
-              badge={!isUltraUser ? <PlanBadge plan="Ultra" /> : undefined}
-            >
-              {isUltraUser && (
-                <div className="flex justify-end">
-                  <UtmTemplateSelector
-                    onSelect={(params) => {
-                      form.setValue("utmParams.utm_source", params.utm_source ?? "");
-                      form.setValue("utmParams.utm_medium", params.utm_medium ?? "");
-                      form.setValue("utmParams.utm_campaign", params.utm_campaign ?? "");
-                      form.setValue("utmParams.utm_term", params.utm_term ?? "");
-                      form.setValue("utmParams.utm_content", params.utm_content ?? "");
-                    }}
+                  {/* Campaign */}
+                  <FormField
+                    control={form.control}
+                    name="campaignId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Campaign
+                        </FormLabel>
+                        <Select
+                          value={field.value != null ? field.value.toString() : "none"}
+                          onValueChange={(value) => {
+                            field.onChange(value === "none" ? null : Number(value));
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] text-neutral-900 dark:text-foreground">
+                              <SelectValue placeholder="No campaign" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No campaign</SelectItem>
+                            {campaigns?.map((campaign) => (
+                              <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                                {campaign.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isProUser && selectedCampaign ? (
+                          <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                            Will stamp{" "}
+                            <code className="rounded bg-neutral-100 dark:bg-muted px-1 py-0.5 text-[11px]">
+                              utm_campaign={selectedCampaign.slug}
+                              {selectedCampaign.utmSource &&
+                                `, utm_source=${selectedCampaign.utmSource}`}
+                              {selectedCampaign.utmMedium &&
+                                `, utm_medium=${selectedCampaign.utmMedium}`}
+                            </code>{" "}
+                            onto this link. Values you enter yourself are kept.
+                          </FormDescription>
+                        ) : (
+                          <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                            Group this link into a campaign (optional)
+                          </FormDescription>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-              )}
-              <UtmParamsForm form={form} disabled={!isUltraUser} />
-            </SectionToggle>
 
-            {/* Link Cloaking Section */}
-            <SectionToggle
-              title="Link Cloaking"
-              description="Keep your short URL visible while showing destination content"
-              isOpen={isLinkCloakingOpen}
-              onToggle={() => setIsLinkCloakingOpen(!isLinkCloakingOpen)}
-              badge={!isUltraUser ? <PlanBadge plan="Ultra" /> : undefined}
-              highlighted={!!form.watch("cloaking")}
-            >
-              <FormField
-                control={form.control}
-                name="cloaking"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border border-neutral-200 dark:border-border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                        Enable Link Cloaking
-                      </FormLabel>
-                      <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                        Visitors see your short URL while viewing the destination page.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <div className="flex items-center gap-2">
-                        {isCheckingIframeable && (
-                          <IconLoader2
-                            size={14}
-                            stroke={1.5}
-                            className="animate-spin text-neutral-400"
+                {/* Custom Metadata Section */}
+                <SectionToggle
+                  title="Custom Social Media Previews"
+                  description="Personalize your link previews with custom metadata settings"
+                  isOpen={isCustomMetadataOpen}
+                  onToggle={() => setIsCustomMetadataOpen(!isCustomMetadataOpen)}
+                  badge={!isProUser ? <PlanBadge plan="Pro" /> : undefined}
+                >
+                  <FormField
+                    control={form.control}
+                    name="metadata.title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Custom Title
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Custom title for your link"
+                            className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setMetaData((prev) => ({
+                                ...prev,
+                                title: e.target.value,
+                              }));
+                            }}
                           />
-                        )}
-                        <Switch
-                          checked={field.value ?? false}
-                          onCheckedChange={field.onChange}
-                          disabled={!isUltraUser || !destinationURL || isCheckingIframeable}
-                        />
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {!isUltraUser && (
-                <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                  Link cloaking is an Ultra plan feature.
-                </p>
-              )}
-
-              {!destinationURL && isUltraUser && (
-                <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                  Enter a destination URL above to enable link cloaking.
-                </p>
-              )}
-
-              {iframeableResult === true && cloakingEnabled && (
-                <p className="text-[12px] text-green-600 dark:text-emerald-400">
-                  This URL can be cloaked successfully.
-                </p>
-              )}
-
-              {iframeableResult === false && (
-                <p className="text-[12px] text-amber-600 dark:text-amber-400">
-                  This website doesn&apos;t allow cloaking. Try a different URL.
-                </p>
-              )}
-            </SectionToggle>
-
-            {/* Verified Clicks Section */}
-            <SectionToggle
-              title="Verified Clicks"
-              description="Tell real visitors apart from automated traffic"
-              isOpen={isVerifiedClicksOpen}
-              onToggle={() => setIsVerifiedClicksOpen(!isVerifiedClicksOpen)}
-              badge={!isProUser ? <PlanBadge plan="Pro" /> : undefined}
-              highlighted={!!form.watch("verifiedClicksEnabled")}
-            >
-              <FormField
-                control={form.control}
-                name="verifiedClicksEnabled"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border border-neutral-200 dark:border-border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                        Enable Verified Clicks
-                      </FormLabel>
-                      <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                        With this on, your analytics shows which clicks came from real visitors, not
-                        automated traffic — so you can tell real engagement apart from noise.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value ?? false}
-                        onCheckedChange={field.onChange}
-                        disabled={!isProUser}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              {!isProUser && (
-                <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                  Verified clicks are available on Pro and Ultra plans.
-                </p>
-              )}
-            </SectionToggle>
-
-            {/* Geotargeting Rules Section */}
-            <GeoRulesForm
-              form={form}
-              disabled={!isProUser}
-              maxRules={isUltraUser ? undefined : 3}
-              isUnlimited={isUltraUser}
-            />
-
-            {/* Optional Settings Section */}
-            <SectionToggle
-              title="Optional Settings"
-              description="Configure additional options for your link"
-              isOpen={isOptionalSettingsOpen}
-              onToggle={() => setIsOptionalSettingsOpen(!isOptionalSettingsOpen)}
-            >
-              <FormField
-                control={form.control}
-                name="disableLinkAfterClicks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Disable after clicks
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]"
-                      />
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Deactivate the link after a certain number of clicks. Leave empty to never
-                      disable
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="disableLinkAfterDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Disable after date
-                    </FormLabel>
-                    <FormControl>
-                      <LinkExpirationDatePicker setSeletectedDate={field.onChange} />
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Deactivate the link after a certain date
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                disabled={!isProUser}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Password
-                    </FormLabel>
-                    {!userSubscription.isLoading && !isProUser && (
-                      <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                        You need to be on a <b>pro plan</b> to create password protected links
-                      </FormDescription>
+                        </FormControl>
+                      </FormItem>
                     )}
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]"
+                  />
+                  <FormField
+                    control={form.control}
+                    name="metadata.description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Custom Description
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Custom description for your link"
+                            className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setMetaData((prev) => ({
+                                ...prev,
+                                description: e.target.value,
+                              }));
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="metadata.image"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Custom Image
+                        </FormLabel>
+                        <FormControl>
+                          <OgImageUploader
+                            value={field.value}
+                            onChange={(image) => {
+                              field.onChange(image);
+                              setMetaData((prev) => ({
+                                ...prev,
+                                image: image || "",
+                              }));
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </SectionToggle>
+              </div>
+            )}
+
+            {activeTab === "routing" && (
+              <div className="space-y-4">
+                {/* UTM Parameters Section */}
+                <SectionToggle
+                  title="UTM Parameters"
+                  description="Add UTM parameters for campaign tracking"
+                  isOpen={isUtmParamsOpen}
+                  onToggle={() => setIsUtmParamsOpen(!isUtmParamsOpen)}
+                  badge={!isUltraUser ? <PlanBadge plan="Ultra" /> : undefined}
+                >
+                  {isUltraUser && (
+                    <div className="flex justify-end">
+                      <UtmTemplateSelector
+                        onSelect={(params) => {
+                          form.setValue("utmParams.utm_source", params.utm_source ?? "");
+                          form.setValue("utmParams.utm_medium", params.utm_medium ?? "");
+                          form.setValue("utmParams.utm_campaign", params.utm_campaign ?? "");
+                          form.setValue("utmParams.utm_term", params.utm_term ?? "");
+                          form.setValue("utmParams.utm_content", params.utm_content ?? "");
+                        }}
                       />
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Set a password to protect your link
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </SectionToggle>
+                    </div>
+                  )}
+                  <UtmParamsForm form={form} disabled={!isUltraUser} />
+                </SectionToggle>
+
+                {/* Link Cloaking Section */}
+                <SectionToggle
+                  title="Link Cloaking"
+                  description="Keep your short URL visible while showing destination content"
+                  isOpen={isLinkCloakingOpen}
+                  onToggle={() => setIsLinkCloakingOpen(!isLinkCloakingOpen)}
+                  badge={!isUltraUser ? <PlanBadge plan="Ultra" /> : undefined}
+                  highlighted={!!form.watch("cloaking")}
+                >
+                  <FormField
+                    control={form.control}
+                    name="cloaking"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-neutral-200 dark:border-border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Enable Link Cloaking
+                          </FormLabel>
+                          <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                            Visitors see your short URL while viewing the destination page.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            {isCheckingIframeable && (
+                              <IconLoader2
+                                size={14}
+                                stroke={1.5}
+                                className="animate-spin text-neutral-400"
+                              />
+                            )}
+                            <Switch
+                              checked={field.value ?? false}
+                              onCheckedChange={field.onChange}
+                              disabled={!isUltraUser || !destinationURL || isCheckingIframeable}
+                            />
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {!isUltraUser && (
+                    <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                      Link cloaking is an Ultra plan feature.
+                    </p>
+                  )}
+
+                  {!destinationURL && isUltraUser && (
+                    <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                      Enter a destination URL above to enable link cloaking.
+                    </p>
+                  )}
+
+                  {iframeableResult === true && cloakingEnabled && (
+                    <p className="text-[12px] text-green-600 dark:text-emerald-400">
+                      This URL can be cloaked successfully.
+                    </p>
+                  )}
+
+                  {iframeableResult === false && (
+                    <p className="text-[12px] text-amber-600 dark:text-amber-400">
+                      This website doesn&apos;t allow cloaking. Try a different URL.
+                    </p>
+                  )}
+                </SectionToggle>
+
+                {/* Verified Clicks Section */}
+                <SectionToggle
+                  title="Verified Clicks"
+                  description="Tell real visitors apart from automated traffic"
+                  isOpen={isVerifiedClicksOpen}
+                  onToggle={() => setIsVerifiedClicksOpen(!isVerifiedClicksOpen)}
+                  badge={!isProUser ? <PlanBadge plan="Pro" /> : undefined}
+                  highlighted={!!form.watch("verifiedClicksEnabled")}
+                >
+                  <FormField
+                    control={form.control}
+                    name="verifiedClicksEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-neutral-200 dark:border-border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            Enable Verified Clicks
+                          </FormLabel>
+                          <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                            With this on, your analytics shows which clicks came from real visitors,
+                            not automated traffic — so you can tell real engagement apart from
+                            noise.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                            disabled={!isProUser}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {!isProUser && (
+                    <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                      Verified clicks are available on Pro and Ultra plans.
+                    </p>
+                  )}
+                </SectionToggle>
+
+                {/* Geotargeting Rules Section */}
+                <GeoRulesForm
+                  form={form}
+                  disabled={!isProUser}
+                  maxRules={isUltraUser ? undefined : 3}
+                  isUnlimited={isUltraUser}
+                />
+
+                {/* Optional Settings Section */}
+                <SectionToggle
+                  title="Optional Settings"
+                  description="Configure additional options for your link"
+                  isOpen={isOptionalSettingsOpen}
+                  onToggle={() => setIsOptionalSettingsOpen(!isOptionalSettingsOpen)}
+                >
+                  <FormField
+                    control={form.control}
+                    name="disableLinkAfterClicks"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Disable after clicks
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                          Deactivate the link after a certain number of clicks. Leave empty to never
+                          disable
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="disableLinkAfterDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Disable after date
+                        </FormLabel>
+                        <FormControl>
+                          <LinkExpirationDatePicker setSeletectedDate={field.onChange} />
+                        </FormControl>
+                        <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                          Deactivate the link after a certain date
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    disabled={!isProUser}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                          Password
+                        </FormLabel>
+                        {!userSubscription.isLoading && !isProUser && (
+                          <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                            You need to be on a <b>pro plan</b> to create password protected links
+                          </FormDescription>
+                        )}
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="password"
+                            className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]"
+                          />
+                        </FormControl>
+                        <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                          Set a password to protect your link
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SectionToggle>
+              </div>
+            )}
+
+            {activeTab === "qr" && (
+              <div className="space-y-5 rounded-lg border border-neutral-200 dark:border-border p-4">
+                <div>
+                  <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                    QR Code Title
+                  </FormLabel>
+                  <Input
+                    placeholder="E.g. Summer Promo Flyer QR"
+                    value={qrCodeTitle}
+                    onChange={(e) => setQrCodeTitle(e.target.value)}
+                    className="mt-1.5 h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px] placeholder:text-neutral-400"
+                  />
+                  <FormDescription className="mt-1 text-[12px] text-neutral-400 dark:text-neutral-500">
+                    Give this QR code a name so you can easily identify it later.
+                  </FormDescription>
+                </div>
+
+                <QRAdvancedCustomization
+                  pixelStyle={qrState.pixelStyle}
+                  setPixelStyle={(style) => updateQrState({ pixelStyle: style })}
+                  markerShape={qrState.markerShape}
+                  setMarkerShape={(shape) => updateQrState({ markerShape: shape })}
+                  markerInnerShape={qrState.markerInnerShape}
+                  setMarkerInnerShape={(shape) => updateQrState({ markerInnerShape: shape })}
+                  darkColor={qrState.darkColor}
+                  setDarkColor={(color) => updateQrState({ darkColor: color })}
+                  lightColor={qrState.lightColor}
+                  setLightColor={(color) => updateQrState({ lightColor: color })}
+                  effect={qrState.effect}
+                  setEffect={(effect) => updateQrState({ effect })}
+                  effectRadius={qrState.effectCrystalizeRadius}
+                  setEffectRadius={(radius) =>
+                    updateQrState({ effectCrystalizeRadius: radius, effectLiquidifyRadius: radius })
+                  }
+                  marginNoise={qrState.marginNoise}
+                  setMarginNoise={(marginNoise) => updateQrState({ marginNoise })}
+                  marginNoiseRate={qrState.marginNoiseRate}
+                  setMarginNoiseRate={(marginNoiseRate) => updateQrState({ marginNoiseRate })}
+                  logoImage={qrState.logoImage}
+                  setLogoImage={(logoImage) => updateQrState({ logoImage })}
+                  logoSize={qrState.logoSize}
+                  setLogoSize={(logoSize) => updateQrState({ logoSize })}
+                  logoMargin={qrState.logoMargin}
+                  setLogoMargin={(logoMargin) => updateQrState({ logoMargin })}
+                  logoBorderRadius={qrState.logoBorderRadius}
+                  setLogoBorderRadius={(logoBorderRadius) => updateQrState({ logoBorderRadius })}
+                />
+              </div>
+            )}
 
             <Button
               type="submit"
               className="mt-10 w-full bg-blue-600 text-[13px] hover:bg-blue-700"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={formUpdateMutation.isLoading}
+              disabled={formUpdateMutation.isLoading || qrCodeSaveImageMutation.isLoading}
             >
-              {formUpdateMutation.isLoading ? "Creating..." : "Create Link"}
+              {formUpdateMutation.isLoading
+                ? "Creating..."
+                : activeTab === "qr" || isQrCodeOnlyParam
+                  ? "Create Link & QR Code"
+                  : "Create Link"}
             </Button>
           </form>
         </Form>
@@ -1074,21 +1294,71 @@ export default function CreateLinkPage() {
         <div className="h-screen border-r border-neutral-200 dark:border-border" />
       </div>
       <div className="mt-4 flex flex-col gap-4 md:col-span-5 md:mt-0">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-foreground">
-            How users see your link
-          </h1>
-          <p className="text-[13px] text-neutral-400">
-            This is how your link will be displayed to users on social platforms
-          </p>
-        </div>
-        <LinkPreviewComponent
-          destinationURL={destinationURL}
-          metaTitle={metaData.title}
-          metaDescription={metaData.description}
-          metaImage={metaData.image}
-          favicon={metaData.favicon}
-        />
+        {activeTab === "qr" ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-foreground">
+                QR Code Preview
+              </h1>
+              <p className="text-[13px] text-neutral-400">
+                Live preview of your customized QR code
+              </p>
+            </div>
+            <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-border bg-white dark:bg-card p-6 shadow-sm">
+              <div className="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm">
+                <canvas ref={canvasRef} className="max-w-[240px] max-h-[240px] w-full h-full" />
+              </div>
+              <p className="mt-4 text-center text-xs text-neutral-400">
+                Scans to:{" "}
+                <span className="font-medium text-neutral-600 dark:text-neutral-300 break-all">
+                  {destinationURL || "https://clickpath.analytai.in"}
+                </span>
+              </p>
+            </div>
+            {presets && presets.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                  Quick Style Presets
+                </FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  {presets.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => loadPreset(preset.id)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+                        selectedPresetId === preset.id
+                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                          : "border-neutral-200 dark:border-border hover:bg-neutral-50 dark:hover:bg-accent text-neutral-600 dark:text-neutral-400",
+                      )}
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-foreground">
+                How users see your link
+              </h1>
+              <p className="text-[13px] text-neutral-400">
+                This is how your link will be displayed to users on social platforms
+              </p>
+            </div>
+            <LinkPreviewComponent
+              destinationURL={destinationURL}
+              metaTitle={metaData.title}
+              metaDescription={metaData.description}
+              metaImage={metaData.image}
+              favicon={metaData.favicon}
+            />
+          </div>
+        )}
       </div>
     </section>
   );

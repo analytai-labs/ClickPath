@@ -91,6 +91,20 @@ export const geoRuleInputSchema = z
     },
   );
 
+export const qrCodeCustomizationSchema = z.object({
+  enabled: z.boolean().optional(),
+  title: z.string().optional(),
+  patternStyle: z.string().default("rounded").optional(),
+  cornerStyle: z.string().default("rounded").optional(),
+  selectedColor: z.string().default("#000000").optional(),
+  lightColor: z.string().default("#ffffff").optional(),
+  logoImage: z.string().nullable().optional(),
+  effect: z.string().default("none").optional(),
+  marginNoise: z.boolean().default(false).optional(),
+  markerInnerShape: z.string().default("auto").optional(),
+  isQrCodeOnly: z.boolean().optional(),
+});
+
 export const createLinkSchema = z.object({
   url: z.string(),
   name: z.string().optional(),
@@ -121,6 +135,7 @@ export const createLinkSchema = z.object({
   verifiedClicksEnabled: z.boolean().optional(),
   geoRules: z.array(geoRuleInputSchema).optional(),
   campaignId: z.number().nullable().optional(),
+  qrCode: qrCodeCustomizationSchema.optional(),
 });
 
 export const quickLinkShorteningSchema = z.object({

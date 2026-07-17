@@ -1,6 +1,9 @@
 "use client";
 
+import { sendGAEvent } from "@next/third-parties/google";
 import posthog from "posthog-js";
+
+import { env } from "@/env.mjs";
 
 /**
  * PostHog event names for tracking user activities
@@ -54,6 +57,10 @@ type PostHogEventName = (typeof POSTHOG_EVENTS)[keyof typeof POSTHOG_EVENTS];
  */
 export function trackEvent(eventName: PostHogEventName, properties?: Record<string, unknown>) {
   if (typeof window !== "undefined") {
-    posthog.capture(eventName, properties);
+    if (env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.capture(eventName, properties);
+    } else if (env.NEXT_PUBLIC_GA_ID) {
+      sendGAEvent({ event: eventName, ...properties });
+    }
   }
 }

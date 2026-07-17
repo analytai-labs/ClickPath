@@ -6,7 +6,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div
       data-theme="warm"
-      data-accent="terracotta"
+      data-accent="purple"
       style={{
         minHeight: "100vh",
         background: "var(--warm-bg)",

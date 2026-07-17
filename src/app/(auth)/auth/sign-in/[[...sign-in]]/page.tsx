@@ -68,10 +68,10 @@ function SignInForm() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6">
+    <div className="flex w-full max-w-md flex-col items-center justify-center space-y-6 rounded-[24px] border border-[var(--warm-line)] bg-[var(--warm-paper)] p-8 shadow-xl">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Welcome back</h1>
-        <p className="mt-2 text-sm text-neutral-600">Sign in to your account to continue</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--warm-ink)]">Welcome back</h1>
+        <p className="mt-2 text-sm text-[var(--warm-mute-soft)]">Sign in to your account to continue</p>
       </div>
 
       <div className="w-full flex flex-col space-y-4">
@@ -84,7 +84,7 @@ function SignInForm() {
           <input
             type="email"
             placeholder="Email address"
-            className="h-11 rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
+            className="h-11 w-full rounded-xl border border-[var(--warm-line)] bg-[var(--warm-paper)] px-3.5 py-2 text-sm text-[var(--warm-ink)] placeholder-[var(--warm-mute-soft)] transition-all focus:border-[var(--warm-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--warm-accent)]/20"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
@@ -92,7 +92,7 @@ function SignInForm() {
           <input
             type="password"
             placeholder="Password (optional for magic link)"
-            className="h-11 rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none"
+            className="h-11 w-full rounded-xl border border-[var(--warm-line)] bg-[var(--warm-paper)] px-3.5 py-2 text-sm text-[var(--warm-ink)] placeholder-[var(--warm-mute-soft)] transition-all focus:border-[var(--warm-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--warm-accent)]/20"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
@@ -100,7 +100,7 @@ function SignInForm() {
           <div className="flex gap-2">
             <Button
               type="submit"
-              className="h-11 flex-1 bg-neutral-900 text-white hover:bg-neutral-800"
+              className="h-11 flex-1 border-none bg-[var(--warm-accent)] text-[var(--warm-accent-ink)] hover:bg-[var(--warm-accent-deep)]"
               disabled={isLoading || !password}
             >
               Sign in with Password
@@ -108,7 +108,7 @@ function SignInForm() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 flex-1"
+              className="h-11 flex-1 border-[var(--warm-line)] bg-[var(--warm-paper)] text-[var(--warm-ink)] hover:bg-[var(--warm-line-soft)]"
               onClick={handleMagicLink}
               disabled={isLoading || !email}
             >
@@ -120,16 +120,16 @@ function SignInForm() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-neutral-200" />
+            <span className="w-full border-t border-[var(--warm-line)]" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-neutral-500">Or continue with</span>
+            <span className="bg-[var(--warm-paper)] px-2 text-[var(--warm-mute-soft)]">Or continue with</span>
           </div>
         </div>
 
         <Button
           variant="outline"
-          className="h-11 w-full bg-white text-neutral-900 hover:bg-neutral-50"
+          className="h-11 w-full border-[var(--warm-line)] bg-[var(--warm-paper)] text-[var(--warm-ink)] hover:bg-[var(--warm-line-soft)]"
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
         >
           <IconBrandGoogle className="mr-2 h-5 w-5" />
@@ -137,16 +137,16 @@ function SignInForm() {
         </Button>
         <Button
           variant="outline"
-          className="h-11 w-full bg-white text-neutral-900 hover:bg-neutral-50"
+          className="h-11 w-full border-[var(--warm-line)] bg-[var(--warm-paper)] text-[var(--warm-ink)] hover:bg-[var(--warm-line-soft)]"
           onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
         >
           <IconBrandGithub className="mr-2 h-5 w-5" />
           GitHub
         </Button>
 
-        <p className="text-center text-sm text-neutral-500">
+        <p className="text-center text-sm text-[var(--warm-mute-soft)]">
           Don't have an account?{" "}
-          <Link href="/auth/sign-up" className="text-neutral-900 hover:underline">
+          <Link href="/auth/sign-up" className="text-[var(--warm-ink)] hover:underline">
             Sign up
           </Link>
         </p>

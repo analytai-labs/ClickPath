@@ -23,7 +23,7 @@ import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
 import { cn } from "@/lib/utils";
 import { TRPCReactProvider } from "@/trpc/react";
 
-import { CSPostHogProvider } from "./providers";
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 
 import type { Metadata, Viewport } from "next";
 
@@ -78,7 +78,7 @@ export default function RootLayout({
             <JsonLd data={websiteSchema} />
           </head>
           <MicrosoftClarityScript />
-          <CSPostHogProvider>
+          <AnalyticsProvider>
             <body
               className={cn(
                 "min-h-screen bg-background font-sans antialiased",
@@ -100,7 +100,7 @@ export default function RootLayout({
                 <Toaster />
               </ThemeProvider>
             </body>
-          </CSPostHogProvider>
+          </AnalyticsProvider>
         </html>
       </ViewTransitions>
     </SessionProvider>

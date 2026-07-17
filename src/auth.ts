@@ -39,11 +39,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email },
         });
         if (!user || !user.password || user.banned) {
+          // Dummy compare to prevent timing attacks for user enumeration
+          await bcrypt.compare("dummy", "$2a$10$XDummySaltToTakeUpProcessingTime123");
           return null;
         }
         const isValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isValid) {
           return null;
+        }
+        if (!user.emailVerified) {
+          throw new Error("Please verify your email before logging in.");
         }
         return {
           id: user.id,

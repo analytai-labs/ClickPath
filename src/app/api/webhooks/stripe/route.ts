@@ -44,8 +44,20 @@ export async function POST(req: Request) {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    await prisma.subscription.create({
-      data: {
+    await prisma.subscription.upsert({
+      where: { userId: user.id },
+      update: {
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customerId,
+        stripePriceId: subscription.items?.data?.[0]?.price?.id ?? "",
+        plan: "pro",
+        status: subscription.status,
+        renewsAt: new Date(subscription.current_period_end * 1000),
+        endsAt: subscription.cancel_at
+          ? new Date(subscription.cancel_at * 1000)
+          : null,
+      },
+      create: {
         userId: user.id,
         stripeSubscriptionId: subscription.id,
         stripeCustomerId: customerId,

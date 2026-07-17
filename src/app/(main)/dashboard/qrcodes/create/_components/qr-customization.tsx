@@ -20,6 +20,7 @@ interface QRCodeCustomizationProps {
   selectedColor: string;
   setSelectedColor: (color: string) => void;
   setLogoImage: (image: string | null) => void;
+  logoImage?: string | null;
 }
 
 function QRCodeCustomization({
@@ -30,6 +31,7 @@ function QRCodeCustomization({
   selectedColor,
   setSelectedColor,
   setLogoImage,
+  logoImage,
 }: QRCodeCustomizationProps) {
   return (
     <div>
@@ -76,7 +78,7 @@ function QRCodeCustomization({
         </div>
 
         <ColorPicker selectedColor={selectedColor} setSelectedColor={setSelectedColor} />
-        <LogoUploader setLogoImage={setLogoImage} />
+        <LogoUploader setLogoImage={setLogoImage} currentLogoImage={logoImage || null} />
       </div>
     </div>
   );

@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { name: "Links", href: "/dashboard" },
-  { name: "QR Codes", href: "/dashboard/qrcodes" },
+  { name: "Links & QR Codes", href: "/dashboard" },
   // { name: "API Keys", href: "/dashboard/tokens" },
   { name: "Settings", href: "/dashboard/settings" },
   // {

@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import { fontFamily } from "tailwindcss/defaultTheme";
+import colors from "tailwindcss/colors";
 
 export default {
   darkMode: ["class"],
@@ -20,6 +21,7 @@ export default {
         logo: ["var(--font-logo)", ...fontFamily.sans],
       },
       colors: {
+        blue: colors.violet,
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -56,7 +58,7 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
+        md: "var(--radius)",
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {

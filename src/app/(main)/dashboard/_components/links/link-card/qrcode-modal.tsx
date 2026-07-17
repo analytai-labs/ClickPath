@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { clientLogger } from "@/lib/logger/client";
 
 const log = clientLogger.child({ component: "qr-modal" });
+import { IconPencil } from "@tabler/icons-react";
 import {
   Dialog,
   DialogBody,
@@ -22,9 +23,26 @@ type QRCodeModalProps = {
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   destinationUrl: string;
+  onCustomize?: () => void;
+  qrCode?: {
+    patternStyle?: string | null;
+    cornerStyle?: string | null;
+    selectedColor?: string | null;
+    lightColor?: string | null;
+    logoImage?: string | null;
+    effect?: string | null;
+    marginNoise?: boolean | null;
+    markerInnerShape?: string | null;
+  } | null;
 };
 
-export function QRCodeModal({ open, setOpen, destinationUrl }: QRCodeModalProps) {
+export function QRCodeModal({
+  open,
+  setOpen,
+  destinationUrl,
+  onCustomize,
+  qrCode,
+}: QRCodeModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderQRCode = useCallback(async () => {
@@ -36,11 +54,19 @@ export function QRCodeModal({ open, setOpen, destinationUrl }: QRCodeModalProps)
         text: destinationUrl,
         scale: 10,
         margin: 2,
+        pixelStyle: (qrCode?.patternStyle as any) || "rounded",
+        markerShape: (qrCode?.cornerStyle as any) || "rounded",
+        darkColor: qrCode?.selectedColor || "#000000",
+        lightColor: qrCode?.lightColor || "#ffffff",
+        logoImage: qrCode?.logoImage || "",
+        effect: (qrCode?.effect as any) || "none",
+        marginNoise: qrCode?.marginNoise ?? false,
+        markerInnerShape: (qrCode?.markerInnerShape as "auto" | "circle" | "square" | "plus" | "diamond") || "auto",
       });
     } catch (error) {
       log.error({ err: error, action: "render" }, "failed to generate QR code");
     }
-  }, [destinationUrl]);
+  }, [destinationUrl, qrCode]);
 
   useEffect(() => {
     if (open) {
@@ -61,6 +87,14 @@ export function QRCodeModal({ open, setOpen, destinationUrl }: QRCodeModalProps)
         text: destinationUrl,
         scale: 20,
         margin: 2,
+        pixelStyle: (qrCode?.patternStyle as any) || "rounded",
+        markerShape: (qrCode?.cornerStyle as any) || "rounded",
+        darkColor: qrCode?.selectedColor || "#000000",
+        lightColor: qrCode?.lightColor || "#ffffff",
+        logoImage: qrCode?.logoImage || "",
+        effect: (qrCode?.effect as any) || "none",
+        marginNoise: qrCode?.marginNoise ?? false,
+        markerInnerShape: (qrCode?.markerInnerShape as "auto" | "circle" | "square" | "plus" | "diamond") || "auto",
       });
 
       const pngUrl = downloadCanvas
@@ -102,13 +136,28 @@ export function QRCodeModal({ open, setOpen, destinationUrl }: QRCodeModalProps)
           </div>
         </DialogBody>
 
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-9">
-            Close
-          </Button>
-          <Button onClick={handleQRCodeDownload} className="h-9">
-            Download
-          </Button>
+        <DialogFooter className="gap-2 sm:justify-between">
+          {onCustomize ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCustomize}
+              className="h-9 gap-1.5 text-xs font-medium"
+            >
+              <IconPencil size={14} stroke={1.5} />
+              Customize QR Style
+            </Button>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="h-9">
+              Close
+            </Button>
+            <Button onClick={handleQRCodeDownload} className="h-9">
+              Download
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
