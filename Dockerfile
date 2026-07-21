@@ -1,14 +1,13 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # 1. Dependencies stage
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* bun.lockb* ./
 RUN \
-  if [ -f bun.lockb ]; then npm install -g bun && bun install --frozen-lockfile; \
+  if [ -f bun.lockb ]; then npm install -g bun && bun install; \
   elif [ -f package-lock.json ]; then npm ci; \
   else npm install; \
   fi
@@ -26,6 +25,8 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=1
+ENV STRIPE_API_KEY=sk_test_123
+ENV STRIPE_WEBHOOK_SECRET=whsec_123
 RUN npm run build
 
 # 3. Production runner stage
@@ -52,4 +53,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npm_config_cache=/tmp/.npm npx -y prisma@6.7.0 migrate deploy && node server.js"]
