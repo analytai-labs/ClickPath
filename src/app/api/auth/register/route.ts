@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const token = crypto.randomBytes(32).toString("hex");
 
     // Send Verification Email FIRST to avoid dead accounts on failure
-    const origin = process.env.NEXT_PUBLIC_APP_URL || "https://ishortn.ink";
+    const origin = process.env.NEXT_PUBLIC_APP_URL || "https://clickpath.analytai.in";
     const verifyLink = `${origin}/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
     if (resend) {

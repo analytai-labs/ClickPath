@@ -135,13 +135,20 @@ export const Logo = ({
 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
     <path
-      d="M10 6c-3 0-5 2-5 5s2 5 5 5h12c3 0 5 2 5 5s-2 5-5 5"
+      d="M6 24 L14 16 L20 22 L28 10"
       stroke={color}
       strokeWidth="2.5"
       strokeLinecap="round"
+      strokeLinejoin="round"
     />
-    <circle cx="10" cy="11" r="2.5" fill={color} />
-    <circle cx="22" cy="21" r="2.5" fill={color} />
+    <path
+      d="M20 10 L28 10 L28 18"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="6" cy="24" r="2.5" fill={color} />
   </svg>
 );
 
