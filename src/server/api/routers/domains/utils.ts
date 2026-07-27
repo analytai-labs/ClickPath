@@ -10,6 +10,10 @@ export interface CloudflareCustomHostnameResponse {
       type: string;
       method: string;
       status: string;
+      validation_records?: {
+        txt_name: string;
+        txt_value: string;
+      }[];
     };
     status: string;
     verification_errors?: string[];

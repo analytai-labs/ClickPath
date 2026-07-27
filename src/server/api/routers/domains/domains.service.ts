@@ -88,13 +88,28 @@ export async function addDomainToUserAccount(
     const wellConfigured = targetCustomHostname.status === "active" && targetCustomHostname.ssl.status === "active";
     const verificationDetails = [];
 
-    // Add ownership verification TXT record
+    // Add ownership verification TXT record (if required)
     if (targetCustomHostname.ownership_verification) {
       verificationDetails.push({
         type: "TXT",
         domain: targetCustomHostname.ownership_verification.name,
         value: targetCustomHostname.ownership_verification.value,
       });
+    }
+
+    // Add SSL certificate TXT validation records
+    if (targetCustomHostname.ssl?.validation_records) {
+      for (const record of targetCustomHostname.ssl.validation_records) {
+        // Prevent duplicate TXT records if ownership and SSL validation happen to use the same record
+        const exists = verificationDetails.find((v) => v.type === "TXT" && v.domain === record.txt_name);
+        if (!exists) {
+          verificationDetails.push({
+            type: "TXT",
+            domain: record.txt_name,
+            value: record.txt_value,
+          });
+        }
+      }
     }
 
     // Add CNAME instruction to point to the Fallback Origin
