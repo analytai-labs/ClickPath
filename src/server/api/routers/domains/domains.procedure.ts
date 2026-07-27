@@ -86,7 +86,9 @@ export const customDomainRouter = createTRPCRouter({
         
         if (cfDomain.ssl?.validation_records) {
           for (const record of cfDomain.ssl.validation_records) {
-            const exists = challenges.find((v) => v.type === "TXT" && v.domain === record.txt_name);
+            const exists = challenges.find(
+              (v) => v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value
+            );
             if (!exists) {
               challenges.push({
                 type: "TXT",

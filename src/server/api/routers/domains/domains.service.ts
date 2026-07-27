@@ -100,8 +100,10 @@ export async function addDomainToUserAccount(
     // Add SSL certificate TXT validation records
     if (targetCustomHostname.ssl?.validation_records) {
       for (const record of targetCustomHostname.ssl.validation_records) {
-        // Prevent duplicate TXT records if ownership and SSL validation happen to use the same record
-        const exists = verificationDetails.find((v) => v.type === "TXT" && v.domain === record.txt_name);
+        // Prevent duplicate TXT records only if both name and value are exactly the same
+        const exists = verificationDetails.find(
+          (v) => v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value
+        );
         if (!exists) {
           verificationDetails.push({
             type: "TXT",
