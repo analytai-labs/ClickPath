@@ -1678,11 +1678,11 @@ export const exportAllUserLinks = async (ctx: WorkspaceTRPCContext) => {
   });
 };
 
-export const checkPresenceOfVercelHeaders = async (ctx: PublicTRPCContext) => {
+export const checkPresenceOfHeaders = async (ctx: PublicTRPCContext) => {
   return {
     headers: ctx.headers,
-    countryHeader: ctx.headers.get("x-vercel-ip-country"),
-    cityHeader: ctx.headers.get("x-vercel-ip-city"),
+    countryHeader: ctx.headers.get("cf-ipcountry") || ctx.headers.get("x-vercel-ip-country"),
+    cityHeader: ctx.headers.get("cf-ipcity") || ctx.headers.get("x-vercel-ip-city"),
   };
 };
 

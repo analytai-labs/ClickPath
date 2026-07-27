@@ -46,9 +46,11 @@ export function WorkspaceSwitcher({
     const baseDomain = getAppBaseDomain();
 
     if (type === "personal") {
+      document.cookie = "clickpath-workspace=personal; path=/; max-age=31536000; SameSite=Lax";
       window.location.href = `${window.location.protocol}//${baseDomain}/dashboard`;
     } else if (teamSlug) {
-      window.location.href = `${window.location.protocol}//${teamSlug}.${baseDomain}/dashboard`;
+      document.cookie = `clickpath-workspace=team:${teamSlug}; path=/; max-age=31536000; SameSite=Lax`;
+      window.location.href = `${window.location.protocol}//${baseDomain}/dashboard`;
     }
   };
 

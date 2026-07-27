@@ -7,75 +7,39 @@ const log = logger.child({ component: "domain-reminder" });
 // Reminder throttle: don't send more than once per 7 days
 const REMINDER_INTERVAL_DAYS = 7;
 
-type VercelConfigResponse = {
-  misconfigured: boolean;
-};
 
-type VercelDomainResponse = {
-  verified: boolean;
-};
+
+import { getCustomHostnameFromCloudflare } from "./utils";
 
 /**
- * Verify domain status with Vercel APIs.
- * Returns true if domain is actually valid (verified and not misconfigured).
+ * Verify domain status with Cloudflare APIs.
+ * Returns true if domain is actually valid (verified and active).
  */
-async function verifyDomainWithVercel(domain: string): Promise<boolean> {
+async function verifyDomainWithCloudflare(domain: string): Promise<boolean> {
   try {
-    const [configResponse, domainResponse] = await Promise.all([
-      fetch(
-        `https://api.vercel.com/v6/domains/${domain}/config?teamId=${process.env.TEAM_ID_VERCEL}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        },
-      ),
-      fetch(
-        `https://api.vercel.com/v9/projects/${process.env.PROJECT_ID_VERCEL}/domains/${domain}?teamId=${process.env.TEAM_ID_VERCEL}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        },
-      ),
-    ]);
+    const cfDomain = await getCustomHostnameFromCloudflare(domain);
 
-    if (!configResponse.ok || !domainResponse.ok) {
-      // If API calls fail, assume domain is still invalid to be safe
-      log.error(
-        {
-          domain,
-          configStatus: configResponse.status,
-          domainStatus: domainResponse.status,
-        },
-        "Vercel API check failed",
-      );
+    if (!cfDomain) {
+      log.error({ domain }, "Cloudflare API check failed or domain not found");
       return false;
     }
 
-    const configData = (await configResponse.json()) as VercelConfigResponse;
-    const domainData = (await domainResponse.json()) as VercelDomainResponse;
-
-    // Domain is valid if it's verified and not misconfigured
-    const isValid = domainData.verified && !configData.misconfigured;
+    // Domain is valid if it's active and ssl is active
+    const isValid = cfDomain.status === "active" && cfDomain.ssl.status === "active";
 
     log.debug(
       {
         domain,
-        verified: domainData.verified,
-        misconfigured: configData.misconfigured,
+        status: cfDomain.status,
+        sslStatus: cfDomain.ssl.status,
         isValid,
       },
-      "Vercel domain check result",
+      "Cloudflare domain check result",
     );
 
     return isValid;
   } catch (error) {
-    log.error({ err: error, domain }, "error checking Vercel API");
+    log.error({ err: error, domain }, "error checking Cloudflare API");
     // On error, assume domain is still invalid to be safe
     return false;
   }
@@ -168,9 +132,9 @@ export async function sendDomainConfigurationReminders(): Promise<ReminderResult
     const domainName = domainRecord.domain ?? "unknown";
 
     try {
-      // First, verify with Vercel API if the domain is actually invalid
+      // First, verify with Cloudflare API if the domain is actually invalid
       // This prevents sending emails to users who have already fixed their domain configuration
-      const isActuallyValid = await verifyDomainWithVercel(domainName);
+      const isActuallyValid = await verifyDomainWithCloudflare(domainName);
 
       if (isActuallyValid) {
         // Domain is now valid according to Vercel, update our database and skip sending email

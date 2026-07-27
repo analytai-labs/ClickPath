@@ -106,7 +106,8 @@ function AcceptInviteContent() {
   const acceptInviteMutation = api.team.acceptInvite.useMutation({
     onSuccess: (data) => {
       toast.success(`Joined ${data.teamName}`);
-      window.location.href = `${window.location.protocol}//${data.teamSlug}.${baseDomain}/dashboard`;
+      document.cookie = `clickpath-workspace=team:${data.teamSlug}; path=/; max-age=31536000; SameSite=Lax`;
+      window.location.href = `${window.location.protocol}//${baseDomain}/dashboard`;
     },
     onError: (error) => {
       toast.error(error.message);
@@ -214,9 +215,10 @@ function AcceptInviteContent() {
       >
         <div className="space-y-2 w-full">
           <Button
-            onClick={() =>
-              (window.location.href = `${window.location.protocol}//${invite.team.slug}.${baseDomain}/dashboard`)
-            }
+            onClick={() => {
+              document.cookie = `clickpath-workspace=team:${invite.team.slug}; path=/; max-age=31536000; SameSite=Lax`;
+              window.location.href = `${window.location.protocol}//${baseDomain}/dashboard`;
+            }}
             className="w-full bg-neutral-900 hover:bg-neutral-800"
           >
             Go to team
@@ -285,7 +287,7 @@ function AcceptInviteContent() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-500">Workspace</span>
                 <span className="text-xs font-mono text-neutral-600 bg-white px-2 py-1 rounded border border-neutral-200/60">
-                  {invite.team.slug}.{baseDomain}
+                  {invite.team.slug}
                 </span>
               </div>
               <div className="h-px bg-neutral-200/60" />

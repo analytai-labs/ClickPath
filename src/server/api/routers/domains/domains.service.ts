@@ -4,14 +4,13 @@ import { PLAN_CAPS, isSubscriptionEntitled, resolvePlan } from "@/lib/billing/pl
 import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
 import {
-  addDomainToVercelProject,
-  deleteDomainFromVercelProject,
-  getDomainFromVercelProject,
+  addDomainToCloudflare,
+  deleteCustomHostnameFromCloudflare,
+  getCustomHostnameFromCloudflare,
 } from "./utils";
 
 import type { WorkspaceTRPCContext } from "../../trpc";
 import type { CreateCustomDomainInput } from "./domains.input";
-import type { VercelConfigResponse } from "./domains.procedure";
 
 export async function addDomainToUserAccount(
   ctx: WorkspaceTRPCContext,
@@ -73,91 +72,37 @@ export async function addDomainToUserAccount(
   }
 
   try {
-    const response = await addDomainToVercelProject(domain);
+    const response = await addDomainToCloudflare(domain);
+    let targetCustomHostname = response.result;
 
-    // If domain already exists in Vercel (added by another workspace), get its current config
+    // If domain already exists in Cloudflare (added by another workspace), get its current config
     if (response.alreadyExists) {
-      const existingVercelDomain = await getDomainFromVercelProject(domain);
+      const existingCloudflareDomain = await getCustomHostnameFromCloudflare(domain);
 
-      if (!existingVercelDomain) {
-        throw new Error("Failed to retrieve domain configuration");
+      if (!existingCloudflareDomain) {
+        throw new Error("Failed to retrieve domain configuration from Cloudflare");
       }
+      targetCustomHostname = existingCloudflareDomain;
+    }
 
-      // Check if it's properly configured
-      const configResponse = await fetch(
-        `https://api.vercel.com/v6/domains/${domain}/config?teamId=${process.env.TEAM_ID_VERCEL}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    const wellConfigured = targetCustomHostname.status === "active" && targetCustomHostname.ssl.status === "active";
+    const verificationDetails = [];
 
-      const configData = (await configResponse.json()) as VercelConfigResponse;
-      const wellConfigured = existingVercelDomain.verified && !configData.misconfigured;
-
-      // Get verification details from existing domain
-      const verificationDetails =
-        existingVercelDomain.verification?.map((challenge) => {
-          if (challenge.type === "TXT") {
-            return {
-              type: challenge.type,
-              domain: "_vercel",
-              value: challenge.value,
-            };
-          }
-          return challenge;
-        }) ?? [];
-
-      await ctx.prisma.customDomain.create({
-        data: {
-          userId: ownership.userId,
-          teamId: ownership.teamId,
-          domain: domain,
-          status: wellConfigured ? "active" : "pending",
-          verificationDetails: verificationDetails,
-        },
+    // Add ownership verification TXT record
+    if (targetCustomHostname.ownership_verification) {
+      verificationDetails.push({
+        type: "TXT",
+        domain: targetCustomHostname.ownership_verification.name,
+        value: targetCustomHostname.ownership_verification.value,
       });
-
-      return { success: true };
     }
 
-    const verificationChallenges = response.verificationChallenges;
-
-    // for a verification challenge that has a type of "TXT", change the domain to be just
-    // _vercel
-    const verificationDetails = verificationChallenges.map((challenge) => {
-      if (challenge.type === "TXT") {
-        return {
-          type: challenge.type,
-          domain: "_vercel",
-          value: challenge.value,
-        };
-      }
-
-      return challenge;
+    // Add CNAME instruction to point to the Fallback Origin
+    verificationDetails.push({
+      type: "CNAME",
+      domain: domain,
+      value: "clickpath.analytai.in", // The fallback origin
     });
-
-    let wellConfigured = false;
-
-    if (response.verified) {
-      // the domain is verified so let's check if it's misconfigured
-      const configResponse = await fetch(
-        `https://api.vercel.com/v6/domains/${domain}/config?teamId=${process.env.TEAM_ID_VERCEL}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      const data = (await configResponse.json()) as VercelConfigResponse;
-      wellConfigured = !data.misconfigured;
-    }
 
     await ctx.prisma.customDomain.create({
       data: {
@@ -172,7 +117,7 @@ export async function addDomainToUserAccount(
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error("Failed to add domain to Vercel project");
+    throw new Error("Failed to add domain to Cloudflare");
   }
 
   return { success: true };
@@ -252,9 +197,13 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
       },
     });
 
-    // If no other workspaces use this domain, delete from Vercel first
+    // If no other workspaces use this domain, delete from Cloudflare first
     if (!otherWorkspacesUsingDomain) {
-      await deleteDomainFromVercelProject(domain.domain!);
+      // First, lookup the domain to get its ID since Cloudflare uses IDs for deletion
+      const cfDomain = await getCustomHostnameFromCloudflare(domain.domain!);
+      if (cfDomain) {
+        await deleteCustomHostnameFromCloudflare(cfDomain.id);
+      }
     }
 
     // Delete the domain record from our database

@@ -6,6 +6,7 @@ import { createTRPCRouter, workspaceProcedure } from "@/server/api/trpc";
 
 import * as input from "./domains.input";
 import * as services from "./domains.service";
+import { getCustomHostnameFromCloudflare } from "./utils";
 
 const log = logger.child({ component: "domains.procedure" });
 
@@ -59,166 +60,58 @@ export const customDomainRouter = createTRPCRouter({
     .input(z.object({ domain: z.string() }))
     .query(async ({ ctx, input }) => {
       const domain = input.domain;
-      log.debug({ domain }, "checking domain status");
+      log.debug({ domain }, "checking domain status on Cloudflare");
 
-      const [configResponse, domainResponse] = await Promise.all([
-        fetch(
-          `https://api.vercel.com/v6/domains/${domain}/config?teamId=${process.env.TEAM_ID_VERCEL}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-              "Content-Type": "application/json",
-            },
-          },
-        ),
-        fetch(
-          `https://api.vercel.com/v9/projects/${process.env.PROJECT_ID_VERCEL}/domains/${domain}?teamId=${process.env.TEAM_ID_VERCEL}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
-              "Content-Type": "application/json",
-            },
-          },
-        ),
-      ]);
+      const cfDomain = await getCustomHostnameFromCloudflare(domain);
 
-      const configData = (await configResponse.json()) as VercelConfigResponse;
-      const domainData = (await domainResponse.json()) as VercelDomainResponse;
+      if (!cfDomain) {
+        log.warn({ domain }, "Custom hostname not found in Cloudflare");
+        return { status: "invalid", verificationChallenges: [] };
+      }
+
+      const isVerified = cfDomain.status === "active" && cfDomain.ssl.status === "active";
+      let status: "pending" | "active" | "invalid" = isVerified ? "active" : "pending";
+      
+      const challenges = [];
+      
+      // If not fully active, provide verification details
+      if (!isVerified) {
+        if (cfDomain.ownership_verification) {
+          challenges.push({
+            type: "TXT",
+            domain: cfDomain.ownership_verification.name,
+            value: cfDomain.ownership_verification.value,
+          });
+        }
+        
+        challenges.push({
+          type: "CNAME",
+          domain: domain,
+          value: "clickpath.analytai.in",
+        });
+      }
 
       log.debug(
-        {
-          domain,
-          verified: domainData.verified,
-          misconfigured: configData.misconfigured,
-          challengeCount: configData.challenges?.length ?? 0,
-        },
-        "Vercel responses",
+        { domain, status, challengeCount: challenges.length },
+        "domain status resolved",
       );
 
-      if (configData.misconfigured && domainData.verified) {
-        const isApex = domainData.name.split(".").length === 2;
-        const verificationRecord = configData.misconfigured
-          ? null
-          : (configData.challenges?.find((c) => c.type === "TXT")?.value ?? null);
-
-        let status: "pending" | "active" | "invalid" = "pending";
-        const verificationDetails: VerificationDetails = {
-          challenges: [],
-        };
-
-        // Add TXT challenge if available
-        if (verificationRecord) {
-          verificationDetails.challenges.push({
-            type: "TXT",
-            domain: "_vercel",
-            value: verificationRecord,
-          });
-        }
-
-        // Add A or CNAME challenge based on domain type
-        if (isApex) {
-          verificationDetails.challenges.push({
-            type: "A",
-            domain: "@",
-            value: "76.76.21.21",
-          });
-        } else {
-          const subdomain = domain.split(".")[0];
-          verificationDetails.challenges.push({
-            type: "CNAME",
-            domain: subdomain!,
-            value: "cname.vercel-dns.com",
-          });
-        }
-
-        if (domainData.verified) {
-          status = configData.misconfigured ? "invalid" : "active";
-        }
-
-        // Update the database with the new status and verification details
-
-        log.debug(
-          { domain, status, challengeCount: verificationDetails.challenges.length },
-          "domain status resolved",
-        );
-
-        if (domainData.verified) {
-          await ctx.prisma.customDomain.updateMany({
-            where: {
-              domain,
-              ...(ctx.workspace.type === "team"
-                ? { teamId: ctx.workspace.teamId }
-                : { userId: ctx.workspace.userId, teamId: null }),
-            },
-            data: {
-              status,
-              verificationDetails: verificationDetails.challenges,
-            },
-          });
-        }
-
-        return {
+      await ctx.prisma.customDomain.updateMany({
+        where: {
+          domain,
+          ...(ctx.workspace.type === "team"
+            ? { teamId: ctx.workspace.teamId }
+            : { userId: ctx.workspace.userId, teamId: null }),
+        },
+        data: {
           status,
-          verificationChallenges: verificationDetails.challenges,
-        };
-      }
-
-      if (configData.misconfigured === false) {
-        // everything is all clear
-        await ctx.prisma.customDomain.updateMany({
-          where: {
-            domain,
-            ...(ctx.workspace.type === "team"
-              ? { teamId: ctx.workspace.teamId }
-              : { userId: ctx.workspace.userId, teamId: null }),
-          },
-          data: { status: "active" },
-        });
-
-        return {
-          status: "active",
-        };
-      }
+          verificationDetails: challenges,
+        },
+      });
 
       return {
-        status: "invalid",
+        status,
+        verificationChallenges: challenges,
       };
     }),
 });
-
-export type VercelConfigResponse = {
-  configuredBy: string | null;
-  nameservers: string[];
-  serviceType: string;
-  cnames: string[];
-  aValues: string[];
-  conflicts: unknown[];
-  acceptedChallenges: unknown[];
-  misconfigured: boolean;
-  challenges?: { type: string; value: string }[];
-};
-
-type VercelDomainResponse = {
-  name: string;
-  apexName: string;
-  projectId: string;
-  redirect: string | null;
-  redirectStatusCode: number | null;
-  gitBranch: string | null;
-  customEnvironmentId: string | null;
-  updatedAt: number;
-  createdAt: number;
-  verified: boolean;
-};
-
-type Challenge = {
-  type: "TXT" | "A" | "CNAME";
-  domain: string;
-  value: string;
-};
-
-type VerificationDetails = {
-  challenges: Challenge[];
-};

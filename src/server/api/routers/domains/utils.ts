@@ -1,99 +1,93 @@
-export interface VercelDomainResponse {
-  name: string;
-  apexName: string;
-  projectId: string;
-  redirect?: string | null;
-  redirectStatusCode?: number | null;
-  gitBranch?: string | null;
-  updatedAt?: number;
-  createdAt?: number;
-  verified: boolean;
-  verification?: {
-    type: string;
-    domain: string;
-    value: string;
-    reason: string;
-  }[];
-}
-
-export interface VercelErrorResponse {
-  error: {
-    code: string;
-    message: string;
+export interface CloudflareCustomHostnameResponse {
+  success: boolean;
+  errors: { code: number; message: string }[];
+  messages: { code: number; message: string }[];
+  result: {
+    id: string;
+    hostname: string;
+    ssl: {
+      id: string;
+      type: string;
+      method: string;
+      status: string;
+    };
+    status: string;
+    verification_errors?: string[];
+    ownership_verification?: {
+      type: string;
+      name: string;
+      value: string;
+    };
+    created_at: string;
   };
 }
 
-export async function addDomainToVercelProject(domain: string) {
+export async function addDomainToCloudflare(domain: string) {
   const response = await fetch(
-    `https://api.vercel.com/v9/projects/${process.env.PROJECT_ID_VERCEL}/domains?teamId=${process.env.TEAM_ID_VERCEL}`,
+    `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/custom_hostnames`,
     {
-      body: `{\n  "name": "${domain}"\n}`,
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
         "Content-Type": "application/json",
       },
-      method: "POST",
+      body: JSON.stringify({
+        hostname: domain,
+        ssl: {
+          method: "txt",
+          type: "dv",
+        },
+      }),
     },
   );
 
-  const responseJson = (await response.json()) as unknown;
-  const data = responseJson as VercelDomainResponse | VercelErrorResponse;
+  const data = (await response.json()) as CloudflareCustomHostnameResponse;
 
-  if ("error" in data) {
-    switch (data.error.code) {
-      case "forbidden":
-        throw new Error("You don't have permission to add a domain to this project");
-      case "domain_taken":
-        throw new Error("This domain is already taken by another Vercel project");
-      case "domain_already_in_use":
-        // Domain is already added to our Vercel project - this is fine for domain sharing
-        return { alreadyExists: true as const };
-      default:
-        throw new Error("Failed to add domain to project");
+  if (!data.success) {
+    const errorMsg = data.errors?.[0]?.message || "Failed to add domain to Cloudflare";
+    if (errorMsg.includes("already exists")) {
+      return { alreadyExists: true as const, result: data.result };
     }
+    throw new Error(errorMsg);
   }
 
   return {
-    ...data,
     alreadyExists: false as const,
-    verificationChallenges:
-      data.verification?.map((challenge) => ({
-        type: challenge.type,
-        domain: challenge.domain,
-        value: challenge.value,
-      })) ?? [],
+    result: data.result,
   };
 }
 
-export async function getDomainFromVercelProject(domain: string) {
+export async function getCustomHostnameFromCloudflare(hostname: string) {
   const response = await fetch(
-    `https://api.vercel.com/v9/projects/${process.env.PROJECT_ID_VERCEL}/domains/${domain}?teamId=${process.env.TEAM_ID_VERCEL}`,
+    `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/custom_hostnames?hostname=${hostname}`,
     {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
         "Content-Type": "application/json",
       },
-      method: "GET",
     },
   );
 
-  const data = (await response.json()) as VercelDomainResponse | VercelErrorResponse;
+  const data = (await response.json()) as { success: boolean; result: CloudflareCustomHostnameResponse["result"][] };
 
-  if ("error" in data) {
+  if (!data.success || !data.result || data.result.length === 0) {
     return null;
   }
 
-  return data;
+  return data.result[0];
 }
 
-export async function deleteDomainFromVercelProject(domain: string) {
+export async function deleteCustomHostnameFromCloudflare(hostnameId: string) {
   await fetch(
-    `https://api.vercel.com/v9/projects/${process.env.PROJECT_ID_VERCEL}/domains/${domain}?teamId=${process.env.TEAM_ID_VERCEL}`,
+    `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/custom_hostnames/${hostnameId}`,
     {
       method: "DELETE",
       headers: {
-        Authorization: `Bearer ${process.env.AUTH_BEARER_TOKEN}`,
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json",
       },
     },
   );
 }
+

@@ -30,12 +30,9 @@ export function DNSRecordsSection({ verificationChallenges }: DNSRecordsSectionP
   return (
     <div className="space-y-4">
       <Tabs defaultValue="dns-records" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="dns-records" className="text-[12px]">
             DNS Records
-          </TabsTrigger>
-          <TabsTrigger value="vercel-dns" className="text-[12px]">
-            Vercel DNS
           </TabsTrigger>
         </TabsList>
 
@@ -131,41 +128,7 @@ export function DNSRecordsSection({ verificationChallenges }: DNSRecordsSectionP
           </div>
         </TabsContent>
 
-        <TabsContent value="vercel-dns" className="space-y-3">
-          <div className="rounded-lg border border-neutral-200 dark:border-border bg-neutral-50 dark:bg-accent/50 p-4">
-            <p className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">
-              Use Vercel DNS for automatic configuration
-            </p>
-            <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
-              Update your domain&apos;s nameservers at your registrar to:
-            </p>
-            <div className="mt-3 space-y-2">
-              {["ns1.vercel-dns.com", "ns2.vercel-dns.com"].map((ns) => (
-                <div
-                  key={ns}
-                  className="flex items-center justify-between rounded-md border border-neutral-200 dark:border-border bg-white dark:bg-card px-3 py-2"
-                >
-                  <code className="text-[11px] text-neutral-600 dark:text-neutral-400">{ns}</code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(ns)}
-                    className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 dark:text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-600 dark:hover:text-neutral-300"
-                  >
-                    {copiedValue === ns ? (
-                      <IconCheck size={12} stroke={1.5} className="text-emerald-500" />
-                    ) : (
-                      <IconCopy size={12} stroke={1.5} />
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-[11px] text-neutral-400 dark:text-neutral-500">
-              Note: This will route all DNS for your domain through Vercel. If you use other
-              services on this domain, use the DNS Records tab instead.
-            </p>
-          </div>
-        </TabsContent>
+
       </Tabs>
     </div>
   );

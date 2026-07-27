@@ -2,78 +2,47 @@ import type { PrismaClient, Team } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 
 import { resolvePlan } from "@/lib/billing/plans";
-import { extractPlatformSubdomain } from "@/lib/constants/domains";
 import { prisma } from "@/server/db";
-import { RESERVED_TEAM_SLUGS } from "@/server/db/types";
 
 import type { PersonalWorkspaceContext, TeamWorkspaceContext, WorkspaceContext } from "./types";
 
 type DbClient = PrismaClient;
 
-/**
- * Extracts the subdomain from a hostname.
- *
- * Any catalogue platform domain is accepted, so `acme.clk.path` and
- * `acme.clickpath.analytai.in` both resolve to team slug `acme`.
- *
- * Examples:
- * - "acme.clk.path" -> "acme"
- * - "acme.clickpath.analytai.in" -> "acme"
- * - "clk.path" -> null
- * - "localhost:3000" -> null
- * - "acme.localhost:3000" -> "acme" (for local development)
- *
- * @param hostname - The full hostname from the request
- * @returns The subdomain or null if no subdomain
- */
-export function extractSubdomain(hostname: string): string | null {
-  // Remove port if present
-  const host = hostname.split(":")[0] ?? hostname;
 
-  let subdomain: string | null = extractPlatformSubdomain(host);
-
-  // Check for local development subdomains (*.localhost)
-  if (!subdomain && host.endsWith(".localhost")) {
-    const parts = host.split(".");
-    if (parts.length === 2) {
-      const candidate = parts[0]?.trim().toLowerCase();
-      if (candidate && candidate.length > 0) {
-        subdomain = candidate;
-      }
-    }
-  }
-
-  // Don't treat reserved slugs as team subdomains
-  // These are system subdomains (www, api, app, etc.) that should use personal workspace
-  if (subdomain && RESERVED_TEAM_SLUGS.includes(subdomain)) {
-    return null;
-  }
-
-  return subdomain;
-}
 
 /**
  * Resolves the workspace context for the current request.
  *
  * @param userId - The authenticated user's ID
- * @param hostname - The request hostname
+ * @param workspaceCookie - The clickpath-workspace cookie value
  * @param dbClient - Optional database client (defaults to main db)
  * @returns The resolved workspace context
  */
 export async function resolveWorkspaceContext(
   userId: string,
-  hostname: string,
+  workspaceCookie: string | null,
   dbClient: DbClient = prisma,
 ): Promise<WorkspaceContext> {
-  const subdomain = extractSubdomain(hostname);
+  let teamSlug: string | null = null;
+  
+  if (workspaceCookie) {
+    const match = workspaceCookie.match(/^team:(.+)$/);
+    if (match && match[1]) {
+      teamSlug = match[1];
+    }
+  }
 
-  if (!subdomain) {
-    // No subdomain -> personal workspace
+  if (!teamSlug) {
+    // No team cookie or it's 'personal' -> personal workspace
     return getPersonalWorkspaceContext(userId, dbClient);
   }
 
-  // Subdomain exists -> try to resolve team workspace
-  return getTeamWorkspaceContext(userId, subdomain, dbClient);
+  try {
+    return await getTeamWorkspaceContext(userId, teamSlug, dbClient);
+  } catch (error) {
+    // Fallback to personal workspace if the team doesn't exist or user lost access
+    return getPersonalWorkspaceContext(userId, dbClient);
+  }
 }
 
 /**

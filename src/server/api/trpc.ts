@@ -111,13 +111,19 @@ export type WorkspaceTRPCContext = ProtectedTRPCContext & {
 };
 
 /**
- * Workspace-aware procedure that resolves the current workspace from the hostname.
+ * Workspace-aware procedure that resolves the current workspace from the workspace cookie.
  * This should be used for all operations that need workspace context.
  */
 export const workspaceProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const hostname = ctx.headers.get("host") ?? DEFAULT_PLATFORM_DOMAIN;
+  const cookieHeader = ctx.headers.get("cookie") ?? "";
+  
+  let workspaceCookie: string | null = null;
+  const match = cookieHeader.match(/clickpath-workspace=([^;]+)/);
+  if (match && match[1]) {
+    workspaceCookie = match[1];
+  }
 
-  const workspace = await resolveWorkspaceContext(ctx.auth.userId, hostname, ctx.prisma);
+  const workspace = await resolveWorkspaceContext(ctx.auth.userId, workspaceCookie, ctx.prisma);
 
   return next({
     ctx: {

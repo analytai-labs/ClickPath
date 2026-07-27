@@ -138,8 +138,8 @@ export const linkRouter = createTRPCRouter({
     return services.exportAllUserLinks(ctx);
   }),
 
-  checkVercelHeaders: publicProcedure.query(async ({ ctx }) => {
-    return services.checkPresenceOfVercelHeaders(ctx);
+  checkHeaders: publicProcedure.query(async ({ ctx }) => {
+    return services.checkPresenceOfHeaders(ctx);
   }),
 
   stats: workspaceProcedure.query(async ({ ctx }) => {

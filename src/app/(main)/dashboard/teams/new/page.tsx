@@ -66,7 +66,8 @@ export default function CreateTeamPage() {
     onSuccess: (data) => {
       toast.success("Team created successfully!");
       const baseDomain = getAppBaseDomain();
-      window.location.href = `${window.location.protocol}//${data.slug}.${baseDomain}/dashboard`;
+      document.cookie = `clickpath-workspace=team:${data.slug}; path=/; max-age=31536000; SameSite=Lax`;
+      window.location.href = `${window.location.protocol}//${baseDomain}/dashboard`;
     },
     onError: (error) => {
       toast.error(error.message);

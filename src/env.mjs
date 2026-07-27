@@ -45,6 +45,10 @@ export const env = createEnv({
     // events are accepted — the feature is effectively disabled.
     VERIFIED_CLICKS_SECRET: z.string().min(32).optional(),
     
+    // Cloudflare Custom Hostnames (for Custom Domains)
+    CLOUDFLARE_ZONE_ID: z.string().optional(),
+    CLOUDFLARE_API_TOKEN: z.string().optional(),
+    
     // Stripe
     STRIPE_API_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
@@ -95,6 +99,9 @@ export const env = createEnv({
     R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
     IP_HASH_SECRET: process.env.IP_HASH_SECRET,
     VERIFIED_CLICKS_SECRET: process.env.VERIFIED_CLICKS_SECRET,
+    // Cloudflare Custom Hostnames
+    CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID,
+    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
     // Client-side env vars
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
