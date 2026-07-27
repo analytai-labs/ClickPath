@@ -131,12 +131,13 @@ export function LogoUploader({ setLogoImage, currentLogoImage }: LogoUploaderPro
                     deleteAsset.mutate({ id: asset.id });
                   }}
                   disabled={deleteAsset.isLoading}
-                  className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-100 disabled:bg-black/60"
+                  className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-md bg-red-500/90 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600 disabled:opacity-100 disabled:bg-red-500/50"
+                  title="Delete logo"
                 >
                   {isDeletingThis ? (
-                    <IconLoader2 size={18} className="animate-spin text-white" />
+                    <IconLoader2 size={14} className="animate-spin text-white" />
                   ) : (
-                    <IconTrash size={18} className="text-white" />
+                    <IconTrash size={14} className="text-white" />
                   )}
                 </button>
               </div>
