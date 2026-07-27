@@ -1293,7 +1293,7 @@ export default function CreateLinkPage() {
       <div className="hidden items-center justify-center md:flex">
         <div className="h-screen border-r border-neutral-200 dark:border-border" />
       </div>
-      <div className="mt-4 flex flex-col gap-4 md:col-span-5 md:mt-0">
+      <div className="mt-4 flex flex-col gap-4 md:col-span-5 md:mt-0 sticky top-24 self-start">
         {activeTab === "qr" ? (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">

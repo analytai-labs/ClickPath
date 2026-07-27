@@ -16,6 +16,10 @@ export async function generateAliasFromMetadata(metadata: {
   keywords?: string[];
   url: string;
 }): Promise<Array<string>> {
+  if (!process.env.OPENAI_API_KEY) {
+    return [];
+  }
+
   const result = await generateText({
     model: openai("gpt-4o-mini"),
     output: Output.object({
@@ -119,6 +123,10 @@ export async function detectPhishingLink(
   url: string,
   metadata: Metadata,
 ): Promise<{ url: string; phishing: boolean }> {
+  if (!process.env.OPENAI_API_KEY) {
+    return { url, phishing: false };
+  }
+
   const features = extractUrlFeatures(url);
 
   const result = await generateText({

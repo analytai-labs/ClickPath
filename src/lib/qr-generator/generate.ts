@@ -859,7 +859,9 @@ async function drawLogo(
   if (!state.logoImage) return;
 
   const img = new Image();
-  img.crossOrigin = "anonymous";
+  if (!state.logoImage.startsWith("data:")) {
+    img.crossOrigin = "anonymous";
+  }
   img.src = state.logoImage;
 
   await new Promise<void>((resolve, reject) => {
