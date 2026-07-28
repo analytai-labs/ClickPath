@@ -158,7 +158,12 @@ export function UpdateLinkModal({ link, open, setOpen }: LinkEditModalProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form 
+            onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              toast.error("Please check the form for errors before saving.");
+              console.error("Form validation errors:", errors);
+            })}
+          >
             <DialogBody className="space-y-3">
               {/* Basic Information Section */}
               <div className="rounded-lg border border-neutral-200 dark:border-border">

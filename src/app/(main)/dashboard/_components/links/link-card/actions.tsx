@@ -50,7 +50,6 @@ import { MoveToFolderModal } from "@/app/(main)/dashboard/folders/_components/mo
 import { TransferToWorkspaceModal } from "../transfer-to-workspace-modal";
 
 import { AddToCampaignModal } from "./add-to-campaign-modal";
-import { EditLinkDrawer } from "./edit-link-drawer";
 import { ChangeLinkPasswordModal } from "./password-change-modal";
 import { QRCodeModal } from "./qrcode-modal";
 
@@ -61,8 +60,6 @@ type LinkActionsProps = {
 };
 
 export const LinkActions = ({ link }: LinkActionsProps) => {
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [editTab, setEditTab] = useState<"settings" | "routing" | "qr">("settings");
   const [qrModal, setQrModal] = useState(false);
   const [openChangePasswordModal, setOpenChangePasswordModal] = useState(false);
   const [moveToFolderModal, setMoveToFolderModal] = useState(false);
@@ -164,10 +161,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
             Edit & Share
           </DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={() => {
-              setEditTab("settings");
-              setOpenEditModal(true);
-            }}
+            onClick={() => router.push(`/dashboard/link/${link.id}/edit`)}
             className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
           >
             <IconPencil size={15} stroke={1.5} className="mr-2 text-neutral-400" />
@@ -288,7 +282,6 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditLinkDrawer link={link} open={openEditModal} onClose={() => setOpenEditModal(false)} initialTab={editTab} />
       <QRCodeModal
         open={qrModal}
         setOpen={setQrModal}
@@ -296,8 +289,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
         qrCode={link.qrCode}
         onCustomize={() => {
           setQrModal(false);
-          setEditTab("qr");
-          setOpenEditModal(true);
+          router.push(`/dashboard/link/${link.id}/edit?tab=qr`);
         }}
       />
       <ChangeLinkPasswordModal
