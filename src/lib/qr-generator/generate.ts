@@ -861,8 +861,10 @@ async function drawLogo(
   const img = new Image();
   if (!state.logoImage.startsWith("data:")) {
     img.crossOrigin = "anonymous";
+    img.src = state.logoImage + (state.logoImage.includes("?") ? "&" : "?") + "not-from-cache-please";
+  } else {
+    img.src = state.logoImage;
   }
-  img.src = state.logoImage;
 
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
@@ -910,16 +912,16 @@ async function drawLogo(
 
   if (imgRatio > 1) {
     // Wider than tall
-    drawHeight = logoSize;
-    drawWidth = logoSize * imgRatio;
-    drawX = logoX - (drawWidth - logoSize) / 2;
-    drawY = logoY;
-  } else {
-    // Taller than wide or square
     drawWidth = logoSize;
     drawHeight = logoSize / imgRatio;
     drawX = logoX;
-    drawY = logoY - (drawHeight - logoSize) / 2;
+    drawY = logoY + (logoSize - drawHeight) / 2;
+  } else {
+    // Taller than wide or square
+    drawHeight = logoSize;
+    drawWidth = logoSize * imgRatio;
+    drawX = logoX + (logoSize - drawWidth) / 2;
+    drawY = logoY;
   }
 
   ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
