@@ -194,11 +194,11 @@ export default function EditLinkPage() {
       if (link.qrCode) {
         if (link.qrCode.patternStyle) base.pixelStyle = link.qrCode.patternStyle as any;
         if (link.qrCode.cornerStyle) base.markerShape = link.qrCode.cornerStyle as any;
-        if (link.qrCode.selectedColor) base.darkColor = link.qrCode.selectedColor;
+        if (link.qrCode.color) base.darkColor = link.qrCode.color;
         if (link.qrCode.lightColor) base.lightColor = link.qrCode.lightColor;
         if (link.qrCode.logoImage) base.logoImage = link.qrCode.logoImage;
         if (link.qrCode.effect) base.effect = link.qrCode.effect as any;
-        if (link.qrCode.marginNoise !== undefined) base.marginNoise = link.qrCode.marginNoise;
+        if (link.qrCode.marginNoise !== undefined && link.qrCode.marginNoise !== null) base.marginNoise = link.qrCode.marginNoise;
         if (link.qrCode.markerInnerShape) base.markerInnerShape = link.qrCode.markerInnerShape as any;
       }
       setQrState(base);

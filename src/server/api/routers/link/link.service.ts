@@ -264,14 +264,23 @@ export const getLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) =>
         ? { teamId: ctx.workspace.teamId }
         : { userId: ctx.workspace.userId, teamId: null }),
     },
+    include: {
+      qrCodes: true,
+    }
   });
 
+  if (!linkData) return null;
+
   // Check folder access permission for team members
-  if (linkData?.folderId) {
+  if (linkData.folderId) {
     await requireFolderAccess(prisma as any, ctx.workspace, linkData.folderId);
   }
 
-  return linkData;
+  const { qrCodes, ...rest } = linkData;
+  return {
+    ...rest,
+    qrCode: qrCodes[0] ?? null,
+  };
 };
 
 export const getLinkByAlias = async (input: {
