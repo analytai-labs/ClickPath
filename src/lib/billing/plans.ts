@@ -11,7 +11,8 @@ type PlanCaps = {
   domainLimit?: number;
   geoRulesLimit?: number; // Max geo rules per link (undefined => unlimited)
   milestonesPerLinkLimit?: number; // Max milestones per link (undefined => unlimited)
-  bioPageLimit?: number; // Max bio pages (undefined => unlimited)
+  bioPageLimit?: number; // Max bio pages (undefined => unlimited) [legacy — use templatePageLimit]
+  templatePageLimit?: number; // Max template pages of any type combined (undefined => unlimited)
   campaignLimit?: number; // Max ACTIVE campaigns (archived don't count; undefined => unlimited)
 };
 
@@ -50,6 +51,7 @@ export const PLAN_CAPS: Record<Plan, PlanCaps> = {
     geoRulesLimit: 0, // Geotargeting not available for free plan
     milestonesPerLinkLimit: 0,
     bioPageLimit: 1,
+    templatePageLimit: 1,
     campaignLimit: 1,
   },
   pro: {
@@ -60,6 +62,7 @@ export const PLAN_CAPS: Record<Plan, PlanCaps> = {
     geoRulesLimit: 3, // Pro plan allows 3 geo rules per link
     milestonesPerLinkLimit: 5,
     bioPageLimit: 3,
+    templatePageLimit: 5,
     campaignLimit: 2,
   },
   ultra: {
@@ -158,6 +161,15 @@ export function canUseMilestones(plan: Plan): boolean {
 
 export function getBioPageLimit(plan: Plan): number | undefined {
   return PLAN_CAPS[plan].bioPageLimit;
+}
+
+export function getTemplatePageLimit(plan: Plan): number | undefined {
+  return PLAN_CAPS[plan].templatePageLimit;
+}
+
+export function canCreateTemplatePage(plan: Plan): boolean {
+  const limit = PLAN_CAPS[plan].templatePageLimit;
+  return limit === undefined || limit > 0;
 }
 
 /** Pro+ may remove the "Made with ClickPath" badge from their bio page. */

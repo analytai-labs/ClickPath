@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PharmaProductPublicView } from "@/components/templates/pharma-product/pharma-product-public-view";
 import { PublicBioView } from "@/components/bio/public-bio-view";
 import { api } from "@/trpc/server";
 
@@ -23,30 +24,32 @@ function safeDecodeHost(host: string): string | null {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { host } = await params;
   const domain = safeDecodeHost(host);
-  const page = domain ? await api.bioPage.getByDomain.query({ domain }).catch(() => null) : null;
+  const page = domain
+    ? await api.templatePage.getByDomain.query({ domain }).catch(() => null)
+    : null;
   if (!page) return {};
 
   const title = page.seoTitle || page.title || page.slug;
   const description = page.seoDescription || page.description || undefined;
 
-  // og:image is supplied by the colocated opengraph-image route.
   return {
     title: { absolute: title },
     description,
-    // This custom-domain root is the canonical URL for the page.
     alternates: { canonical: `https://${domain}` },
     openGraph: { title, description, type: "profile" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
 
-export default async function CustomDomainBioPage({ params }: Props) {
+export default async function CustomDomainTemplatePage({ params }: Props) {
   const { host } = await params;
   const domain = safeDecodeHost(host);
   if (!domain) notFound();
-  // A missing page is a 404; a real fetch error throws so it surfaces as a 5xx
-  // rather than being masked as a missing page.
-  const page = await api.bioPage.getByDomain.query({ domain });
+  const page = await api.templatePage.getByDomain.query({ domain });
   if (!page) notFound();
+
+  if (page.templateType === "pharma_product") {
+    return <PharmaProductPublicView page={page} />;
+  }
   return <PublicBioView page={page} />;
 }

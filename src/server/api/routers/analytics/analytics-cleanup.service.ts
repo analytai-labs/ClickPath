@@ -120,7 +120,7 @@ async function cleanupBioPageViews(
   proCutoffDate: Date,
 ): Promise<void> {
   await processBioPageBatch(result, freeCutoffDate, (lastId) =>
-    prisma.bioPage
+    prisma.templatePage
       .findMany({
         where: {
           id: { gt: lastId },
@@ -134,7 +134,7 @@ async function cleanupBioPageViews(
       .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, freeCutoffDate, (lastId) =>
-    prisma.bioPage
+    prisma.templatePage
       .findMany({
         where: {
           id: { gt: lastId },
@@ -148,7 +148,7 @@ async function cleanupBioPageViews(
       .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, proCutoffDate, (lastId) =>
-    prisma.bioPage
+    prisma.templatePage
       .findMany({
         where: {
           id: { gt: lastId },
@@ -162,7 +162,7 @@ async function cleanupBioPageViews(
       .then((res) => res.map((p) => ({ bioPageId: p.id }))),
   );
   await processBioPageBatch(result, proCutoffDate, (lastId) =>
-    prisma.bioPage
+    prisma.templatePage
       .findMany({
         where: {
           id: { gt: lastId },
@@ -197,15 +197,15 @@ async function processBioPageBatch(
       result.dailySummariesCreated += await aggregateBioDailySummaries(batch, cutoffDate);
 
       const [viewRes, uniqueRes] = await Promise.all([
-        prisma.bioPageView.deleteMany({
+        prisma.templatePageView.deleteMany({
           where: {
-            bioPageId: { in: batch },
+            templatePageId: { in: batch },
             createdAt: { lt: cutoffDate },
           },
         }),
-        prisma.uniqueBioPageView.deleteMany({
+        prisma.uniqueTemplatePageView.deleteMany({
           where: {
-            bioPageId: { in: batch },
+            templatePageId: { in: batch },
             createdAt: { lt: cutoffDate },
           },
         }),
@@ -269,10 +269,10 @@ async function aggregateBioDailySummaries(bioPageIds: number[], cutoffDate: Date
 
   let upserted = 0;
   for (const row of rows) {
-    await prisma.bioPageViewDailySummary.upsert({
+    await prisma.templatePageViewDailySummary.upsert({
       where: {
         bio_page_date_unique: {
-          bioPageId: row.bioPageId,
+          templatePageId: row.bioPageId,
           date: row.date,
         },
       },
@@ -281,7 +281,7 @@ async function aggregateBioDailySummaries(bioPageIds: number[], cutoffDate: Date
         uniqueViews: row.uniqueViews,
       },
       create: {
-        bioPageId: row.bioPageId,
+        templatePageId: row.bioPageId,
         date: row.date,
         views: row.views,
         uniqueViews: row.uniqueViews,

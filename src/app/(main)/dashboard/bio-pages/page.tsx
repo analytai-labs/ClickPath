@@ -1,15 +1,7 @@
-import { api } from "@/trpc/server";
+import { redirect } from "next/navigation";
 
-import { BioPagesList } from "./_components/bio-pages-list";
-
-export const dynamic = "force-dynamic";
-
-async function BioPagesPage() {
-  const [pages, sub] = await Promise.all([api.bioPage.list.query(), api.subscriptions.get.query()]);
-
-  return (
-    <BioPagesList pages={pages} plan={sub.plan} bioPageLimit={sub.caps.bioPageLimit ?? null} />
-  );
+// /dashboard/bio-pages is now merged into /dashboard/templates.
+// Redirect to keep any bookmarks working.
+export default function BioPagesRedirect() {
+  redirect("/dashboard/templates");
 }
-
-export default BioPagesPage;

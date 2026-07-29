@@ -49,7 +49,7 @@ const navigationItems = [
     icon: IconChartBar,
   },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: IconSpeakerphone },
-  { name: "Bio Pages", href: "/dashboard/bio-pages", icon: IconLayoutList },
+  { name: "Templates", href: "/dashboard/templates", icon: IconLayoutList },
   { name: "Domains", href: "/dashboard/domains", icon: IconWorld },
   { name: "Folders", href: "/dashboard/folders", icon: IconFolder },
   { name: "UTM Templates", href: "/dashboard/utm-templates", icon: IconTarget },

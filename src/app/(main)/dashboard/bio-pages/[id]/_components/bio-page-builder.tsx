@@ -43,7 +43,7 @@ import { BlockList } from "./block-list";
 import { PageQrDialog } from "./page-qr-dialog";
 import { type BioSettingsDraft, SettingsPanel } from "./settings-panel";
 
-type BioPageData = RouterOutputs["bioPage"]["get"];
+type BioPageData = RouterOutputs["templatePage"]["get"];
 type EditorBlock = BioPageData["blocks"][number];
 
 const ADD_OPTIONS: { type: BioBlockType; label: string; icon: typeof IconLink }[] = [
@@ -82,7 +82,7 @@ export function BioPageBuilder({
   plan: Plan;
 }) {
   const utils = api.useUtils();
-  const { data } = api.bioPage.get.useQuery(
+  const { data } = api.templatePage.get.useQuery(
     { id: pageId },
     { initialData, refetchOnWindowFocus: false },
   );
@@ -100,23 +100,23 @@ export function BioPageBuilder({
   }));
   const [adding, setAdding] = useState<BioBlockType | null>(null);
 
-  const refresh = () => utils.bioPage.get.invalidate({ id: pageId });
+  const refresh = () => utils.templatePage.get.invalidate({ id: pageId });
 
-  const updatePage = api.bioPage.update.useMutation({
+  const updatePage = api.templatePage.update.useMutation({
     onSuccess: () => {
       toast.success("Changes saved.");
       refresh();
     },
     onError: (e) => toast.error(e.message),
   });
-  const togglePublished = api.bioPage.togglePublished.useMutation({
+  const togglePublished = api.templatePage.togglePublished.useMutation({
     onSuccess: (res) => {
       toast.success(res.isPublished ? "Your bio page is live." : "Your bio page is now a draft.");
       refresh();
     },
     onError: (e) => toast.error(e.message),
   });
-  const addBlock = api.bioPage.addBlock.useMutation({
+  const addBlock = api.templatePage.addBlock.useMutation({
     onSuccess: refresh,
     onError: (e) => toast.error(e.message),
   });

@@ -40,7 +40,7 @@ import type { BioBlockType } from "@prisma/client";
 
 import { BlockFormDialog } from "./block-form-dialog";
 
-type EditorBlock = RouterOutputs["bioPage"]["get"]["blocks"][number];
+type EditorBlock = RouterOutputs["templatePage"]["get"]["blocks"][number];
 
 const TYPE_ICON: Record<BioBlockType, typeof IconLink> = {
   link: IconLink,
@@ -95,11 +95,11 @@ export function BlockList({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const reorder = api.bioPage.reorderBlocks.useMutation({
+  const reorder = api.templatePage.reorderBlocks.useMutation({
     onError: (e) => {
       toast.error(e.message);
       setItems(blocks); // revert local order
-      void utils.bioPage.get.invalidate({ id: pageId }); // restore preview from the server
+      void utils.templatePage.get.invalidate({ id: pageId }); // restore preview from the server
     },
     // No onSuccess refetch: the optimistic cache write below is authoritative,
     // and refetching here could briefly race rapid consecutive reorders.
@@ -118,7 +118,7 @@ export function BlockList({
     setItems(next);
     // Optimistically reorder the query cache so the live preview updates in the
     // same frame, instead of waiting for the mutation + refetch round-trip.
-    utils.bioPage.get.setData({ id: pageId }, (old) => (old ? { ...old, blocks: next } : old));
+    utils.templatePage.get.setData({ id: pageId }, (old) => (old ? { ...old, blocks: next } : old));
     reorder.mutate({ bioPageId: pageId, blockIds: next.map((b) => b.id) });
   }
 
@@ -178,13 +178,13 @@ function SortableRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
   });
-  const Icon = TYPE_ICON[block.type];
+  const Icon = TYPE_ICON[block.type as import("@prisma/client").BioBlockType] ?? TYPE_ICON.link;
 
-  const update = api.bioPage.updateBlock.useMutation({
+  const update = api.templatePage.updateBlock.useMutation({
     onSuccess: onChanged,
     onError: (e) => toast.error(e.message),
   });
-  const remove = api.bioPage.deleteBlock.useMutation({
+  const remove = api.templatePage.deleteBlock.useMutation({
     onSuccess: onChanged,
     onError: (e) => toast.error(e.message),
   });

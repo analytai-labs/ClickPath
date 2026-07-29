@@ -14,7 +14,7 @@ export default async function Image({ params }: Props) {
   const domain = decodeURIComponent(host)
     .toLowerCase()
     .replace(/^www\./, "");
-  const page = await prisma.bioPage
+  const page = await prisma.templatePage
     .findFirst({
       where: { customDomain: domain, isPublished: true },
       select: {

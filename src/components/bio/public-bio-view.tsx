@@ -3,7 +3,7 @@ import { BioPageViewBeacon } from "./view-beacon";
 
 import type { RouterOutputs } from "@/trpc/shared";
 
-type PublicBioPage = NonNullable<RouterOutputs["bioPage"]["getBySlug"]>;
+type PublicBioPage = NonNullable<RouterOutputs["templatePage"]["getBySlug"]>;
 
 function toRenderModel(page: PublicBioPage): BioRenderModel {
   return {
@@ -12,7 +12,7 @@ function toRenderModel(page: PublicBioPage): BioRenderModel {
     avatarUrl: page.avatarUrl,
     theme: page.theme,
     removeBranding: page.removeBranding,
-    blocks: page.blocks.map((b): BioRenderBlock => {
+    blocks: page.blocks.map((b: NonNullable<typeof page.blocks>[number]): BioRenderBlock => {
       switch (b.type) {
         case "link":
           return { id: b.id, type: "link", title: b.title, href: b.href };

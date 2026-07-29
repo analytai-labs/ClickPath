@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Only record for a page that actually exists and is published.
-  const page = await prisma.bioPage.findFirst({
+  const page = await prisma.templatePage.findFirst({
     where: { id: bioPageId, isPublished: true },
     select: { id: true, userId: true },
   });

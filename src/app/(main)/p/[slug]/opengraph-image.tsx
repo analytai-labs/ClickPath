@@ -11,7 +11,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export default async function Image({ params }: Props) {
   const { slug } = await params;
-  const page = await prisma.bioPage
+  const page = await prisma.templatePage
     .findFirst({
       where: { slug: slug, isPublished: true },
       select: {

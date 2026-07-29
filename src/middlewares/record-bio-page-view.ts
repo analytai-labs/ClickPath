@@ -21,9 +21,9 @@ type RecordBioPageViewOptions = {
  * concurrent inserts silently collapse to a no-op.
  */
 async function recordUniqueView(ipHash: string, bioPageId: number) {
-  await prisma.uniqueBioPageView
+  await prisma.uniqueTemplatePageView
     .create({
-      data: { ipHash, bioPageId },
+      data: { ipHash, templatePageId: bioPageId },
     })
     .catch(() => {
       // Ignore duplicate key errors, effectively mirroring onDuplicateKeyUpdate no-op
@@ -67,9 +67,9 @@ export async function recordBioPageView(opts: RecordBioPageViewOptions): Promise
   const { countryName, continentName, cityName } = resolveGeo(country, city);
 
   await Promise.all([
-    prisma.bioPageView.create({
+    prisma.templatePageView.create({
       data: {
-        bioPageId,
+        templatePageId: bioPageId,
         ...deviceDetails,
         referer: parseReferrer(headers.get("referer")),
         country: countryName,

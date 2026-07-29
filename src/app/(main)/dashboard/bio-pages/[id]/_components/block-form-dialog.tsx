@@ -25,7 +25,7 @@ import type { BioBlockType } from "@prisma/client";
 
 import { DateTimePicker } from "./date-time-picker";
 
-type EditorBlock = RouterOutputs["bioPage"]["get"]["blocks"][number];
+type EditorBlock = RouterOutputs["templatePage"]["get"]["blocks"][number];
 type Social = { platform: string; url: string; key: string };
 
 const TYPE_LABELS: Record<BioBlockType, string> = {
@@ -72,7 +72,7 @@ export function BlockFormDialog({
     setUrl(block?.url ?? "");
     setSocials(
       block?.socials && block.socials.length > 0
-        ? block.socials.map((s) => ({ ...s, key: crypto.randomUUID() }))
+        ? block.socials.map((s: { platform: string; url: string }) => ({ ...s, key: crypto.randomUUID() }))
         : type === "social"
           ? [{ platform: "website", url: "", key: crypto.randomUUID() }]
           : [],
@@ -88,8 +88,8 @@ export function BlockFormDialog({
     },
     onError: (e: { message: string }) => toast.error(e.message),
   };
-  const addBlock = api.bioPage.addBlock.useMutation(mutationOptions);
-  const updateBlock = api.bioPage.updateBlock.useMutation(mutationOptions);
+  const addBlock = api.templatePage.addBlock.useMutation(mutationOptions);
+  const updateBlock = api.templatePage.updateBlock.useMutation(mutationOptions);
 
   const pending = addBlock.isLoading || updateBlock.isLoading;
 

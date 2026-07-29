@@ -318,25 +318,25 @@ export async function validateAccountTransfer(
     }
   }
 
-  // Bio pages: block the transfer if it would exceed the target's bio-page cap.
-  if (targetCaps.bioPageLimit !== undefined) {
+  // Template pages: block the transfer if it would exceed the target's template-page cap.
+  if (targetCaps.templatePageLimit !== undefined) {
     const [srcBioPages, tgtBioPages] = await Promise.all([
-      ctx.prisma.bioPage.count({
+      ctx.prisma.templatePage.count({
         where: { userId: ctx.auth.userId, teamId: null },
       }),
-      ctx.prisma.bioPage.count({
+      ctx.prisma.templatePage.count({
         where: { userId: targetUser.id, teamId: null },
       }),
     ]);
     if (srcBioPages > 0) {
       const newTotal = tgtBioPages + srcBioPages;
-      if (newTotal > targetCaps.bioPageLimit) {
+      if (newTotal > targetCaps.templatePageLimit) {
         errors.push({
           type: "LIMIT_EXCEEDED",
-          message: `Transfer would exceed target account's bio page limit`,
+          message: `Transfer would exceed target account's template page limit`,
           resourceType: "bioPages",
           currentCount: newTotal,
-          limit: targetCaps.bioPageLimit,
+          limit: targetCaps.templatePageLimit,
         });
       }
     }
@@ -860,7 +860,7 @@ async function executeResourceTransfer(
     // Backing links already moved in Phase 3 (they're personal links).
     // Reassigning BioPage ownership keeps the page + its blocks consistent with
     // those links. bioBlock / bioPageView rows reference ids, so need no change.
-    const bioPagesUpdate = await tx.bioPage.updateMany({
+    const bioPagesUpdate = await tx.templatePage.updateMany({
       where: { userId: fromUserId, teamId: null },
       data: { userId: toUserId, teamId: null },
     });

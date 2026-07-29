@@ -19,7 +19,7 @@ import type { RouterOutputs } from "@/trpc/shared";
 
 import { QuickInfoCard } from "../../../analytics/[alias]/_components/quick-info-card";
 
-type Analytics = RouterOutputs["bioPage"]["getAnalytics"];
+type Analytics = RouterOutputs["templatePage"]["getAnalytics"];
 
 const RANGES = [
   { value: "7d", label: "7 days" },
@@ -38,7 +38,7 @@ export function AnalyticsPanel({ pageId, plan }: { pageId: number; plan: Plan })
   const [range, setRange] = useState<Range>("7d");
   const isFree = plan === "free";
 
-  const { data, isLoading, isFetching } = api.bioPage.getAnalytics.useQuery(
+  const { data, isLoading, isFetching } = api.templatePage.getAnalytics.useQuery(
     { id: pageId, range },
     {
       // Lazy by design (this tab unmounts when inactive). Keep the previous

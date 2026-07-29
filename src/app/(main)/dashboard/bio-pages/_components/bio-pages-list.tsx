@@ -26,16 +26,16 @@ import type { RouterOutputs } from "@/trpc/shared";
 import { CreateBioPageDialog } from "./create-bio-page-dialog";
 
 type BioPagesListProps = {
-  pages: RouterOutputs["bioPage"]["list"];
+  pages: RouterOutputs["templatePage"]["list"];
   plan: Plan;
-  bioPageLimit: number | null;
+  templatePageLimit: number | null;
 };
 
-export function BioPagesList({ pages, bioPageLimit }: BioPagesListProps) {
+export function BioPagesList({ pages, templatePageLimit }: BioPagesListProps) {
   const router = useRouter();
-  const atLimit = bioPageLimit !== null && pages.length >= bioPageLimit;
+  const atLimit = templatePageLimit !== null && pages.length >= templatePageLimit;
 
-  const deletePage = api.bioPage.delete.useMutation({
+  const deletePage = api.templatePage.delete.useMutation({
     onSuccess: () => {
       toast.success("Bio page deleted.");
       router.refresh();

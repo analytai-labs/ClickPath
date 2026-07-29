@@ -3,7 +3,7 @@ import { accountTransferRouter } from "./routers/account-transfer/account-transf
 import { adminRouter } from "./routers/admin/admin.procedure";
 import { aiRouter } from "./routers/ai/ai.procedure";
 import { audienceFeedbackRouter } from "./routers/audience-feedback/audience-feedback.procedure";
-import { bioPageRouter } from "./routers/bio-page/bio-page.procedure";
+import { templatePageRouter } from "./routers/template-page/template-page.procedure";
 import { campaignRouter } from "./routers/campaign/campaign.procedure";
 import { changelogRouter } from "./routers/changelog/changelog.procedure";
 import { customDomainRouter } from "./routers/domains/domains.procedure";
@@ -45,7 +45,7 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   geoRules: geoRulesRouter,
   linkMilestone: linkMilestoneRouter,
-  bioPage: bioPageRouter,
+  templatePage: templatePageRouter,
   campaign: campaignRouter,
 });
 

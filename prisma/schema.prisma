@@ -134,6 +134,11 @@ enum BioBlockType {
   email
 }
 
+enum TemplateType {
+  bio
+  pharma_product @map("pharma_product")
+}
+
 // Models
 model Team {
   id            Int       @id @default(autoincrement())
@@ -156,10 +161,10 @@ model Team {
   tags          Tag[]
   utmTemplates  UtmTemplate[]
   campaigns     Campaign[]
-  siteSettings  SiteSettings[]
-  bioPages      BioPage[]
-  qrPresets     QrPreset[]
-  qrLogoAssets  QrLogoAsset[]
+  siteSettings   SiteSettings[]
+  templatePages  TemplatePage[]
+  qrPresets      QrPreset[]
+  qrLogoAssets   QrLogoAsset[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -241,7 +246,7 @@ model User {
   blockedDomainsCreated BlockedDomain[]
   qrPresets             QrPreset[]
   campaigns             Campaign[]
-  bioPages              BioPage[]
+  templatePages         TemplatePage[]
   qrLogoAssets          QrLogoAsset[]
 
   accounts Account[]
@@ -759,38 +764,41 @@ model AudienceFeedback {
   @@index([submittedAt])
 }
 
-model BioPage {
-  id              Int       @id @default(autoincrement())
-  userId          String    @db.VarChar(32)
+model TemplatePage {
+  id              Int          @id @default(autoincrement())
+  userId          String       @db.VarChar(32)
   teamId          Int?
-  createdByUserId String?   @db.VarChar(32)
-  slug            String    @unique @db.VarChar(100)
-  title           String?   @db.VarChar(255)
-  description     String?   @db.Text
-  avatarUrl       String?   @db.Text
+  createdByUserId String?      @db.VarChar(32)
+  slug            String       @unique @db.VarChar(100)
+  title           String?      @db.VarChar(255)
+  description     String?      @db.Text
+  avatarUrl       String?      @db.Text
   theme           Json?
-  socialImageUrl  String?   @db.Text
-  seoTitle        String?   @db.VarChar(255)
-  seoDescription  String?   @db.VarChar(500)
-  customDomain    String?   @unique @db.VarChar(255)
-  removeBranding  Boolean?  @default(false)
-  isPublished     Boolean?  @default(false)
-  createdAt       DateTime? @default(now())
-  updatedAt       DateTime? @updatedAt
+  socialImageUrl  String?      @db.Text
+  seoTitle        String?      @db.VarChar(255)
+  seoDescription  String?      @db.VarChar(500)
+  customDomain    String?      @unique @db.VarChar(255)
+  removeBranding  Boolean?     @default(false)
+  isPublished     Boolean?     @default(false)
+  templateType    TemplateType @default(bio)
+  templateData    Json?
+  createdAt       DateTime?    @default(now())
+  updatedAt       DateTime?    @updatedAt
 
-  user           User                      @relation(fields: [userId], references: [id])
-  team           Team?                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user           User                         @relation(fields: [userId], references: [id])
+  team           Team?                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   blocks         BioBlock[]
-  dailySummaries BioPageViewDailySummary[]
+  dailySummaries TemplatePageViewDailySummary[]
 
   @@index([userId])
   @@index([teamId])
   @@index([isPublished])
+  @@index([templateType])
 }
 
 model BioBlock {
   id             Int          @id @default(autoincrement())
-  bioPageId      Int
+  templatePageId Int          @map("bioPageId")
   type           BioBlockType
   title          String?      @db.VarChar(255)
   content        String?      @db.Text
@@ -803,53 +811,56 @@ model BioBlock {
   createdAt      DateTime?    @default(now())
   updatedAt      DateTime?    @updatedAt
 
-  bioPage BioPage @relation(fields: [bioPageId], references: [id], onDelete: Cascade)
-  link    Link?   @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  templatePage TemplatePage @relation(fields: [templatePageId], references: [id], onDelete: Cascade)
+  link         Link?        @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
-  @@index([bioPageId])
-  @@index([bioPageId, position])
+  @@index([templatePageId])
+  @@index([templatePageId, position])
   @@index([linkId])
 }
 
-model BioPageView {
-  id        Int       @id @default(autoincrement())
-  bioPageId Int
-  device    String?   @db.VarChar(255)
-  browser   String?   @db.VarChar(255)
-  os        String?   @db.VarChar(255)
-  model     String?   @default("") @db.VarChar(255)
-  referer   String?   @db.VarChar(255)
-  country   String?   @db.VarChar(255)
-  city      String?   @db.VarChar(255)
-  continent String?   @default("N/A") @db.VarChar(255)
-  createdAt DateTime? @default(now())
+model TemplatePageView {
+  id             Int       @id @default(autoincrement())
+  templatePageId Int       @map("bioPageId")
+  device         String?   @db.VarChar(255)
+  browser        String?   @db.VarChar(255)
+  os             String?   @db.VarChar(255)
+  model          String?   @default("") @db.VarChar(255)
+  referer        String?   @db.VarChar(255)
+  country        String?   @db.VarChar(255)
+  city           String?   @db.VarChar(255)
+  continent      String?   @default("N/A") @db.VarChar(255)
+  createdAt      DateTime? @default(now())
 
-  @@index([bioPageId])
-  @@index([bioPageId, createdAt])
+  @@map("BioPageView")
+  @@index([templatePageId])
+  @@index([templatePageId, createdAt])
   @@index([createdAt])
 }
 
-model UniqueBioPageView {
-  id        Int       @id @default(autoincrement())
-  bioPageId Int
-  ipHash    String    @db.Char(64)
-  createdAt DateTime? @default(now())
+model UniqueTemplatePageView {
+  id             Int       @id @default(autoincrement())
+  templatePageId Int       @map("bioPageId")
+  ipHash         String    @db.Char(64)
+  createdAt      DateTime? @default(now())
 
-  @@unique([bioPageId, ipHash], name: "unique_bio_view_idx")
-  @@index([bioPageId])
-  @@index([bioPageId, createdAt])
+  @@map("UniqueBioPageView")
+  @@unique([templatePageId, ipHash], name: "unique_bio_view_idx")
+  @@index([templatePageId])
+  @@index([templatePageId, createdAt])
 }
 
-model BioPageViewDailySummary {
-  id          Int    @id @default(autoincrement())
-  bioPageId   Int
-  date        String
-  views       Int    @default(0)
-  uniqueViews Int    @default(0)
+model TemplatePageViewDailySummary {
+  id             Int    @id @default(autoincrement())
+  templatePageId Int    @map("bioPageId")
+  date           String
+  views          Int    @default(0)
+  uniqueViews    Int    @default(0)
 
-  bioPage BioPage @relation(fields: [bioPageId], references: [id], onDelete: Cascade)
+  templatePage TemplatePage @relation(fields: [templatePageId], references: [id], onDelete: Cascade)
 
-  @@unique([bioPageId, date], name: "bio_page_date_unique")
+  @@map("BioPageViewDailySummary")
+  @@unique([templatePageId, date], name: "bio_page_date_unique")
 }
 
 model QrLogoAsset {
