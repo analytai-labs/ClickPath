@@ -54,6 +54,7 @@ import { ChangeLinkPasswordModal } from "./password-change-modal";
 import { QRCodeModal } from "./qrcode-modal";
 
 import type { RouterOutputs } from "@/trpc/shared";
+import { shortLinkUrl } from "@/lib/links/short-link";
 
 type LinkActionsProps = {
   link: RouterOutputs["link"]["list"]["links"][number];
@@ -285,7 +286,7 @@ export const LinkActions = ({ link }: LinkActionsProps) => {
       <QRCodeModal
         open={qrModal}
         setOpen={setQrModal}
-        destinationUrl={`https://${link.domain}/${link.alias}`}
+        destinationUrl={shortLinkUrl(link.domain, link.alias ?? "")}
         qrCode={link.qrCode}
         onCustomize={() => {
           setQrModal(false);

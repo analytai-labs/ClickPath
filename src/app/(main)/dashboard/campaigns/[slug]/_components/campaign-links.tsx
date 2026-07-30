@@ -9,6 +9,7 @@ import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
 
 import { AddLinksDialog } from "./add-links-dialog";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 type CampaignData = RouterOutputs["campaign"]["get"];
 
@@ -68,7 +69,7 @@ export function CampaignLinks({ campaign }: { campaign: CampaignData }) {
       ) : (
         <div className="divide-y divide-neutral-200/70 dark:divide-border">
           {campaign.links.map((memberLink, index) => {
-            const shortUrl = `${memberLink.domain}/${memberLink.alias ?? ""}`;
+            const shortUrl = shortLinkDisplay(memberLink.domain, memberLink.alias ?? "");
             const channel = (memberLink.utmParams as Record<string, string>)?.utm_source;
             return (
               <motion.div

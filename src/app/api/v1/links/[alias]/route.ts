@@ -8,6 +8,7 @@ import {
 } from "../../utils";
 
 import type { NextRequest } from "next/server";
+import { shortLinkUrl } from "@/lib/links/short-link";
 
 const log = logger.child({ component: "api.v1.links" });
 
@@ -126,7 +127,7 @@ async function getLinkByAlias(alias: string, domain: string) {
   if (!retrievedLink) return null;
 
   return {
-    shortLink: `https://${retrievedLink.domain}/${retrievedLink.alias}`,
+    shortLink: shortLinkUrl(retrievedLink.domain, retrievedLink.alias ?? ""),
     url: retrievedLink.url,
     alias: retrievedLink.alias,
     expiresAt: retrievedLink.disableLinkAfterDate,

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 type StatusFilter = "pending" | "blocked" | "dismissed" | undefined;
 
@@ -121,7 +122,7 @@ export default function AdminFlaggedLinksPage() {
                     <div className="flex items-center gap-2">
                       <p className="text-[13px] font-medium text-neutral-800 dark:text-neutral-200">
                         {f.linkDomain && f.linkAlias
-                          ? `${f.linkDomain}/${f.linkAlias}`
+                          ? shortLinkDisplay(f.linkDomain, f.linkAlias)
                           : "Unknown link"}
                       </p>
                       <span

@@ -51,6 +51,7 @@ import { OgImageUploader } from "../../new/_components/og-image-uploader";
 
 import type { CustomDomain } from "@prisma/client";
 import type { z } from "zod";
+import { shortLinkUrl } from "@/lib/links/short-link";
 
 const log = clientLogger.child({ component: "edit-link-page" });
 
@@ -246,7 +247,7 @@ export default function EditLinkPage() {
   const regenerateQRCode = useCallback(async () => {
     if (!canvasRef.current) return;
     try {
-      const dest = destinationURL || form.getValues("url") || (link ? `https://${link.domain}/${link.alias}` : "https://clickpath.analytai.in");
+      const dest = destinationURL || form.getValues("url") || (link?.alias ? shortLinkUrl(link.domain, link.alias) : "https://clickpath.analytai.in");
       await generateQRCode(canvasRef.current, {
         ...qrState,
         text: dest,
@@ -298,7 +299,7 @@ export default function EditLinkPage() {
           const uploadCanvas = document.createElement("canvas");
           await generateQRCode(uploadCanvas, {
             ...qrState,
-            text: values.url || link?.url || `https://${link?.domain}/${link?.alias}`,
+            text: values.url || link?.url || (link?.alias ? shortLinkUrl(link.domain, link.alias) : ""),
             scale: 20,
             margin: 2,
           });
@@ -1050,7 +1051,7 @@ export default function EditLinkPage() {
               <p className="mt-4 text-center text-xs text-neutral-400">
                 Scans to:{" "}
                 <span className="font-medium text-neutral-600 dark:text-neutral-300 break-all">
-                  {destinationURL || (link ? `https://${link.domain}/${link.alias}` : "https://clickpath.analytai.in")}
+                  {destinationURL || (link?.alias ? shortLinkUrl(link.domain, link.alias) : "https://clickpath.analytai.in")}
                 </span>
               </p>
             </div>

@@ -66,6 +66,7 @@ import type {
   ToggleArchiveInput,
   UpdateLinkInput,
 } from "./link.input";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 const log = logger.child({ component: "link.service" });
 
@@ -1412,7 +1413,7 @@ export const getAllUserAnalytics = async (
   const linkIdToInfo = new Map<number, { shortLink: string; destination: string | null }>(
     userLinks.map((link) => [
       link.id,
-      { shortLink: `${link.domain}/${link.alias}`, destination: link.url },
+      { shortLink: shortLinkDisplay(link.domain, link.alias ?? ""), destination: link.url },
     ]),
   );
 

@@ -14,6 +14,7 @@ import {
 } from "@/server/api/routers/link/utils";
 
 import type { WorkspaceTRPCContext } from "@/server/api/trpc";
+import { shortLinkUrl } from "@/lib/links/short-link";
 
 // A "hidden tracking link" is a regular Link row that backs another resource
 // (a QR code, or a bio-page link block) rather than appearing in the user's
@@ -71,7 +72,7 @@ export async function prepareHiddenTrackingLink(
       teamId: ownership.teamId,
       createdByUserId: ctx.auth.userId,
     },
-    trackingUrl: `https://${domain}/${alias}`,
+    trackingUrl: shortLinkUrl(domain, alias),
     alias,
     domain,
     shouldIncrementCount,

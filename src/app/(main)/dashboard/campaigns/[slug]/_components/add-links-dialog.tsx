@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 type CampaignData = RouterOutputs["campaign"]["get"];
 
@@ -50,8 +51,8 @@ export function AddLinksDialog({
       .filter((l) => !memberIds.has(l.id))
       .map((l) => ({
         linkId: l.id,
-        label: l.name || `${l.domain}/${l.alias ?? ""}`,
-        detail: `${l.domain}/${l.alias ?? ""}`,
+        label: l.name || shortLinkDisplay(l.domain, l.alias ?? ""),
+        detail: shortLinkDisplay(l.domain, l.alias ?? ""),
         isQrCode: l.isQrCode ?? false,
         inOtherCampaign: l.campaignId != null && l.campaignId !== campaign.id,
       }));

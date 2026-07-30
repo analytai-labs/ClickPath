@@ -18,6 +18,7 @@ import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/shared";
 
 import { QuickInfoCard } from "../../../analytics/[alias]/_components/quick-info-card";
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 
 type CampaignData = RouterOutputs["campaign"]["get"];
 type Analytics = RouterOutputs["campaign"]["analytics"];
@@ -261,7 +262,7 @@ function TopLinksCard({
             <div key={l.id}>
               <div className="flex items-center justify-between gap-3 text-[13px]">
                 <span className="truncate text-neutral-700 dark:text-foreground">
-                  {l.name || `${l.domain}/${l.alias}`}
+                  {l.name || shortLinkDisplay(l.domain, l.alias ?? "")}
                   {l.isQrCode && (
                     <span className="ml-1.5 text-[11px] uppercase tracking-wider text-neutral-400">
                       QR
@@ -385,7 +386,7 @@ function ExportCsvButton({
     const rows = analytics.links.map((l) =>
       [
         escape(l.name ?? ""),
-        escape(`https://${l.domain}/${l.alias ?? ""}`),
+        escape(shortLinkUrl(l.domain, l.alias ?? "")),
         escape(l.url ?? ""),
         l.isQrCode ? "qr" : "link",
         escape(channelByLinkId.get(l.id) ?? ""),

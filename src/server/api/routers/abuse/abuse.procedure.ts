@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, publicProcedure } from "../../trpc";
 import { ABUSE_CATEGORY_LABELS, reportAbuseSchema } from "./abuse.input";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 /**
  * Parse a user-submitted short link into a domain + alias pair.
@@ -66,7 +67,7 @@ export const abuseRouter = createTRPCRouter({
 
     void runBackgroundTask(
       sendAbuseReportNotification({
-        shortUrl: `${reportedLink.domain}/${reportedLink.alias}`,
+        shortUrl: shortLinkDisplay(reportedLink.domain, reportedLink.alias ?? ""),
         destinationUrl: reportedLink.url,
         category: categoryLabel,
         reporterEmail,

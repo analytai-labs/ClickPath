@@ -5,6 +5,7 @@ import { prisma } from "@/server/db";
 import { assertUrlSafe } from "@/server/lib/phishing";
 
 import { resolveApiDomainForUser, validateAndGetToken } from "../utils";
+import { shortLinkUrl } from "@/lib/links/short-link";
 
 export async function POST(request: Request) {
   const apiKey = request.headers.get("x-api-key");
@@ -139,7 +140,7 @@ async function createNewLink(
   const retrievedLink = await prisma.link.create({ data: newLinkData });
 
   return {
-    shortLink: `https://${retrievedLink.domain}/${retrievedLink.alias}`,
+    shortLink: shortLinkUrl(retrievedLink.domain, retrievedLink.alias ?? ""),
     url: retrievedLink.url,
     alias: retrievedLink.alias,
     expiresAt: retrievedLink.disableLinkAfterDate,

@@ -11,6 +11,7 @@ import { LinkActions } from "./actions";
 import { LinkNoteTooltip } from "./note-tooltip";
 
 import type { RouterOutputs } from "@/trpc/shared";
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 
 type LinkProps = {
   link: RouterOutputs["link"]["list"]["links"][number];
@@ -100,14 +101,14 @@ const Link = ({ link, onTagClick }: LinkProps) => {
             >
               {link.name !== "Untitled Link" && link.name
                 ? link.name
-                : `${link.domain}/${link.alias}`}
+                : shortLinkDisplay(link.domain, link.alias ?? "")}
             </span>
             <button
               type="button"
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-600"
               onClick={async (e) => {
                 e.stopPropagation();
-                await copyToClipboard(`https://${link.domain}/${link.alias}`);
+                await copyToClipboard(shortLinkUrl(link.domain, link.alias ?? ""));
               }}
             >
               <IconCopy size={14} stroke={1.5} />

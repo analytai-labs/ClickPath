@@ -10,6 +10,7 @@ import {
   getPlanCaps,
 } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
+import { logger } from "@/lib/logger";
 import { getTemplateDefinition, resolveVariantId } from "@/lib/templates/registry";
 import { releaseImages } from "@/server/lib/assets";
 import { uploadImage } from "@/server/lib/storage";
@@ -45,6 +46,9 @@ import type {
   UpdateTemplateDataInput,
   UpdateTemplatePageInput,
 } from "./template-page.input";
+import { shortLinkUrl } from "@/lib/links/short-link";
+
+const log = logger.child({ component: "template-page" });
 
 export type TemplatePageTheme = TemplateThemeInput;
 export type BioSocialLink = { platform: string; url: string };
@@ -186,9 +190,52 @@ async function fetchTemplatePageForWorkspace(ctx: WorkspaceTRPCContext, id: numb
     },
   });
   if (!page) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Page not found." });
+    throw await describeMissingPage(ctx, id);
   }
   return page;
+}
+
+/**
+ * Explain a page miss instead of guessing.
+ *
+ * "Page not found" has two very different causes: the page is genuinely gone,
+ * or it exists in another workspace — which happens whenever the workspace
+ * switcher moved after a tab was opened, since the editor renders from
+ * server-fetched data and only discovers the mismatch when you hit Save. The
+ * second case is recoverable and the user needs to be told how, so this looks
+ * the row up once (only on the failure path) and says which it is.
+ */
+async function describeMissingPage(ctx: WorkspaceTRPCContext, id: number): Promise<TRPCError> {
+  const owner = await ctx.prisma.templatePage.findUnique({
+    where: { id },
+    select: { userId: true, teamId: true, team: { select: { name: true } } },
+  });
+
+  if (!owner) {
+    return new TRPCError({ code: "NOT_FOUND", message: "Page not found." });
+  }
+
+  log.warn(
+    {
+      pageId: id,
+      requestWorkspace: {
+        type: ctx.workspace.type,
+        userId: ctx.workspace.userId,
+        teamId: ctx.workspace.type === "team" ? ctx.workspace.teamId : null,
+      },
+      pageOwner: { userId: owner.userId, teamId: owner.teamId },
+    },
+    "template page exists but belongs to a different workspace",
+  );
+
+  const where = owner.teamId
+    ? `the ${owner.team?.name ?? "team"} workspace`
+    : "a personal workspace";
+
+  return new TRPCError({
+    code: "FORBIDDEN",
+    message: `This page belongs to ${where}. Switch workspace to edit it.`,
+  });
 }
 
 async function fetchBlockForWorkspace(ctx: WorkspaceTRPCContext, blockId: number) {
@@ -280,7 +327,7 @@ function toEditorBlock(
   };
   if (b.type === "link" && b.linkId) {
     const l = linkMap.get(b.linkId);
-    base.shortUrl = l?.alias ? `https://${l.domain}/${l.alias}` : null;
+    base.shortUrl = l?.alias ? shortLinkUrl(l.domain, l.alias) : null;
     base.blocked = l?.blocked ?? false;
   }
   return base;
@@ -787,7 +834,7 @@ async function assemblePublicTemplatePage(
       if (b.type === "link") {
         const l = b.linkId ? linkMap.get(b.linkId) : undefined;
         if (!l || l.blocked || l.disabled || !l.alias) return null;
-        return { id: b.id, type: "link", title: b.title, href: `https://${l.domain}/${l.alias}` };
+        return { id: b.id, type: "link", title: b.title, href: shortLinkUrl(l.domain, l.alias ?? "") };
       }
       if (b.type === "social") {
         return { id: b.id, type: "social", socials: parseSocials(b.content) };

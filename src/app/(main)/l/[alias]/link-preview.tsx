@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 import { cn } from "@/lib/utils";
 import { satoshi } from "@/styles/fonts";
 import type { RouterOutputs } from "@/trpc/shared";
@@ -21,11 +22,13 @@ function LinkPreview({
         </p>
       </div>
 
-      <h2 className="text-2xl font-semibold mt-10">{`${link?.domain}/${link?.alias}`}</h2>
+      <h2 className="text-2xl font-semibold mt-10">
+        {shortLinkDisplay(link?.domain ?? "", link?.alias ?? "")}
+      </h2>
       <p>Redirects to</p>
       <h2 className="text-2xl font-semibold">{link?.url}</h2>
       <Button variant="outline" asChild>
-        <a href={`https://${link?.domain}/${link?.alias}`}>
+        <a href={shortLinkUrl(link?.domain ?? "", link?.alias ?? "")}>
           Continue to Visit <ExternalLink className="ml-2 size-4" />
         </a>
       </Button>

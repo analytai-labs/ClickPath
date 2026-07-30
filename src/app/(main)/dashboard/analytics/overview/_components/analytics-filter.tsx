@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DEFAULT_PLATFORM_DOMAIN, PLATFORM_DOMAINS } from "@/lib/constants/domains";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 
 type FilterType = "all" | "folder" | "domain" | "link";
 
@@ -167,7 +168,7 @@ export function AnalyticsFilter() {
     if (!linksData?.links) return [];
     return linksData.links.map((link) => ({
       value: String(link.id),
-      label: `${link.domain}/${link.alias}`,
+      label: shortLinkDisplay(link.domain, link.alias ?? ""),
       subtitle: link.name || "",
     }));
   };

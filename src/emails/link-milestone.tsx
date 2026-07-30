@@ -1,5 +1,8 @@
 import { Body, Container, Head, Html, Preview, Section, Text } from "@react-email/components";
 
+import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
+import { shortLinkDisplay } from "@/lib/links/short-link";
+
 type LinkMilestoneEmailProps = {
   userName?: string | null;
   linkAlias: string;
@@ -29,8 +32,9 @@ export const LinkMilestoneEmail = ({
             <Text style={text}>Hi {userName || "there"},</Text>
 
             <Text style={text}>
-              Your link <strong>{displayName}</strong> (clickpath.analytai.in/{linkAlias}) just
-              reached <strong>{totalClicks.toLocaleString()} clicks</strong>, passing your{" "}
+              Your link <strong>{displayName}</strong> (
+              {shortLinkDisplay(DEFAULT_PLATFORM_DOMAIN, linkAlias)}) just reached{" "}
+              <strong>{totalClicks.toLocaleString()} clicks</strong>, passing your{" "}
               {milestone.toLocaleString()}-click milestone.
             </Text>
 
