@@ -1,7 +1,6 @@
 "use client";
 
-import { IconX } from "@tabler/icons-react";
-
+import { AssetField } from "@/components/assets";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,7 +27,6 @@ import type {
 } from "@/lib/qr-generator/types";
 
 import { ColorSwatch } from "./color-swatch";
-import { LogoUploader } from "./qr-logo-uploader";
 
 interface QRAdvancedCustomizationProps {
   pixelStyle: QRPixelStyle;
@@ -263,24 +261,16 @@ export function QRAdvancedCustomization({
       <div className="space-y-3">
         <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">Logo</p>
         <div className="space-y-3">
-          {logoImage ? (
-            <div className="space-y-3">
-              <div className="relative inline-block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={logoImage}
-                  alt="Logo preview"
-                  className="h-16 w-16 rounded-lg object-cover border border-neutral-200 dark:border-border"
-                />
-                <button
-                  type="button"
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600"
-                  onClick={() => setLogoImage(undefined)}
-                >
-                  <IconX size={10} stroke={2} />
-                </button>
-              </div>
+          {/* Always visible, so a logo can be swapped without clearing it first. */}
+          <AssetField
+            value={logoImage ?? null}
+            onChange={(url) => setLogoImage(url ?? undefined)}
+            label="Logo"
+            hint="Sits in the middle of the code. PNG, JPEG, WebP or GIF, up to 2 MB."
+          />
 
+          {logoImage && (
+            <div className="space-y-3">
               <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
@@ -335,8 +325,6 @@ export function QRAdvancedCustomization({
                 />
               </div>
             </div>
-          ) : (
-            <LogoUploader setLogoImage={(image) => setLogoImage(image ?? undefined)} currentLogoImage={logoImage || null} />
           )}
         </div>
       </div>

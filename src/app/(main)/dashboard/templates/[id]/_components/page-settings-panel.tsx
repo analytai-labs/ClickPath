@@ -1,10 +1,11 @@
 "use client";
 
-import { IconLock, IconUpload, IconX } from "@tabler/icons-react";
+import { IconLock } from "@tabler/icons-react";
 import { Link } from "next-view-transitions";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { AssetField } from "@/components/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,8 +26,6 @@ import { EditorCard, Field, SettingRow } from "./editor-ui";
 
 import type { Plan } from "@/lib/billing/plans";
 import type { TemplatePageData } from "./editor-types";
-
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 // Radix Select forbids empty-string item values, so use a sentinel for "no domain".
 const NO_DOMAIN = "__none__";
@@ -79,8 +78,6 @@ export function PageSettingsPanel({
   const isPaid = plan !== "free";
 
   const [draft, setDraft] = useState<Draft>(() => toDraft(page));
-  const avatarRef = useRef<HTMLInputElement>(null);
-  const socialRef = useRef<HTMLInputElement>(null);
 
   // Only verified domains in this workspace can serve a page (the server
   // enforces this on save), so offer exactly those instead of a free-text field.
@@ -103,17 +100,6 @@ export function PageSettingsPanel({
 
   function patch(next: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...next }));
-  }
-
-  function handleImage(file: File | undefined, key: "avatarUrl" | "socialImageUrl") {
-    if (!file) return;
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast.error("Image must be under 2 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => patch({ [key]: reader.result as string });
-    reader.readAsDataURL(file);
   }
 
   function handleSave() {
@@ -174,18 +160,10 @@ export function PageSettingsPanel({
 
           {definition.usesAvatar && (
             <Field label="Avatar">
-              <ImageField
+              <AssetField
                 value={draft.avatarUrl}
-                shape="circle"
-                onPick={() => avatarRef.current?.click()}
-                onClear={() => patch({ avatarUrl: null })}
-              />
-              <input
-                ref={avatarRef}
-                type="file"
-                accept="image/png,image/jpeg,image/gif,image/webp"
-                className="hidden"
-                onChange={(e) => handleImage(e.target.files?.[0], "avatarUrl")}
+                onChange={(url) => patch({ avatarUrl: url })}
+                label="Avatar"
               />
             </Field>
           )}
@@ -225,20 +203,18 @@ export function PageSettingsPanel({
                 : "Available on Pro and Ultra plans."
             }
           >
-            <ImageField
-              value={draft.socialImageUrl}
-              shape="wide"
-              disabled={!isPaid}
-              onPick={() => socialRef.current?.click()}
-              onClear={() => patch({ socialImageUrl: null })}
-            />
-            <input
-              ref={socialRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              className="hidden"
-              onChange={(e) => handleImage(e.target.files?.[0], "socialImageUrl")}
-            />
+            {isPaid ? (
+              <AssetField
+                value={draft.socialImageUrl}
+                onChange={(url) => patch({ socialImageUrl: url })}
+                label="Social preview image"
+                aspect="wide"
+              />
+            ) : (
+              <p className="text-[13px] text-neutral-400 dark:text-neutral-500">
+                Upgrade to set your own share card.
+              </p>
+            )}
           </Field>
         </div>
       </EditorCard>
@@ -354,48 +330,5 @@ export function PageSettingsPanel({
         </Button>
       </div>
     </>
-  );
-}
-
-function ImageField({
-  value,
-  shape,
-  disabled,
-  onPick,
-  onClear,
-}: {
-  value: string | null;
-  shape: "circle" | "wide";
-  disabled?: boolean;
-  onPick: () => void;
-  onClear: () => void;
-}) {
-  const box = shape === "circle" ? "h-14 w-14 rounded-full" : "h-12 w-20 rounded-lg";
-  return (
-    <div className="flex items-center gap-3">
-      {value ? (
-        <span className="relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" className={`${box} object-cover`} />
-          <button
-            type="button"
-            aria-label="Remove image"
-            onClick={onClear}
-            className="absolute -right-1 -top-1 rounded-full bg-neutral-800 p-0.5 text-white"
-          >
-            <IconX size={12} />
-          </button>
-        </span>
-      ) : (
-        <span
-          className={`${box} flex items-center justify-center bg-neutral-100 text-neutral-400 dark:bg-muted`}
-        >
-          <IconUpload size={16} stroke={1.5} />
-        </span>
-      )}
-      <Button variant="outline" size="sm" disabled={disabled} onClick={onPick}>
-        {value ? "Replace" : "Upload"}
-      </Button>
-    </div>
   );
 }

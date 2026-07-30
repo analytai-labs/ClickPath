@@ -2,6 +2,7 @@ import { abuseRouter } from "./routers/abuse/abuse.procedure";
 import { accountTransferRouter } from "./routers/account-transfer/account-transfer.procedure";
 import { adminRouter } from "./routers/admin/admin.procedure";
 import { aiRouter } from "./routers/ai/ai.procedure";
+import { assetRouter } from "./routers/asset/asset.procedure";
 import { audienceFeedbackRouter } from "./routers/audience-feedback/audience-feedback.procedure";
 import { templatePageRouter } from "./routers/template-page/template-page.procedure";
 import { campaignRouter } from "./routers/campaign/campaign.procedure";
@@ -47,6 +48,7 @@ export const appRouter = createTRPCRouter({
   linkMilestone: linkMilestoneRouter,
   templatePage: templatePageRouter,
   campaign: campaignRouter,
+  asset: assetRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -179,6 +179,15 @@ export function canUseBioCustomDomain(plan: Plan): boolean {
   return plan !== "free";
 }
 
+/**
+ * Pro+ may keep images in the reusable asset library and organize them into
+ * folders. Uploading and using an image is available on every plan — the paid
+ * boundary is reuse, not the ability to put a logo on a QR code.
+ */
+export function canUseAssetLibrary(plan: Plan): boolean {
+  return plan !== "free";
+}
+
 /** Ultra-only: per-block UTM attribution on bio links. */
 export function canUseBioUtmPerBlock(plan: Plan): boolean {
   return plan === "ultra";

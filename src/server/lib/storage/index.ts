@@ -1,3 +1,10 @@
-export type { ImageType, R2Config, UploadImageParams, WorkspaceType } from "./types";
-export { deleteImage, uploadImage } from "./image-upload.service";
-export { resetStorageProvider } from "./r2";
+export type { ImageType, R2Config, UploadedImage, UploadImageParams, WorkspaceType } from "./types";
+export {
+  deleteImage,
+  deleteImageByKey,
+  isManagedImageUrl,
+  isUploadableDataUrl,
+  uploadImage,
+  uploadImageDetailed,
+} from "./image-upload.service";
+export { isR2Configured, resetStorageProvider } from "./r2";

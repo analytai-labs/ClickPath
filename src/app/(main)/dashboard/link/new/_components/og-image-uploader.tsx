@@ -1,9 +1,10 @@
 "use client";
 
-import { IconPhotoPlus, IconX } from "@tabler/icons-react";
+import { IconFolders, IconPhotoPlus, IconX } from "@tabler/icons-react";
 import type React from "react";
 import { useRef, useState } from "react";
 
+import { AssetBrowserDialog } from "@/components/assets";
 import { Button } from "@/components/ui/button";
 
 interface OgImageUploaderProps {
@@ -15,6 +16,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
   const [error, setError] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isBase64 = value?.startsWith("data:");
@@ -64,6 +66,20 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
     fileInputRef.current?.click();
   };
 
+  const browser = (
+    <AssetBrowserDialog
+      open={browsing}
+      onOpenChange={setBrowsing}
+      onSelect={(url) => {
+        onChange(url);
+        setError(null);
+      }}
+      selectedUrl={value ?? null}
+      title="Choose a preview image"
+      description="Pick one of your saved images, or upload a new one."
+    />
+  );
+
   // Show preview when there's an uploaded image
   if (isBase64 && value) {
     return (
@@ -84,6 +100,7 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
           </div>
         </div>
         {error && <p className="text-[12px] text-red-500">{error}</p>}
+        {browser}
       </div>
     );
   }
@@ -98,7 +115,16 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
           onChange={handleUrlChange}
           className="h-full flex-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-900 dark:text-foreground placeholder:text-neutral-400 focus:outline-none"
         />
-        <div className="flex h-full items-center border-l border-neutral-200 dark:border-border px-1">
+        <div className="flex h-full items-center gap-0.5 border-l border-neutral-200 dark:border-border px-1">
+          <button
+            type="button"
+            onClick={() => setBrowsing(true)}
+            title="Choose from your assets"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-neutral-500 dark:text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-700 dark:hover:text-neutral-300"
+          >
+            <IconFolders size={14} stroke={1.5} />
+            <span>Assets</span>
+          </button>
           <button
             type="button"
             onClick={handleUploadClick}
@@ -133,6 +159,8 @@ export function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
           />
         </div>
       )}
+
+      {browser}
     </div>
   );
 }

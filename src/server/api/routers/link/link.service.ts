@@ -21,7 +21,8 @@ import { hashIp } from "@/lib/utils/ip-hash";
 import { prisma } from "@/server/db";
 import { checkAndFireMilestones } from "@/server/lib/milestone-check";
 import { assertUrlSafe } from "@/server/lib/phishing";
-import { deleteImage, uploadImage } from "@/server/lib/storage";
+import { releaseImage, uploadAndRecordAsset } from "@/server/lib/assets";
+import { isUploadableDataUrl, uploadImage } from "@/server/lib/storage";
 import {
   assertCanEnableVerifiedClicks,
   issueVerifiedClickToken,
@@ -295,6 +296,32 @@ export const getLinkByAlias = async (input: {
   });
 };
 
+/**
+ * Make sure a QR logo is a URL before it reaches the database.
+ *
+ * The editor picks logos from the asset library and already sends a URL, so
+ * this is normally a no-op. It matters for older clients and direct API calls,
+ * which would otherwise park a multi-megabyte base64 string in `logoImage` and
+ * ship it back on every list query.
+ */
+async function materializeQrLogo<T extends { logoImage?: string | null } | undefined>(
+  ctx: WorkspaceTRPCContext,
+  qrCode: T,
+): Promise<T> {
+  if (!qrCode?.logoImage || !isUploadableDataUrl(qrCode.logoImage)) return qrCode;
+
+  try {
+    const asset = await uploadAndRecordAsset(ctx, qrCode.logoImage, {
+      name: "QR logo",
+      library: false,
+    });
+    return { ...qrCode, logoImage: asset.url };
+  } catch (error) {
+    log.error({ err: error }, "failed to upload QR logo; dropping it rather than storing base64");
+    return { ...qrCode, logoImage: null };
+  }
+}
+
 export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInput) => {
   const { plan, currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
   const isPaidPlan = plan !== "free";
@@ -388,7 +415,8 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
   const tagNames = input.tags ?? [];
 
   // Create link without tags, geoRules, and qrCode fields
-  const { tags, geoRules, qrCode, ...linkData } = input;
+  const { tags, geoRules, qrCode: rawQrCode, ...linkData } = input;
+  const qrCode = await materializeQrLogo(ctx, rawQrCode);
   const ownership = workspaceOwnership(ctx.workspace);
 
   const { linkId, qrCodeId } = await prisma.$transaction(async (tx) => {
@@ -595,7 +623,8 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
   }
 
   // Extract tags, geoRules, and qrCode from input
-  const { tags: tagNames, geoRules: geoRulesInput, qrCode, ...linkData } = input;
+  const { tags: tagNames, geoRules: geoRulesInput, qrCode: rawQrCode, ...linkData } = input;
+  const qrCode = await materializeQrLogo(ctx, rawQrCode);
 
   // Upload OG image to R2 if it's base64
   if (linkData.metadata?.image) {
@@ -774,13 +803,14 @@ export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput)
     await requireFolderAccess(prisma as any, ctx.workspace, linkToDelete.folderId);
   }
 
-  // Delete OG image from R2 if present
+  // Release the OG image. One saved in the asset library is kept — this link is
+  // only one of the places that may point at it.
   const metadata = linkToDelete.metadata as { image?: string } | null;
   if (metadata?.image) {
     try {
-      await deleteImage(metadata.image);
+      await releaseImage(ctx, metadata.image);
     } catch (error) {
-      log.error({ err: error, linkId: input.id }, "failed to delete OG image from R2");
+      log.error({ err: error, linkId: input.id }, "failed to release OG image");
     }
   }
 
@@ -838,14 +868,14 @@ export const bulkDeleteLinks = async (ctx: WorkspaceTRPCContext, linkIds: number
 
   const validLinkIds = linksToDelete.map((l) => l.id);
 
-  // Delete OG images from R2 before removing links
+  // Release OG images before removing links; library assets are left alone.
   for (const l of linksToDelete) {
     const metadata = l.metadata as { image?: string } | null;
     if (metadata?.image) {
       try {
-        await deleteImage(metadata.image);
+        await releaseImage(ctx, metadata.image);
       } catch (error) {
-        log.error({ err: error, linkId: l.id }, "failed to delete OG image for link");
+        log.error({ err: error, linkId: l.id }, "failed to release OG image for link");
       }
     }
   }

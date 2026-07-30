@@ -52,20 +52,23 @@ const marginNoiseRateSchema = z.string().refine((val) => {
   return !isNaN(num) && num >= 0 && num <= 1;
 }, "marginNoiseRate must be a number between 0 and 1");
 
-// Logo image validator: must be a valid base64 data URI (PNG/JPEG) under 2MB
+// A logo is normally an asset-library URL. A base64 data URI is still accepted
+// (and uploaded on save) so an older client or a direct API call keeps working.
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
 const logoImageSchema = z
   .string()
-  .regex(
-    /^data:image\/(png|jpe?g);base64,[A-Za-z0-9+/]+=*$/,
-    "Logo must be a valid base64 PNG or JPEG data URI",
+  .max(5_000_000)
+  .refine(
+    (value) =>
+      value.startsWith("http") || /^data:image\/(png|jpe?g|gif|webp);base64,/.test(value),
+    "Logo must be an image URL or a base64 image data URI",
   )
-  .refine((dataUri) => {
-    // Extract the base64 payload after the comma
-    const base64Payload = dataUri.split(",")[1];
-    if (!base64Payload) return false;
+  .refine((value) => {
+    if (value.startsWith("http")) return true;
 
     // Calculate decoded byte length (accounting for padding)
+    const base64Payload = value.split(",")[1];
+    if (!base64Payload) return false;
     const padding = (base64Payload.match(/=+$/) || [""])[0].length;
     const decodedSize = Math.ceil((base64Payload.length * 3) / 4) - padding;
 
@@ -115,16 +118,3 @@ export const qrPresetUpdateInput = z.object({
 
 export type QRPresetCreateInput = z.infer<typeof qrPresetCreateInput>;
 export type QRPresetUpdateInput = z.infer<typeof qrPresetUpdateInput>;
-
-// Logo Asset schemas
-export const logoAssetCreateInput = z.object({
-  name: z.string().max(255).optional(),
-  image: z.string().regex(
-    /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/]+=*$/,
-    "Image must be a valid base64 data URI",
-  ),
-});
-
-export const logoAssetIdInput = z.object({
-  id: z.number(),
-});

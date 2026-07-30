@@ -850,6 +850,26 @@ function pointToLineProjection(
   return [x, y] as const;
 }
 
+/**
+ * Load a remote logo through the app's own origin so the canvas stays clean.
+ *
+ * Relative URLs and anything already same-origin are used as-is; everything
+ * else goes via the asset image proxy, which only serves our own bucket.
+ */
+function proxiedLogoUrl(url: string): string {
+  if (url.startsWith("/")) return url;
+
+  try {
+    if (typeof window !== "undefined" && new URL(url).origin === window.location.origin) {
+      return url;
+    }
+  } catch {
+    return url; // not a parseable absolute URL; let the browser deal with it
+  }
+
+  return `/api/assets/image?src=${encodeURIComponent(url)}`;
+}
+
 async function drawLogo(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
@@ -859,11 +879,14 @@ async function drawLogo(
   if (!state.logoImage) return;
 
   const img = new Image();
-  if (!state.logoImage.startsWith("data:")) {
-    img.crossOrigin = "anonymous";
-    img.src = state.logoImage + (state.logoImage.includes("?") ? "&" : "?") + "not-from-cache-please";
-  } else {
+  if (state.logoImage.startsWith("data:")) {
     img.src = state.logoImage;
+  } else {
+    // The canvas must stay untainted — effects read pixels back and export
+    // calls toDataURL — so the logo has to load with CORS. Route remote images
+    // through our own origin, since public object stores serve no CORS headers.
+    img.crossOrigin = "anonymous";
+    img.src = proxiedLogoUrl(state.logoImage);
   }
 
   await new Promise<void>((resolve, reject) => {

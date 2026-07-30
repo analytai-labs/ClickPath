@@ -40,7 +40,9 @@ export function isR2Configured(): boolean {
   return getClient() !== null;
 }
 
-export async function r2UploadImage(params: UploadImageParams): Promise<string> {
+export async function r2UploadImage(
+  params: UploadImageParams,
+): Promise<{ url: string; key: string }> {
   const s3Client = getClient();
   if (!s3Client || !publicUrl) {
     throw new Error("R2 storage not configured");
@@ -57,7 +59,7 @@ export async function r2UploadImage(params: UploadImageParams): Promise<string> 
     }),
   );
 
-  return `${publicUrl}/${key}`;
+  return { url: `${publicUrl}/${key}`, key };
 }
 
 export async function r2DeleteImage(key: string): Promise<void> {

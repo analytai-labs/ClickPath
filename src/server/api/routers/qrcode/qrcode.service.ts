@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { buildCacheKey, deleteFromCache } from "@/lib/core/cache";
 import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
+import { releaseImage } from "@/server/lib/assets";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import { insertHiddenTrackingLink, prepareHiddenTrackingLink } from "@/server/lib/tracking-link";
@@ -473,14 +474,15 @@ export const deleteQrPreset = userFacing(
       });
     }
 
-    // Delete logo image from R2 if present
+    // Release the logo. A logo saved in the asset library survives this — the
+    // preset is only one of the places that may point at it.
     if (preset.logoImage) {
       try {
-        await deleteImage(preset.logoImage);
+        await releaseImage(ctx, preset.logoImage);
       } catch (error) {
         log.error(
           { err: error, presetId: id, action: "delete-preset" },
-          "failed to delete logo image from R2",
+          "failed to release logo image",
         );
       }
     }
@@ -525,11 +527,11 @@ export const updateQrPreset = userFacing(
       logoImageUrl = null;
       if (preset.logoImage) {
         try {
-          await deleteImage(preset.logoImage);
+          await releaseImage(ctx, preset.logoImage);
         } catch (error) {
           log.error(
             { err: error, presetId: input.id, action: "remove-logo" },
-            "failed to delete logo image from R2",
+            "failed to release logo image",
           );
         }
       }
@@ -547,11 +549,11 @@ export const updateQrPreset = userFacing(
         // Delete old logo from R2 if it's being replaced
         if (preset.logoImage && preset.logoImage !== logoImageUrl) {
           try {
-            await deleteImage(preset.logoImage);
+            await releaseImage(ctx, preset.logoImage);
           } catch (error) {
             log.error(
               { err: error, presetId: input.id, action: "replace-logo" },
-              "failed to delete old logo image from R2",
+              "failed to release old logo image",
             );
           }
         }
@@ -588,89 +590,5 @@ export const updateQrPreset = userFacing(
     return ctx.prisma.qrPreset.findUnique({
       where: { id: input.id },
     });
-  },
-);
-
-// ---------------------------------------------------------------------------
-// Logo Assets
-// ---------------------------------------------------------------------------
-
-export const createLogoAsset = userFacing(
-  "createLogoAsset",
-  "Something went wrong while uploading your logo asset.",
-  async (ctx: WorkspaceTRPCContext, input: z.infer<typeof import("./qrcode.input").logoAssetCreateInput>) => {
-    // Only allow for paid plans
-    if (ctx.workspace.plan === "free") {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Logo Asset Library is a premium feature. Please upgrade your plan.",
-      });
-    }
-
-    const ownership = workspaceOwnership(ctx.workspace);
-    const resourceId = Date.now(); // Simple unique ID for the asset image
-
-    // Upload to R2
-    const url = await uploadImage(ctx, {
-      image: input.image,
-      resourceId,
-      imageType: "qr-logo" as any,
-    });
-
-    if (!url || url === input.image) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to upload logo to R2",
-      });
-    }
-
-    // Save to DB
-    const asset = await ctx.prisma.qrLogoAsset.create({
-      data: {
-        userId: ownership.userId,
-        teamId: ownership.teamId,
-        name: input.name,
-        url,
-      },
-    });
-
-    return asset;
-  },
-);
-
-export const listLogoAssets = userFacing(
-  "listLogoAssets",
-  "Something went wrong while fetching your logo assets.",
-  async (ctx: WorkspaceTRPCContext) => {
-    return ctx.prisma.qrLogoAsset.findMany({
-      where: workspaceFilter(ctx.workspace),
-      orderBy: { createdAt: "desc" },
-    });
-  },
-);
-
-export const deleteLogoAsset = userFacing(
-  "deleteLogoAsset",
-  "Something went wrong while deleting your logo asset.",
-  async (ctx: WorkspaceTRPCContext, id: number) => {
-    const asset = await ctx.prisma.qrLogoAsset.findFirst({
-      where: {
-        id,
-        ...workspaceFilter(ctx.workspace),
-      },
-    });
-
-    if (!asset) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
-    }
-
-    // Delete from DB only (Soft Delete for R2)
-    // We intentionally leave the image in R2 to prevent breaking any live QR codes 
-    // that might be referencing this logo URL.
-    await ctx.prisma.qrLogoAsset.delete({
-      where: { id: asset.id },
-    });
-
-    return { success: true };
   },
 );

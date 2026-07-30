@@ -32,7 +32,7 @@ async function uploadFeedbackImage(
 
   if (buffer.length > MAX_IMAGE_SIZE_BYTES) return null;
 
-  return r2UploadImage({
+  const { url } = await r2UploadImage({
     buffer,
     contentType: `image/${format}`,
     imageType: "feedback",
@@ -41,6 +41,8 @@ async function uploadFeedbackImage(
     workspaceType: "personal",
     extension: EXTENSION_MAP[format!] || "png",
   });
+
+  return url;
 }
 
 export const feedbackRouter = createTRPCRouter({

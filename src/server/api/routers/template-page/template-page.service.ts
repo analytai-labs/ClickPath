@@ -11,7 +11,8 @@ import {
 } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
 import { getTemplateDefinition, resolveVariantId } from "@/lib/templates/registry";
-import { deleteImage, uploadImage } from "@/server/lib/storage";
+import { releaseImages } from "@/server/lib/assets";
+import { uploadImage } from "@/server/lib/storage";
 import {
   deleteHiddenTrackingLink,
   insertHiddenTrackingLink,
@@ -430,7 +431,7 @@ export async function updateTemplatePage(
     }
   }
 
-  for (const url of imagesToDelete) await deleteImage(url).catch(() => {});
+  await releaseImages(ctx, imagesToDelete);
   revalidateTemplatePath(page.slug);
   if (typeof updates.slug === "string" && updates.slug !== page.slug) {
     revalidateTemplatePath(updates.slug);
@@ -475,7 +476,7 @@ export async function updateTemplateData(
 
   await ctx.prisma.templatePage.update({ where: { id: page.id }, data: updates });
 
-  await Promise.all(staleUrls.map((url) => deleteImage(url).catch(() => {})));
+  await releaseImages(ctx, staleUrls);
   revalidateTemplatePath(page.slug);
   return { success: true };
 }
@@ -498,7 +499,7 @@ export async function updateQrDesign(ctx: WorkspaceTRPCContext, input: UpdateQrD
     data: { qrDesign: resolved as object },
   });
 
-  await Promise.all(staleUrls.map((url) => deleteImage(url).catch(() => {})));
+  await releaseImages(ctx, staleUrls);
   return { success: true, qrDesign: resolved };
 }
 
@@ -548,7 +549,7 @@ export async function deleteTemplatePage(ctx: WorkspaceTRPCContext, id: number) 
     ...collectManagedImageUrls(page.templateData),
     ...collectManagedImageUrls(page.qrDesign),
   ].filter((url): url is string => !!url);
-  await Promise.all(imageUrls.map((url) => deleteImage(url).catch(() => {})));
+  await releaseImages(ctx, imageUrls);
 
   revalidateTemplatePath(page.slug);
   return { success: true };

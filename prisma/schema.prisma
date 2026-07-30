@@ -164,7 +164,8 @@ model Team {
   siteSettings   SiteSettings[]
   templatePages  TemplatePage[]
   qrPresets      QrPreset[]
-  qrLogoAssets   QrLogoAsset[]
+  assets         Asset[]
+  assetFolders   AssetFolder[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -247,7 +248,8 @@ model User {
   qrPresets             QrPreset[]
   campaigns             Campaign[]
   templatePages         TemplatePage[]
-  qrLogoAssets          QrLogoAsset[]
+  assets                Asset[]
+  assetFolders          AssetFolder[]
 
   accounts Account[]
   sessions Session[]
@@ -872,17 +874,64 @@ model TemplatePageViewDailySummary {
   @@unique([templatePageId, date], name: "bio_page_date_unique")
 }
 
-model QrLogoAsset {
+/// A folder in the workspace's asset library. Nests via `parentId`; depth is
+/// capped in the service so the breadcrumb stays readable.
+model AssetFolder {
   id        Int       @id @default(autoincrement())
-  url       String    @db.Text
-  name      String?   @db.VarChar(255)
   userId    String    @db.VarChar(32)
   teamId    Int?
+  parentId  Int?
+  name      String    @db.VarChar(120)
   createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
 
-  user User  @relation(fields: [userId], references: [id])
-  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id])
+  team     Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  parent   AssetFolder?  @relation("AssetFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children AssetFolder[] @relation("AssetFolderTree")
+  assets   Asset[]
 
-  @@index([userId])
+  @@index([userId, teamId])
   @@index([teamId])
+  @@index([parentId])
+}
+
+/// An image this app stored in R2.
+///
+/// Every object the app uploads gets exactly one row, so its storage key is
+/// always recoverable. `library` separates images the user deliberately saved
+/// for reuse from one-off uploads made inline while editing something — only
+/// library assets appear in the picker and survive their resource's cleanup.
+model Asset {
+  id       Int     @id @default(autoincrement())
+  /// Uploader, kept for the team audit trail. Workspace scope is (userId, teamId).
+  userId   String  @db.VarChar(32)
+  teamId   Int?
+  folderId Int?
+  name     String  @db.VarChar(255)
+  /// Public R2 URL — the value every consumer stores as its image.
+  url      String  @db.VarChar(1024)
+  /// R2 object key, so the object stays deletable independently of the URL.
+  storageKey String? @db.VarChar(1024)
+  mimeType   String? @db.VarChar(100)
+  byteSize   Int?
+  /// sha256 of the decoded bytes: re-uploading the same file reuses the row
+  /// instead of filling the library with duplicates.
+  checksum  String?   @db.Char(64)
+  library   Boolean   @default(true)
+  /// Soft delete. Hides the asset from the library but leaves the R2 object and
+  /// every existing reference to it untouched, so live QR codes keep rendering.
+  deletedAt DateTime?
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  user   User         @relation(fields: [userId], references: [id])
+  team   Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  folder AssetFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, teamId])
+  @@index([teamId])
+  @@index([folderId])
+  @@index([url])
+  @@index([checksum])
 }

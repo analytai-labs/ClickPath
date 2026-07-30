@@ -52,19 +52,4 @@ export const qrCodeRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return services.deleteQrPreset(ctx, input.id);
     }),
-
-  // Logo Asset procedures
-  createLogoAsset: workspaceProcedure
-    .input(inputs.logoAssetCreateInput)
-    .mutation(async ({ ctx, input }) => {
-      return services.createLogoAsset(ctx, input);
-    }),
-  listLogoAssets: workspaceProcedure.query(async ({ ctx }) => {
-    return services.listLogoAssets(ctx);
-  }),
-  deleteLogoAsset: workspaceProcedure
-    .input(inputs.logoAssetIdInput)
-    .mutation(async ({ ctx, input }) => {
-      return services.deleteLogoAsset(ctx, input.id);
-    }),
 });
