@@ -17,18 +17,39 @@ async function resolveLinkAndLogAnalytics(request: NextRequest) {
 
   const { pathname, host, origin } = new URL(request.url);
 
-  // A verified custom domain serves its owner's bio page at the domain root.
-  // Short links on the same domain are deeper paths and keep resolving normally.
-  const bareHost = host.split(":")[0] ?? host;
-  if (
-    pathname === "/" &&
-    bareHost &&
+  // Take the host from the request headers, not from `request.url` — behind a
+  // proxy (and for `next start`) the URL carries the listening address, which
+  // would silently disable all customer-domain routing.
+  const requestHost =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? host;
+  const bareHost = (requestHost.split(":")[0] ?? requestHost).toLowerCase();
+  // A host that isn't ours: it's a customer's own verified domain (or an
+  // impostor — the routes below verify ownership before serving anything).
+  const isCustomerHost =
+    !!bareHost &&
     !bareHost.includes("localhost") &&
     !bareHost.endsWith(".vercel.app") && // preview/deploy URLs keep the marketing root
     !isPlatformDomain(bareHost) &&
-    extractPlatformSubdomain(bareHost) === null
-  ) {
-    return NextResponse.rewrite(new URL(`/p-host/${encodeURIComponent(bareHost)}`, request.url));
+    extractPlatformSubdomain(bareHost) === null;
+
+  if (isCustomerHost) {
+    // A verified custom domain serves its owner's page at the domain root.
+    // Short links on the same domain are deeper paths and keep resolving normally.
+    if (pathname === "/") {
+      return NextResponse.rewrite(new URL(`/p-host/${encodeURIComponent(bareHost)}`, request.url));
+    }
+
+    // ...and serves every template page in that workspace at /p/<slug>, so the
+    // pages and any printed QR codes do not depend on the platform domain.
+    const templateSlug = pathname.startsWith("/p/") ? pathname.slice(3) : null;
+    if (templateSlug && !templateSlug.includes("/")) {
+      return NextResponse.rewrite(
+        new URL(
+          `/p-host/${encodeURIComponent(bareHost)}/p/${encodeURIComponent(templateSlug)}`,
+          request.url,
+        ),
+      );
+    }
   }
 
   const staticRoutes = [

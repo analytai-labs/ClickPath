@@ -1,4 +1,12 @@
-export type ImageType = "og-image" | "qr-logo" | "qr-code" | "feedback" | "bio-avatar" | "bio-og" | "pharma-product-image" | "pharma-document-image";
+export type ImageType =
+  | "og-image"
+  | "qr-logo"
+  | "qr-code"
+  | "feedback"
+  | "bio-avatar"
+  | "bio-og"
+  /** Any image embedded in a template page's `templateData`, for every template. */
+  | "template-media";
 
 export type WorkspaceType = "personal" | "team";
 

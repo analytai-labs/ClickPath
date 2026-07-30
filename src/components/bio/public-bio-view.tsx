@@ -1,18 +1,17 @@
+import { TemplatePageViewBeacon } from "@/components/templates/view-beacon";
+
 import { type BioRenderBlock, type BioRenderModel, BioRenderer } from "./bio-renderer";
-import { BioPageViewBeacon } from "./view-beacon";
 
-import type { RouterOutputs } from "@/trpc/shared";
+import type { PublicTemplatePage, PublicTemplatePageProps } from "@/components/templates/types";
 
-type PublicBioPage = NonNullable<RouterOutputs["templatePage"]["getBySlug"]>;
-
-function toRenderModel(page: PublicBioPage): BioRenderModel {
+function toRenderModel(page: PublicTemplatePage): BioRenderModel {
   return {
     title: page.title,
     description: page.description,
     avatarUrl: page.avatarUrl,
     theme: page.theme,
     removeBranding: page.removeBranding,
-    blocks: page.blocks.map((b: NonNullable<typeof page.blocks>[number]): BioRenderBlock => {
+    blocks: page.blocks.map((b): BioRenderBlock => {
       switch (b.type) {
         case "link":
           return { id: b.id, type: "link", title: b.title, href: b.href };
@@ -32,11 +31,11 @@ function toRenderModel(page: PublicBioPage): BioRenderModel {
 }
 
 /** Shared public bio page render, used by /p/[slug] and the custom-domain root. */
-export function PublicBioView({ page }: { page: PublicBioPage }) {
+export function PublicBioView({ page }: PublicTemplatePageProps) {
   return (
     <main className="min-h-[100dvh]">
       <BioRenderer model={toRenderModel(page)} heightClass="min-h-[100dvh]" />
-      <BioPageViewBeacon bioPageId={page.id} />
+      <TemplatePageViewBeacon templatePageId={page.id} />
     </main>
   );
 }

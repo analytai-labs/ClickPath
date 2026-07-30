@@ -1,27 +1,14 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { api } from "@/trpc/server";
-import type { RouterOutputs } from "@/trpc/shared";
-
-import { BioPageBuilder } from "./_components/bio-page-builder";
-
-export const dynamic = "force-dynamic";
+import { templateEditorPath } from "@/lib/templates/registry";
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function BioPageBuilderPage(props: Props) {
-  const { id: idParam } = await props.params;
-  const id = Number(idParam);
-  if (!Number.isFinite(id)) notFound();
-
-  let page: RouterOutputs["templatePage"]["get"];
-  try {
-    page = await api.templatePage.get.query({ id });
-  } catch {
-    notFound();
-  }
-
-  const sub = await api.subscriptions.get.query();
-
-  return <BioPageBuilder pageId={id} initialData={page} plan={sub.plan} />;
+// The bio builder moved to the shared /dashboard/templates/[id] editor.
+export default async function BioPageEditorRedirect({ params }: Props) {
+  const { id } = await params;
+  const pageId = Number(id);
+  redirect(
+    Number.isInteger(pageId) && pageId > 0 ? templateEditorPath(pageId) : "/dashboard/templates",
+  );
 }

@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
 
-import { env } from "@/env.mjs";
 import { normalizeSocialUrl } from "@/components/bio/social-links";
 import {
   canRemoveBioBranding,
@@ -11,6 +10,7 @@ import {
   getPlanCaps,
 } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
+import { getTemplateDefinition, resolveVariantId } from "@/lib/templates/registry";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import {
   deleteHiddenTrackingLink,
@@ -22,30 +22,33 @@ import {
 import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
 import { assertDomainAllowed } from "../link/utils";
+import { collectManagedImageUrls, materializeDataImages } from "./template-data-images";
 import {
   assertSlugAllowed,
   checkTemplatePageLimit,
   pageBelongsToWorkspace,
-  rethrowBioDuplicate,
+  rethrowTemplateDuplicate,
 } from "./utils";
 
+import type { AnyTemplateDefinition, TemplateTypeId } from "@/lib/templates/registry";
 import type { ImageType } from "@/server/lib/storage/types";
 import type { BioBlock, TemplatePage } from "@prisma/client";
 import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
   AddBioBlockInput,
-  BioThemeInput,
   CreateTemplatePageInput,
   ReorderBlocksInput,
+  TemplateThemeInput,
   UpdateBioBlockInput,
-  UpdatePharmaProductInput,
+  UpdateQrDesignInput,
+  UpdateTemplateDataInput,
   UpdateTemplatePageInput,
 } from "./template-page.input";
 
-export type BioPageTheme = BioThemeInput;
+export type TemplatePageTheme = TemplateThemeInput;
 export type BioSocialLink = { platform: string; url: string };
 
-const getWorkspaceWhere = (workspace: any) =>
+const getWorkspaceWhere = (workspace: WorkspaceTRPCContext["workspace"]) =>
   workspace.type === "team"
     ? { teamId: workspace.teamId }
     : { userId: workspace.userId, teamId: null };
@@ -92,17 +95,52 @@ function normalizeSocials(socials: BioSocialLink[]): BioSocialLink[] {
   });
 }
 
-function themeHasCustomization(theme: BioPageTheme): boolean {
+function hasRichThemeCustomization(theme: TemplatePageTheme): boolean {
   return Boolean(theme.accentColor || theme.background || theme.font || theme.buttonStyle);
 }
 
-function assertSchedulingAllowed(
+/**
+ * Normalize an incoming theme for the page's own template: the variant id is
+ * validated against the definition, and the richer bio-only fields are dropped
+ * for templates that don't support them. Always returns an object so a nullable
+ * Json column never has to be written with an ambiguous SQL/JSON null.
+ */
+function normalizeTheme(
   ctx: WorkspaceTRPCContext,
-  scheduledAt?: Date | null,
-  scheduledUntil?: Date | null,
-): void {
-  if ((scheduledAt || scheduledUntil) && !canScheduleBioBlocks(ctx.workspace.plan)) {
-    throw forbidden("Scheduled blocks are available on the Ultra plan.");
+  definition: AnyTemplateDefinition,
+  theme: TemplatePageTheme | null | undefined,
+): TemplatePageTheme {
+  const preset = resolveVariantId(definition, theme?.preset);
+  if (!theme || !definition.supportsRichTheme) return { preset };
+
+  const { accentColor, buttonStyle, background, font } = theme;
+  const rich = { accentColor, buttonStyle, background, font };
+  if (hasRichThemeCustomization(rich) && !canUseBioCustomThemes(ctx.workspace.plan)) {
+    throw forbidden("Theme customization is available on Pro and Ultra plans.");
+  }
+  // Drop unset keys — Prisma writes this straight into a Json column.
+  return Object.fromEntries(
+    Object.entries({ preset, ...rich }).filter(([, v]) => v !== undefined),
+  ) as TemplatePageTheme;
+}
+
+function normalizeHost(host: string): string {
+  return host
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "")
+    .split(":")[0]!;
+}
+
+function assertContentModel(definition: AnyTemplateDefinition, model: "blocks" | "data"): void {
+  if (definition.contentModel !== model) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        model === "blocks"
+          ? `${definition.label} pages don't use content blocks.`
+          : `${definition.label} pages don't store template data.`,
+    });
   }
 }
 
@@ -117,6 +155,26 @@ async function resolveImageUpdate(
     ? ((await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next)
     : null;
   return { value, previousToDelete: previous && previous !== value ? previous : null };
+}
+
+/** Resolve a custom domain input to the value to persist (null clears it). */
+async function resolveCustomerDomain(
+  ctx: WorkspaceTRPCContext,
+  domain: string | null,
+): Promise<string | null> {
+  if (!domain) return null;
+  if (!canUseBioCustomDomain(ctx.workspace.plan)) {
+    throw forbidden("Custom domains are available on Pro and Ultra plans.");
+  }
+  const normalized = normalizeHost(domain);
+  if (isPlatformDomain(normalized)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Use a custom domain you own, not the platform domain.",
+    });
+  }
+  await assertDomainAllowed(ctx, normalized);
+  return normalized;
 }
 
 async function fetchTemplatePageForWorkspace(ctx: WorkspaceTRPCContext, id: number) {
@@ -143,6 +201,23 @@ async function fetchBlockForWorkspace(ctx: WorkspaceTRPCContext, blockId: number
   return block;
 }
 
+/** Title to show in lists and metadata: the user's own, else one derived from content. */
+function displayTitleFor(page: Pick<TemplatePage, "title" | "templateType" | "templateData">) {
+  if (page.title?.trim()) return page.title;
+  const definition = getTemplateDefinition(page.templateType);
+  return definition.deriveTitle(page.templateData ?? definition.defaultData) ?? null;
+}
+
+function assertSchedulingAllowed(
+  ctx: WorkspaceTRPCContext,
+  scheduledAt?: Date | null,
+  scheduledUntil?: Date | null,
+): void {
+  if ((scheduledAt || scheduledUntil) && !canScheduleBioBlocks(ctx.workspace.plan)) {
+    throw forbidden("Scheduled blocks are available on the Ultra plan.");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Page CRUD
 // ---------------------------------------------------------------------------
@@ -151,6 +226,19 @@ export async function listTemplatePages(ctx: WorkspaceTRPCContext) {
   const pages = await ctx.prisma.templatePage.findMany({
     where: getWorkspaceWhere(ctx.workspace),
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      isPublished: true,
+      templateType: true,
+      templateData: true,
+      shareDomain: true,
+      customDomain: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 
   const ids = pages.map((p) => p.id);
@@ -163,11 +251,13 @@ export async function listTemplatePages(ctx: WorkspaceTRPCContext) {
     : [];
   const countMap = new Map(counts.map((c) => [c.templatePageId, Number(c._count.templatePageId)]));
 
-  return pages.map((p) => ({ ...p, blockCount: countMap.get(p.id) ?? 0 }));
+  // templateData is only read to derive a title; it never leaves the server.
+  return pages.map(({ templateData, ...p }) => ({
+    ...p,
+    displayTitle: displayTitleFor({ ...p, templateData }),
+    blockCount: countMap.get(p.id) ?? 0,
+  }));
 }
-
-// Backward-compat alias
-export const listBioPages = listTemplatePages;
 
 function toEditorBlock(
   b: BioBlock,
@@ -197,10 +287,15 @@ function toEditorBlock(
 
 export async function getTemplatePage(ctx: WorkspaceTRPCContext, id: number) {
   const page = await fetchTemplatePageForWorkspace(ctx, id);
-  const blocks = await ctx.prisma.bioBlock.findMany({
-    where: { templatePageId: id },
-    orderBy: { position: "asc" },
-  });
+  const definition = getTemplateDefinition(page.templateType);
+
+  const blocks =
+    definition.contentModel === "blocks"
+      ? await ctx.prisma.bioBlock.findMany({
+          where: { templatePageId: id },
+          orderBy: { position: "asc" },
+        })
+      : [];
 
   const linkIds = blocks.map((b) => b.linkId).filter((x): x is number => !!x);
   const links = linkIds.length
@@ -210,10 +305,13 @@ export async function getTemplatePage(ctx: WorkspaceTRPCContext, id: number) {
     links.map((l) => [l.id, { domain: l.domain, alias: l.alias, blocked: l.blocked }]),
   );
 
-  return { ...page, blocks: blocks.map((b) => toEditorBlock(b, linkMap)) };
+  return {
+    ...page,
+    templateType: page.templateType as TemplateTypeId,
+    displayTitle: displayTitleFor(page),
+    blocks: blocks.map((b) => toEditorBlock(b, linkMap)),
+  };
 }
-
-export const getBioPage = getTemplatePage;
 
 export async function createTemplatePage(
   ctx: WorkspaceTRPCContext,
@@ -223,7 +321,9 @@ export async function createTemplatePage(
   assertSlugAllowed(input.slug);
   await checkTemplatePageLimit(ctx);
 
+  const definition = getTemplateDefinition(input.templateType);
   const ownership = workspaceOwnership(ctx.workspace);
+
   try {
     const res = await ctx.prisma.templatePage.create({
       data: {
@@ -233,16 +333,16 @@ export async function createTemplatePage(
         userId: ownership.userId,
         teamId: ownership.teamId,
         createdByUserId: ctx.auth.userId,
-        templateType: input.templateType ?? "bio",
+        templateType: definition.id,
+        templateData: definition.defaultData as object,
+        theme: { preset: definition.defaultVariantId },
       },
     });
-    return { id: res.id, slug: input.slug };
+    return { id: res.id, slug: input.slug, templateType: definition.id };
   } catch (error) {
-    rethrowBioDuplicate(error);
+    rethrowTemplateDuplicate(error);
   }
 }
-
-export const createBioPage = createTemplatePage;
 
 export async function updateTemplatePage(
   ctx: WorkspaceTRPCContext,
@@ -250,8 +350,8 @@ export async function updateTemplatePage(
 ) {
   const page = await fetchTemplatePageForWorkspace(ctx, input.id);
   requirePermission(ctx.workspace, "bio.edit", "edit template pages");
-  const plan = ctx.workspace.plan;
-  const updates: any = {};
+  const definition = getTemplateDefinition(page.templateType);
+  const updates: Record<string, unknown> = {};
 
   if (input.slug !== undefined) {
     assertSlugAllowed(input.slug);
@@ -263,39 +363,36 @@ export async function updateTemplatePage(
   if (input.seoDescription !== undefined) updates.seoDescription = input.seoDescription;
 
   if (input.removeBranding !== undefined) {
-    if (input.removeBranding && !canRemoveBioBranding(plan)) {
+    if (input.removeBranding && !canRemoveBioBranding(ctx.workspace.plan)) {
       throw forbidden("Removing ClickPath branding is available on Pro and Ultra plans.");
     }
     updates.removeBranding = input.removeBranding;
   }
 
   if (input.theme !== undefined) {
-    if (input.theme && themeHasCustomization(input.theme) && !canUseBioCustomThemes(plan)) {
-      throw forbidden("Theme customization is available on Pro and Ultra plans.");
-    }
-    updates.theme = input.theme ?? null;
+    updates.theme = normalizeTheme(ctx, definition, input.theme);
+  }
+
+  if (input.shareDomain !== undefined) {
+    updates.shareDomain = await resolveCustomerDomain(ctx, input.shareDomain ?? null);
   }
 
   if (input.customDomain !== undefined) {
-    if (input.customDomain) {
-      if (!canUseBioCustomDomain(plan)) {
-        throw forbidden("Custom domains are available on Pro and Ultra plans.");
-      }
-      const normalized = input.customDomain
-        .trim()
-        .toLowerCase()
-        .replace(/^www\./, "");
-      if (isPlatformDomain(normalized)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Use a custom domain you own, not the platform domain.",
-        });
-      }
-      await assertDomainAllowed(ctx, normalized);
-      updates.customDomain = normalized;
-    } else {
-      updates.customDomain = null;
+    const rootDomain = await resolveCustomerDomain(ctx, input.customDomain ?? null);
+    // The root binding only makes sense on the domain the page already lives on,
+    // otherwise the canonical URL and the root would point at different hosts.
+    const shareDomain = (updates.shareDomain ?? page.shareDomain) as string | null;
+    if (rootDomain && rootDomain !== shareDomain) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Serving at the domain root requires that domain to be the page's public domain.",
+      });
     }
+    updates.customDomain = rootDomain;
+  } else if (updates.shareDomain !== undefined && page.customDomain) {
+    // Share domain changed (or cleared) while a root binding existed — move the
+    // binding with it so the two can never drift apart.
+    updates.customDomain = updates.shareDomain;
   }
 
   const imagesToDelete: string[] = [];
@@ -329,131 +426,81 @@ export async function updateTemplatePage(
         data: updates,
       });
     } catch (error) {
-      rethrowBioDuplicate(error);
+      rethrowTemplateDuplicate(error);
     }
   }
 
   for (const url of imagesToDelete) await deleteImage(url).catch(() => {});
   revalidateTemplatePath(page.slug);
-  if (updates.slug && updates.slug !== page.slug) revalidateTemplatePath(updates.slug);
+  if (typeof updates.slug === "string" && updates.slug !== page.slug) {
+    revalidateTemplatePath(updates.slug);
+  }
   return { success: true };
 }
 
-export const updateBioPage = updateTemplatePage;
-
-export async function updatePharmaProduct(
+/**
+ * Write the content document of a `data`-model template. The payload is parsed
+ * with the schema of the page's own template, base64 images anywhere inside it
+ * are uploaded to R2, and R2 objects that dropped out of the document are removed.
+ */
+export async function updateTemplateData(
   ctx: WorkspaceTRPCContext,
-  input: UpdatePharmaProductInput,
+  input: UpdateTemplateDataInput,
 ) {
   const page = await fetchTemplatePageForWorkspace(ctx, input.id);
   requirePermission(ctx.workspace, "bio.edit", "edit template pages");
-  const plan = ctx.workspace.plan;
 
-  // ─── 1. Resolve product images — upload base64 → R2, keep existing URLs ──────
-  const prevData = page.templateData as {
-    productImages?: string[];
-    documents?: { imageUrl: string; name: string }[];
-  } | null;
+  const definition = getTemplateDefinition(page.templateType);
+  assertContentModel(definition, "data");
 
-  const prevProductImages: string[] = prevData?.productImages ?? [];
-  const prevDocImages: string[] = (prevData?.documents ?? []).map((d) => d.imageUrl);
+  const parsed = definition.dataSchema.safeParse(input.data);
+  if (!parsed.success) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: parsed.error.issues[0]?.message ?? "Invalid template content.",
+    });
+  }
 
-  // Upload any item that is a base64 data URL; pass through R2 URLs untouched.
-  const resolvedProductImages: string[] = await Promise.all(
-    input.data.productImages.map(async (img, idx) => {
-      if (!img) return "";
-      if (img.startsWith(env.R2_PUBLIC_URL ?? "https://")) return img; // already an R2 URL
-      const uploaded = await uploadImage(ctx, {
-        image: img,
-        resourceId: Date.now() + idx, // globally unique
-        imageType: "pharma-product-image",
-      });
-      return uploaded ?? img;
-    }),
-  );
-  // Remove empty slots
-  const productImages = resolvedProductImages.filter(Boolean);
+  const resolved = await materializeDataImages(ctx, page.id, parsed.data);
 
-  const resolvedDocuments = await Promise.all(
-    input.data.documents.map(async (doc, idx) => {
-      if (!doc.imageUrl) return { ...doc, imageUrl: "" };
-      if (doc.imageUrl.startsWith(env.R2_PUBLIC_URL ?? "https://")) return doc; // existing R2 URL
-      const uploaded = await uploadImage(ctx, {
-        image: doc.imageUrl,
-        resourceId: Date.now() + 1000 + idx, // globally unique
-        imageType: "pharma-document-image",
-      });
-      return { ...doc, imageUrl: uploaded ?? doc.imageUrl };
-    }),
+  const currentUrls = new Set(collectManagedImageUrls(resolved));
+  const staleUrls = collectManagedImageUrls(page.templateData).filter(
+    (url) => !currentUrls.has(url),
   );
 
-  const resolvedData = { ...input.data, productImages, documents: resolvedDocuments };
-
-  // ─── 2. Delete stale R2 files that were removed ────────────────────────────
-  // Combine all current URLs into a single set to prevent cross-array deletion bugs
-  const allCurrentUrls = new Set([
-    ...productImages,
-    ...resolvedDocuments.map((d) => d.imageUrl)
-  ]);
-
-  const staleUrls = [
-    ...prevProductImages.filter((u) => u.startsWith(env.R2_PUBLIC_URL ?? "https://") && !allCurrentUrls.has(u)),
-    ...prevDocImages.filter((u) => u.startsWith(env.R2_PUBLIC_URL ?? "https://") && !allCurrentUrls.has(u)),
-  ];
-  await Promise.all(staleUrls.map((url) => deleteImage(url).catch(() => {})));
-
-  // ─── 3. Handle optional settings fields ────────────────────────────────────
-  const updates: Record<string, unknown> = { templateData: resolvedData };
-
+  const updates: Record<string, unknown> = { templateData: resolved as object };
   if (input.theme !== undefined) {
-    if (input.theme && themeHasCustomization(input.theme) && !canUseBioCustomThemes(plan)) {
-      throw forbidden("Theme customization is available on Pro and Ultra plans.");
-    }
-    updates.theme = input.theme ?? null;
-  }
-  if (input.seoTitle !== undefined) updates.seoTitle = input.seoTitle;
-  if (input.seoDescription !== undefined) updates.seoDescription = input.seoDescription;
-  if (input.removeBranding !== undefined) {
-    if (input.removeBranding && !canRemoveBioBranding(plan)) {
-      throw forbidden("Removing ClickPath branding is available on Pro and Ultra plans.");
-    }
-    updates.removeBranding = input.removeBranding;
-  }
-  if (input.customDomain !== undefined) {
-    if (input.customDomain) {
-      if (!canUseBioCustomDomain(plan)) {
-        throw forbidden("Custom domains are available on Pro and Ultra plans.");
-      }
-      const normalized = input.customDomain.trim().toLowerCase().replace(/^www\./, "");
-      if (isPlatformDomain(normalized)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Use a custom domain you own." });
-      }
-      await assertDomainAllowed(ctx, normalized);
-      updates.customDomain = normalized;
-    } else {
-      updates.customDomain = null;
-    }
-  }
-  if (input.socialImageUrl !== undefined) {
-    const { value, previousToDelete } = await resolveImageUpdate(
-      ctx,
-      page.id,
-      "bio-og",
-      input.socialImageUrl,
-      page.socialImageUrl,
-    );
-    updates.socialImageUrl = value;
-    if (previousToDelete) await deleteImage(previousToDelete).catch(() => {});
+    updates.theme = normalizeTheme(ctx, definition, input.theme);
   }
 
-  await ctx.prisma.templatePage.update({
-    where: { id: page.id },
-    data: updates,
-  });
+  await ctx.prisma.templatePage.update({ where: { id: page.id }, data: updates });
+
+  await Promise.all(staleUrls.map((url) => deleteImage(url).catch(() => {})));
   revalidateTemplatePath(page.slug);
   return { success: true };
 }
 
+/**
+ * Persist the page's QR design. A base64 logo is uploaded to R2 through the same
+ * generic path as template content, and a replaced logo is cleaned up.
+ */
+export async function updateQrDesign(ctx: WorkspaceTRPCContext, input: UpdateQrDesignInput) {
+  const page = await fetchTemplatePageForWorkspace(ctx, input.id);
+  requirePermission(ctx.workspace, "bio.edit", "edit template pages");
+
+  const resolved = await materializeDataImages(ctx, page.id, input.qrDesign);
+
+  const currentUrls = new Set(collectManagedImageUrls(resolved));
+  const staleUrls = collectManagedImageUrls(page.qrDesign).filter((url) => !currentUrls.has(url));
+
+  await ctx.prisma.templatePage.update({
+    where: { id: page.id },
+    data: { qrDesign: resolved as object },
+  });
+
+  await Promise.all(staleUrls.map((url) => deleteImage(url).catch(() => {})));
+  return { success: true, qrDesign: resolved };
+}
 
 export async function togglePublished(
   ctx: WorkspaceTRPCContext,
@@ -494,25 +541,32 @@ export async function deleteTemplatePage(ctx: WorkspaceTRPCContext, id: number) 
     if (l.alias) purgeTrackingLinkCache(l.domain, l.alias);
   }
 
-  await Promise.all(
-    [page.avatarUrl, page.socialImageUrl]
-      .filter((url): url is string => !!url)
-      .map((url) => deleteImage(url).catch(() => {})),
-  );
+  // Page-level images plus every image embedded in the template's content or QR.
+  const imageUrls = [
+    page.avatarUrl,
+    page.socialImageUrl,
+    ...collectManagedImageUrls(page.templateData),
+    ...collectManagedImageUrls(page.qrDesign),
+  ].filter((url): url is string => !!url);
+  await Promise.all(imageUrls.map((url) => deleteImage(url).catch(() => {})));
 
   revalidateTemplatePath(page.slug);
   return { success: true };
 }
 
-export const deleteBioPage = deleteTemplatePage;
+// ---------------------------------------------------------------------------
+// Block CRUD (templates whose content model is `blocks`)
+// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Block CRUD
-// ---------------------------------------------------------------------------
+async function fetchBlockPage(ctx: WorkspaceTRPCContext, pageId: number) {
+  const page = await fetchTemplatePageForWorkspace(ctx, pageId);
+  requirePermission(ctx.workspace, "bio.edit", "edit template pages");
+  assertContentModel(getTemplateDefinition(page.templateType), "blocks");
+  return page;
+}
 
 export async function addBlock(ctx: WorkspaceTRPCContext, input: AddBioBlockInput) {
-  const page = await fetchTemplatePageForWorkspace(ctx, input.bioPageId);
-  requirePermission(ctx.workspace, "bio.edit", "edit template pages");
+  const page = await fetchBlockPage(ctx, input.templatePageId);
   assertSchedulingAllowed(ctx, input.scheduledAt, input.scheduledUntil);
 
   const maxPosRow = await ctx.prisma.bioBlock.aggregate({
@@ -580,7 +634,7 @@ export async function updateBlock(ctx: WorkspaceTRPCContext, input: UpdateBioBlo
   requirePermission(ctx.workspace, "bio.edit", "edit template pages");
   assertSchedulingAllowed(ctx, input.scheduledAt, input.scheduledUntil);
 
-  const updates: any = {};
+  const updates: Record<string, unknown> = {};
   if (input.title !== undefined) updates.title = input.title;
   if (input.isVisible !== undefined) updates.isVisible = input.isVisible;
   if (input.scheduledAt !== undefined) updates.scheduledAt = input.scheduledAt;
@@ -633,8 +687,7 @@ export async function deleteBlock(ctx: WorkspaceTRPCContext, id: number) {
 }
 
 export async function reorderBlocks(ctx: WorkspaceTRPCContext, input: ReorderBlocksInput) {
-  const page = await fetchTemplatePageForWorkspace(ctx, input.bioPageId);
-  requirePermission(ctx.workspace, "bio.edit", "edit template pages");
+  const page = await fetchBlockPage(ctx, input.templatePageId);
   const blocks = await ctx.prisma.bioBlock.findMany({
     where: { templatePageId: page.id },
     select: { id: true },
@@ -678,21 +731,23 @@ export type PublicBioBlock =
       content: string | null;
     };
 
-export type PublicBioPage = {
+export type PublicTemplatePage = {
   id: number;
   slug: string;
   title: string | null;
+  displayTitle: string | null;
   description: string | null;
   avatarUrl: string | null;
-  theme: BioPageTheme | null;
+  theme: TemplatePageTheme | null;
   removeBranding: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   socialImageUrl: string | null;
+  shareDomain: string | null;
   customDomain: string | null;
   ownerId: string;
-  templateType: string;
-  templateData: unknown | null;
+  templateType: TemplateTypeId;
+  templateData: unknown;
   blocks: PublicBioBlock[];
 };
 
@@ -706,11 +761,16 @@ function isBlockLive(block: BioBlock, now: number): boolean {
 async function assemblePublicTemplatePage(
   prisma: PublicTRPCContext["prisma"],
   page: TemplatePage,
-): Promise<PublicBioPage> {
-  const blocks = await prisma.bioBlock.findMany({
-    where: { templatePageId: page.id },
-    orderBy: { position: "asc" },
-  });
+): Promise<PublicTemplatePage> {
+  const definition = getTemplateDefinition(page.templateType);
+
+  const blocks =
+    definition.contentModel === "blocks"
+      ? await prisma.bioBlock.findMany({
+          where: { templatePageId: page.id },
+          orderBy: { position: "asc" },
+        })
+      : [];
 
   const now = Date.now();
   const live = blocks.filter((b) => isBlockLive(b, now));
@@ -734,7 +794,12 @@ async function assemblePublicTemplatePage(
       if (b.type === "email") {
         return { id: b.id, type: "email", title: b.title, href: b.url ? `mailto:${b.url}` : null };
       }
-      return { id: b.id, type: b.type as any, title: b.title, content: b.content };
+      return {
+        id: b.id,
+        type: b.type as "heading" | "text" | "divider",
+        title: b.title,
+        content: b.content,
+      };
     })
     .filter((b): b is PublicBioBlock => b !== null);
 
@@ -742,25 +807,27 @@ async function assemblePublicTemplatePage(
     id: page.id,
     slug: page.slug,
     title: page.title,
+    displayTitle: displayTitleFor(page),
     description: page.description,
     avatarUrl: page.avatarUrl,
-    theme: page.theme as any,
+    theme: page.theme as TemplatePageTheme | null,
     removeBranding: page.removeBranding ?? false,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
     socialImageUrl: page.socialImageUrl,
+    shareDomain: page.shareDomain,
     customDomain: page.customDomain,
     ownerId: page.userId,
-    templateType: page.templateType,
-    templateData: page.templateData,
+    templateType: definition.id,
+    templateData: page.templateData ?? definition.defaultData,
     blocks: publicBlocks,
   };
 }
 
-export async function getPublicBioPageBySlug(
+export async function getPublicTemplatePageBySlug(
   ctx: PublicTRPCContext,
   slug: string,
-): Promise<PublicBioPage | null> {
+): Promise<PublicTemplatePage | null> {
   const page = await ctx.prisma.templatePage.findFirst({
     where: { slug, isPublished: true },
   });
@@ -768,10 +835,47 @@ export async function getPublicBioPageBySlug(
   return assemblePublicTemplatePage(ctx.prisma, page);
 }
 
-export async function getPublicBioPageByDomain(
+/**
+ * A page requested from a customer domain at /p/<slug>.
+ *
+ * The host must be a verified domain of the workspace that owns the page — not
+ * merely the page's own `shareDomain`. That deliberate looseness is what makes
+ * the platform domain disposable: point any verified domain at this app and
+ * every page in that workspace keeps resolving, printed QR codes included.
+ */
+export async function getPublicTemplatePageBySlugForHost(
+  ctx: PublicTRPCContext,
+  slug: string,
+  host: string,
+): Promise<PublicTemplatePage | null> {
+  const normalized = normalizeHost(host);
+  if (!normalized) return null;
+
+  const page = await ctx.prisma.templatePage.findFirst({
+    where: { slug, isPublished: true },
+  });
+  if (!page) return null;
+
+  // The platform's own hosts always serve every page.
+  if (!isPlatformDomain(normalized)) {
+    const authorized = await ctx.prisma.customDomain.findFirst({
+      where: {
+        domain: normalized,
+        status: "active",
+        ...(page.teamId !== null ? { teamId: page.teamId } : { userId: page.userId, teamId: null }),
+      },
+      select: { id: true },
+    });
+    if (!authorized) return null;
+  }
+
+  return assemblePublicTemplatePage(ctx.prisma, page);
+}
+
+export async function getPublicTemplatePageByDomain(
   ctx: PublicTRPCContext,
   domain: string,
-): Promise<PublicBioPage | null> {
+): Promise<PublicTemplatePage | null> {
   const normalized = domain
     .trim()
     .toLowerCase()
@@ -799,7 +903,7 @@ function resolveRangeDays(range: keyof typeof RANGE_DAYS, capDays?: number): num
   return capDays !== undefined ? Math.min(base, capDays) : base;
 }
 
-export async function getBioPageAnalytics(
+export async function getTemplatePageAnalytics(
   ctx: WorkspaceTRPCContext,
   input: { id: number; range: "7d" | "30d" | "90d" | "all" },
 ) {
@@ -817,8 +921,8 @@ export async function getBioPageAnalytics(
 
   // Raw query uses the actual DB table name (BioPageView) and column (bioPageId) via @@map/@map
   const viewsByDayRaw = await ctx.prisma.$queryRaw<{ date: string; count: bigint }[]>`
-    SELECT DATE("createdAt") as date, COUNT(*) as count 
-    FROM "BioPageView" 
+    SELECT DATE("createdAt") as date, COUNT(*) as count
+    FROM "BioPageView"
     WHERE "bioPageId" = ${page.id} AND "createdAt" >= ${start}
     GROUP BY DATE("createdAt")
   `;

@@ -1,23 +1,7 @@
-export type TemplateType = "bio" | "pharma_product";
+import type { RouterOutputs } from "@/trpc/shared";
 
-export type PharmaProductData = {
-  productName: string;
-  composition: string;
-  productOverview: string;
-  marketed: { name: string; address: string };
-  manufactured: { name: string; address: string };
-  productImages: string[];
-  documents: { imageUrl: string; name: string }[];
-  contact: { name: string; whatsapp: string; email: string };
-};
+/** A published template page as served to the public routes. */
+export type PublicTemplatePage = NonNullable<RouterOutputs["templatePage"]["getBySlug"]>;
 
-export const EMPTY_PHARMA_PRODUCT_DATA: PharmaProductData = {
-  productName: "",
-  composition: "",
-  productOverview: "",
-  marketed: { name: "", address: "" },
-  manufactured: { name: "", address: "" },
-  productImages: [],
-  documents: [],
-  contact: { name: "", whatsapp: "", email: "" },
-};
+/** Props every template's public view receives. */
+export type PublicTemplatePageProps = { page: PublicTemplatePage };

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { PharmaProductPublicView } from "@/components/templates/pharma-product/pharma-product-public-view";
-import { PublicBioView } from "@/components/bio/public-bio-view";
+import { TemplatePublicView } from "@/components/templates/public-views";
+import { templatePageUrl } from "@/lib/templates/page-url";
 import { api } from "@/trpc/server";
 
 import type { Metadata } from "next";
@@ -17,15 +17,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = await api.templatePage.getBySlug.query({ slug }).catch(() => null);
   if (!page) return { title: "Page not found" };
 
-  const title = page.seoTitle || page.title || `@${page.slug}`;
+  const title = page.seoTitle || page.displayTitle || `@${page.slug}`;
   const description = page.seoDescription || page.description || undefined;
 
   return {
     title: { absolute: title },
     description,
-    alternates: {
-      canonical: page.customDomain ? `https://${page.customDomain}` : `/p/${slug}`,
-    },
+    // Point search engines at the page's own domain when it has one, so the
+    // customer's URL is the indexed one.
+    alternates: { canonical: templatePageUrl(page) },
     openGraph: { title, description, type: "profile" },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -36,8 +36,5 @@ export default async function PublicTemplatePageRoute({ params }: Props) {
   const page = await api.templatePage.getBySlug.query({ slug });
   if (!page) notFound();
 
-  if (page.templateType === "pharma_product") {
-    return <PharmaProductPublicView page={page} />;
-  }
-  return <PublicBioView page={page} />;
+  return <TemplatePublicView page={page} />;
 }

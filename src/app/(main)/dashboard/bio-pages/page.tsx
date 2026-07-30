@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
-// /dashboard/bio-pages is now merged into /dashboard/templates.
-// Redirect to keep any bookmarks working.
+// Bio pages are one template among several now. Kept so old bookmarks work.
 export default function BioPagesRedirect() {
   redirect("/dashboard/templates");
 }

@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import type { WorkspaceTRPCContext } from "../../trpc";
 
 // Handles live at /p/<slug> but we exclude every top-level app route name.
-export const RESERVED_BIO_SLUGS = new Set([
+export const RESERVED_TEMPLATE_SLUGS = new Set([
   "p",
   "api",
   "trpc",
@@ -56,7 +56,7 @@ export const RESERVED_BIO_SLUGS = new Set([
 ]);
 
 export function assertSlugAllowed(slug: string): void {
-  if (RESERVED_BIO_SLUGS.has(slug.toLowerCase())) {
+  if (RESERVED_TEMPLATE_SLUGS.has(slug.toLowerCase())) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "That handle is reserved. Please choose another.",
@@ -83,9 +83,6 @@ export async function checkTemplatePageLimit(ctx: WorkspaceTRPCContext): Promise
   }
 }
 
-// Keep backward-compat alias
-export const checkBioPageLimit = checkTemplatePageLimit;
-
 /** In-memory ownership check mirroring workspaceFilter (for already-loaded rows). */
 export function pageBelongsToWorkspace(
   ctx: WorkspaceTRPCContext,
@@ -97,14 +94,14 @@ export function pageBelongsToWorkspace(
   return page.teamId === null && page.userId === ctx.workspace.userId;
 }
 
-export function rethrowBioDuplicate(error: unknown): never {
+export function rethrowTemplateDuplicate(error: unknown): never {
   if (
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    (error as any).code === "P2002"
+    (error as { code?: unknown }).code === "P2002"
   ) {
-    const meta = (error as any).meta;
+    const meta = (error as { meta?: { target?: string[] } }).meta;
     if (meta?.target?.includes("slug")) {
       throw new TRPCError({
         code: "CONFLICT",

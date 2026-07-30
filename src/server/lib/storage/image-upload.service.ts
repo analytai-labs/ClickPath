@@ -21,7 +21,8 @@ const EXTENSION_MAP: Record<string, string> = {
 
 interface UploadImageOptions {
   image: string;
-  resourceId: number;
+  /** Becomes the R2 object name. Use a string when one resource owns many images. */
+  resourceId: number | string;
   imageType: ImageType;
 }
 

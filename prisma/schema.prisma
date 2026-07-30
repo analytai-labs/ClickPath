@@ -777,11 +777,19 @@ model TemplatePage {
   socialImageUrl  String?      @db.Text
   seoTitle        String?      @db.VarChar(255)
   seoDescription  String?      @db.VarChar(500)
+  /// Verified workspace domain the page's public URL is built from
+  /// (https://<shareDomain>/p/<slug>). Null falls back to the platform domain.
+  /// Not unique: one domain serves every page in the workspace.
+  shareDomain     String?      @db.VarChar(255)
+  /// Optional extra binding: this domain's ROOT also serves this page. Unique,
+  /// because a domain root can only show one page.
   customDomain    String?      @unique @db.VarChar(255)
   removeBranding  Boolean?     @default(false)
   isPublished     Boolean?     @default(false)
   templateType    TemplateType @default(bio)
   templateData    Json?
+  /// Persisted QR designer state for this page's QR code.
+  qrDesign        Json?
   createdAt       DateTime?    @default(now())
   updatedAt       DateTime?    @updatedAt
 
@@ -794,6 +802,7 @@ model TemplatePage {
   @@index([teamId])
   @@index([isPublished])
   @@index([templateType])
+  @@index([shareDomain])
 }
 
 model BioBlock {

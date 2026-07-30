@@ -1,8 +1,16 @@
 import { z } from "zod";
 
+import { templateQrDesignSchema } from "@/lib/templates/qr-design";
+import { TEMPLATE_TYPE_IDS } from "@/lib/templates/registry";
+
 export const bioBlockTypeSchema = z.enum(["link", "heading", "text", "social", "divider", "email"]);
 
-export const bioThemeSchema = z.object({
+/**
+ * Page theme. `preset` is the template's styling variant id and applies to every
+ * template; the remaining fields are the bio page's richer theme layer and are
+ * only honoured by templates whose definition sets `supportsRichTheme`.
+ */
+export const templateThemeSchema = z.object({
   preset: z.string().max(50).optional(),
   accentColor: z
     .string()
@@ -25,86 +33,72 @@ export const bioSocialLinkSchema = z.object({
   url: z.string().trim().min(1).max(2048),
 });
 
-export const bioSlugSchema = z
+export const templateSlugSchema = z
   .string()
   .min(3, "Handle must be at least 3 characters")
   .max(100)
   .regex(/^[a-z0-9_-]+$/, "Use lowercase letters, numbers, dashes, and underscores only");
 
-export const templateTypeSchema = z.enum(["bio", "pharma_product"]);
-
-export const pharmaProductDataSchema = z.object({
-  productName: z.string().max(255).default(""),
-  composition: z.string().max(500).default(""),
-  productOverview: z.string().max(2000).default(""),
-  marketed: z.object({
-    name: z.string().max(255).default(""),
-    address: z.string().max(500).default(""),
-  }),
-  manufactured: z.object({
-    name: z.string().max(255).default(""),
-    address: z.string().max(500).default(""),
-  }),
-  productImages: z.array(z.string().max(5_000_000)).max(10).default([]),
-  documents: z
-    .array(z.object({ imageUrl: z.string().max(5_000_000), name: z.string().max(255) }))
-    .max(20)
-    .default([]),
-  contact: z.object({
-    name: z.string().max(255).default(""),
-    whatsapp: z.string().max(50).default(""),
-    email: z.string().max(255).default(""),
-  }),
-});
+export const templateTypeSchema = z.enum(TEMPLATE_TYPE_IDS);
 
 export const createTemplatePageSchema = z.object({
-  slug: bioSlugSchema,
+  slug: templateSlugSchema,
   title: z.string().max(255).optional(),
   description: z.string().max(1000).optional(),
-  templateType: templateTypeSchema.optional(),
+  templateType: templateTypeSchema.default("bio"),
 });
 
-export const createBioPageSchema = createTemplatePageSchema;
-
+/** Page-level settings, shared by every template. */
 export const updateTemplatePageSchema = z.object({
   id: z.number(),
-  slug: bioSlugSchema.optional(),
+  slug: templateSlugSchema.optional(),
   title: z.string().max(255).nullish(),
   description: z.string().max(1000).nullish(),
   avatarUrl: z.string().nullish(),
-  theme: bioThemeSchema.nullish(),
+  theme: templateThemeSchema.nullish(),
   socialImageUrl: z.string().nullish(),
   seoTitle: z.string().max(255).nullish(),
   seoDescription: z.string().max(500).nullish(),
+  /** Verified workspace domain the public URL is built from. Null = platform domain. */
+  shareDomain: z.string().max(255).nullish(),
+  /** Optional root binding on the same domain. Null = only /p/<slug>. */
   customDomain: z.string().max(255).nullish(),
   removeBranding: z.boolean().optional(),
 });
 
-export const updateBioPageSchema = updateTemplatePageSchema;
-
-export const updatePharmaProductSchema = z.object({
+export const updateQrDesignSchema = z.object({
   id: z.number(),
-  data: pharmaProductDataSchema,
-  theme: bioThemeSchema.nullish(),
-  seoTitle: z.string().max(255).nullish(),
-  seoDescription: z.string().max(500).nullish(),
-  socialImageUrl: z.string().nullish(),
-  customDomain: z.string().max(255).nullish(),
-  removeBranding: z.boolean().optional(),
+  qrDesign: templateQrDesignSchema,
+});
+
+/**
+ * Content for templates whose content model is `data`. The payload is validated
+ * against the zod schema of the page's own template, resolved server-side from
+ * the stored `templateType` — the client cannot pick which schema applies.
+ */
+export const updateTemplateDataSchema = z.object({
+  id: z.number(),
+  data: z.unknown(),
+  theme: templateThemeSchema.nullish(),
 });
 
 export const templatePageIdSchema = z.object({ id: z.number() });
-export const bioPageIdSchema = templatePageIdSchema;
 
 export const togglePublishedSchema = z.object({
   id: z.number(),
   isPublished: z.boolean(),
 });
 
-export const getPublicBioPageSchema = z.object({ slug: z.string() });
-export const getPublicBioPageByDomainSchema = z.object({ domain: z.string() });
+export const publicSlugSchema = z.object({ slug: z.string() });
+export const publicDomainSchema = z.object({ domain: z.string() });
 
-export const getBioPageAnalyticsSchema = z.object({
+/** A page requested from a specific host, which must be authorized to serve it. */
+export const publicSlugForHostSchema = z.object({
+  slug: z.string(),
+  host: z.string().max(255),
+});
+
+export const templatePageAnalyticsSchema = z.object({
   id: z.number(),
   range: z.enum(["7d", "30d", "90d", "all"]).default("7d"),
 });
@@ -119,7 +113,7 @@ const blockFieldsSchema = {
 };
 
 export const addBioBlockSchema = z.object({
-  bioPageId: z.number(),
+  templatePageId: z.number(),
   type: bioBlockTypeSchema,
   ...blockFieldsSchema,
 });
@@ -133,16 +127,15 @@ export const updateBioBlockSchema = z.object({
 export const blockIdSchema = z.object({ id: z.number() });
 
 export const reorderBlocksSchema = z.object({
-  bioPageId: z.number(),
+  templatePageId: z.number(),
   blockIds: z.array(z.number()),
 });
 
 export type CreateTemplatePageInput = z.infer<typeof createTemplatePageSchema>;
-export type CreateBioPageInput = CreateTemplatePageInput;
 export type UpdateTemplatePageInput = z.infer<typeof updateTemplatePageSchema>;
-export type UpdateBioPageInput = UpdateTemplatePageInput;
-export type UpdatePharmaProductInput = z.infer<typeof updatePharmaProductSchema>;
+export type UpdateTemplateDataInput = z.infer<typeof updateTemplateDataSchema>;
+export type UpdateQrDesignInput = z.infer<typeof updateQrDesignSchema>;
 export type AddBioBlockInput = z.infer<typeof addBioBlockSchema>;
 export type UpdateBioBlockInput = z.infer<typeof updateBioBlockSchema>;
 export type ReorderBlocksInput = z.infer<typeof reorderBlocksSchema>;
-export type BioThemeInput = z.infer<typeof bioThemeSchema>;
+export type TemplateThemeInput = z.infer<typeof templateThemeSchema>;

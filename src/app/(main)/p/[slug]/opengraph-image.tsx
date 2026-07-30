@@ -1,29 +1,29 @@
-import { BIO_OG_SIZE, bioOgImageResponse } from "@/components/bio/og-image";
+import { TEMPLATE_OG_SIZE, templateOgImageResponse } from "@/components/templates/og-image";
 import { prisma } from "@/server/db";
-import type { BioPageTheme } from "@/server/db/types";
 
 export const runtime = "nodejs";
-export const alt = "Bio page preview";
-export const size = BIO_OG_SIZE;
+export const alt = "Page preview";
+export const size = TEMPLATE_OG_SIZE;
 export const contentType = "image/png";
+
+const OG_SELECT = {
+  title: true,
+  slug: true,
+  description: true,
+  avatarUrl: true,
+  theme: true,
+  socialImageUrl: true,
+  templateType: true,
+  templateData: true,
+} as const;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export default async function Image({ params }: Props) {
   const { slug } = await params;
   const page = await prisma.templatePage
-    .findFirst({
-      where: { slug: slug, isPublished: true },
-      select: {
-        title: true,
-        slug: true,
-        description: true,
-        avatarUrl: true,
-        theme: true,
-        socialImageUrl: true,
-      },
-    })
+    .findFirst({ where: { slug, isPublished: true }, select: OG_SELECT })
     .catch(() => null);
 
-  return bioOgImageResponse(page ? { ...page, theme: page.theme as BioPageTheme } : null, slug);
+  return templateOgImageResponse(page, slug);
 }

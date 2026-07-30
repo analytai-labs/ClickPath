@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { PharmaProductPublicView } from "@/components/templates/pharma-product/pharma-product-public-view";
-import { PublicBioView } from "@/components/bio/public-bio-view";
+import { TemplatePublicView } from "@/components/templates/public-views";
 import { api } from "@/trpc/server";
 
 import type { Metadata } from "next";
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : null;
   if (!page) return {};
 
-  const title = page.seoTitle || page.title || page.slug;
+  const title = page.seoTitle || page.displayTitle || page.slug;
   const description = page.seoDescription || page.description || undefined;
 
   return {
@@ -48,8 +47,5 @@ export default async function CustomDomainTemplatePage({ params }: Props) {
   const page = await api.templatePage.getByDomain.query({ domain });
   if (!page) notFound();
 
-  if (page.templateType === "pharma_product") {
-    return <PharmaProductPublicView page={page} />;
-  }
-  return <PublicBioView page={page} />;
+  return <TemplatePublicView page={page} />;
 }

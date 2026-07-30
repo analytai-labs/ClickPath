@@ -14,13 +14,20 @@ export const templatePageRouter = createTRPCRouter({
     .input(inputs.createTemplatePageSchema)
     .mutation(({ ctx, input }) => services.createTemplatePage(ctx, input)),
 
+  /** Page-level settings — handle, SEO, domain, branding. Every template. */
   update: workspaceProcedure
     .input(inputs.updateTemplatePageSchema)
     .mutation(({ ctx, input }) => services.updateTemplatePage(ctx, input)),
 
-  updatePharmaProduct: workspaceProcedure
-    .input(inputs.updatePharmaProductSchema)
-    .mutation(({ ctx, input }) => services.updatePharmaProduct(ctx, input)),
+  /** Content for templates whose content model is `data`, validated per template. */
+  updateTemplateData: workspaceProcedure
+    .input(inputs.updateTemplateDataSchema)
+    .mutation(({ ctx, input }) => services.updateTemplateData(ctx, input)),
+
+  /** The page's QR design — applies to every template. */
+  updateQrDesign: workspaceProcedure
+    .input(inputs.updateQrDesignSchema)
+    .mutation(({ ctx, input }) => services.updateQrDesign(ctx, input)),
 
   togglePublished: workspaceProcedure
     .input(inputs.togglePublishedSchema)
@@ -30,6 +37,7 @@ export const templatePageRouter = createTRPCRouter({
     .input(inputs.templatePageIdSchema)
     .mutation(({ ctx, input }) => services.deleteTemplatePage(ctx, input.id)),
 
+  // Blocks — templates whose content model is `blocks` (the bio page).
   addBlock: workspaceProcedure
     .input(inputs.addBioBlockSchema)
     .mutation(({ ctx, input }) => services.addBlock(ctx, input)),
@@ -47,15 +55,22 @@ export const templatePageRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => services.reorderBlocks(ctx, input)),
 
   getAnalytics: workspaceProcedure
-    .input(inputs.getBioPageAnalyticsSchema)
-    .query(({ ctx, input }) => services.getBioPageAnalytics(ctx, input)),
+    .input(inputs.templatePageAnalyticsSchema)
+    .query(({ ctx, input }) => services.getTemplatePageAnalytics(ctx, input)),
 
   // Public — used by the /p/[slug] render route and custom-domain root.
   getBySlug: publicProcedure
-    .input(inputs.getPublicBioPageSchema)
-    .query(({ ctx, input }) => services.getPublicBioPageBySlug(ctx, input.slug)),
+    .input(inputs.publicSlugSchema)
+    .query(({ ctx, input }) => services.getPublicTemplatePageBySlug(ctx, input.slug)),
 
   getByDomain: publicProcedure
-    .input(inputs.getPublicBioPageByDomainSchema)
-    .query(({ ctx, input }) => services.getPublicBioPageByDomain(ctx, input.domain)),
+    .input(inputs.publicDomainSchema)
+    .query(({ ctx, input }) => services.getPublicTemplatePageByDomain(ctx, input.domain)),
+
+  /** /p/<slug> requested from a customer domain — the host must be authorized. */
+  getBySlugForHost: publicProcedure
+    .input(inputs.publicSlugForHostSchema)
+    .query(({ ctx, input }) =>
+      services.getPublicTemplatePageBySlugForHost(ctx, input.slug, input.host),
+    ),
 });
