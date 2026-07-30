@@ -34,6 +34,16 @@ export function shortLinkDisplay(domain: string, alias: string): string {
 }
 
 /**
+ * Everything before the alias: `example.com/l/`.
+ *
+ * For UI that dims the fixed part of a short link and emphasises the alias, so
+ * those views don't have to interpolate the prefix themselves.
+ */
+export function shortLinkHostPrefix(domain: string): string {
+  return `${domain}/${SHORT_LINK_PREFIX}/`;
+}
+
+/**
  * The alias in a short-link pathname, or null when the path isn't one.
  *
  * Only matches exactly one segment after the prefix, so `/l/a/b` is not a short

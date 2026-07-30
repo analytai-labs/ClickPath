@@ -42,6 +42,12 @@ export function CreateTemplateDialog({
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
 
+  // The page is created on the workspace's default domain, so preview that host
+  // rather than the platform's — otherwise the dialog shows a URL that is wrong
+  // the moment the page exists.
+  const defaultDomainQuery = api.link.defaultDomain.useQuery(undefined, { enabled: open });
+  const defaultDomain = defaultDomainQuery.data?.domain ?? getAppBaseDomain();
+
   const create = api.templatePage.create.useMutation({
     onSuccess: (res) => {
       toast.success("Page created.");
@@ -76,7 +82,8 @@ export function CreateTemplateDialog({
         <DialogHeader>
           <DialogTitle>New {definition?.label.toLowerCase() ?? "template"} page</DialogTitle>
           <DialogDescription>
-            {definition?.description} Pick a handle — you can change it later in settings.
+            {definition?.description} Choose the handle carefully — it is fixed once the page
+            exists, because printed QR codes and shared links point at it.
           </DialogDescription>
         </DialogHeader>
 
@@ -85,7 +92,7 @@ export function CreateTemplateDialog({
             <Label htmlFor="template-slug">Handle</Label>
             <div className="flex h-9 items-center overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-border dark:bg-card dark:shadow-none">
               <span className="flex h-full select-none items-center border-r border-gray-200 bg-gray-50 px-3 text-[13px] text-gray-500 dark:border-border dark:bg-muted dark:text-gray-400">
-                {getAppBaseDomain()}/p/
+                {defaultDomain}/p/
               </span>
               <input
                 id="template-slug"

@@ -83,6 +83,12 @@ export type TemplateDefinition<TData = unknown> = {
   usesAvatar: boolean;
   /** Fallback display title derived from the content when the user set none. */
   deriveTitle: (data: TData) => string | null;
+  /**
+   * Fallback share description derived from the content, used when the page has
+   * no description of its own — e.g. a product's composition. Keep it to one
+   * sentence: it ends up in search results and link previews.
+   */
+  deriveDescription: (data: TData) => string | null;
   /** Palette for the generated OG image, so it matches the live page. */
   resolveOgColors: (theme: TemplateThemeValue) => TemplateOgColors;
 };

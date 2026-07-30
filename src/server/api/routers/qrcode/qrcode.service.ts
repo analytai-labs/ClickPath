@@ -404,6 +404,7 @@ export const createQrPreset = userFacing(
         logoSize: input.logoSize,
         logoMargin: input.logoMargin,
         logoBorderRadius: input.logoBorderRadius,
+        logoClearSpace: input.logoClearSpace,
       },
     });
 
@@ -584,6 +585,7 @@ export const updateQrPreset = userFacing(
         logoSize: input.logoSize,
         logoMargin: input.logoMargin,
         logoBorderRadius: input.logoBorderRadius,
+        logoClearSpace: input.logoClearSpace,
       },
     });
 

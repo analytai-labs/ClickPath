@@ -3,6 +3,7 @@
 import { IconClick } from "@tabler/icons-react";
 
 import { Card } from "@/components/ui/card";
+import { shortLinkHostPrefix } from "@/lib/links/short-link";
 import { api } from "@/trpc/react";
 
 type TopLinksCardProps = {
@@ -47,7 +48,9 @@ export function TopLinksCard({ from, to }: TopLinksCardProps) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                  <span className="text-neutral-400 dark:text-neutral-500">{l.domain}/</span>
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    {shortLinkHostPrefix(l.domain)}
+                  </span>
                   {l.alias}
                 </p>
                 <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">

@@ -56,6 +56,8 @@ interface QRAdvancedCustomizationProps {
   setLogoMargin: (margin: number) => void;
   logoBorderRadius: number;
   setLogoBorderRadius: (radius: number) => void;
+  logoClearSpace: boolean;
+  setLogoClearSpace: (clear: boolean) => void;
 }
 
 export function QRAdvancedCustomization({
@@ -85,6 +87,8 @@ export function QRAdvancedCustomization({
   setLogoMargin,
   logoBorderRadius,
   setLogoBorderRadius,
+  logoClearSpace,
+  setLogoClearSpace,
 }: QRAdvancedCustomizationProps) {
   return (
     <div className="space-y-6">
@@ -271,6 +275,23 @@ export function QRAdvancedCustomization({
 
           {logoImage && (
             <div className="space-y-3">
+              <div className="space-y-2 rounded-lg border border-neutral-200 dark:border-border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                    Clear space for logo
+                  </Label>
+                  <Switch
+                    checked={logoClearSpace}
+                    onCheckedChange={(checked) => setLogoClearSpace(checked)}
+                  />
+                </div>
+                <p className="text-[11px] leading-relaxed text-neutral-400 dark:text-neutral-500">
+                  {logoClearSpace
+                    ? "The code leaves a gap for the logo, so it looks designed in rather than pasted on. Error correction keeps the code scannable."
+                    : "The logo is drawn on top of the pattern. Turn this on if the edges look like the code has been cut into."}
+                </p>
+              </div>
+
               <div className="space-y-2.5 rounded-lg border border-neutral-200 dark:border-border p-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-[12px] text-neutral-400 dark:text-neutral-500">

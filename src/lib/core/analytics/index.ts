@@ -4,8 +4,6 @@ import { env } from "@/env.mjs";
 import { LOCAL_DEVELOPMENT_GEOLOCATION_DATA } from "@/lib/constants/app";
 import { resolveDeviceType } from "@/lib/utils/device-type";
 
-import type { RouterOutputs } from "@/trpc/shared";
-
 import type { GeolocationAPIResponseType } from "./types";
 
 const getGeolocationDetailsFromAPI = async (ip: string) => {
@@ -74,14 +72,32 @@ function safeIncrement<T extends string>(record: Record<T, number>, key: T): voi
   record[key] = (record[key] || 0) + 1;
 }
 
-type AggregateVisitsParams = {
-  visits: RouterOutputs["link"]["linkVisits"]["totalVisits"];
-  uniqueVisits: RouterOutputs["link"]["linkVisits"]["uniqueVisits"];
+/**
+ * One recorded visit, as far as aggregation is concerned.
+ *
+ * Structural on purpose: a `LinkVisit` and a `TemplatePageView` record the same
+ * dimensions, so both flow through this reducer and the dashboards for links and
+ * template pages can't drift apart. `verifiedAt` is link-only, hence optional.
+ */
+export type AggregatableVisit = {
+  createdAt: Date | string | null;
+  country?: string | null;
+  city?: string | null;
+  continent?: string | null;
+  device?: string | null;
+  os?: string | null;
+  browser?: string | null;
+  model?: string | null;
+  verifiedAt?: Date | string | null;
+};
+
+export type AggregatableUniqueVisit = {
+  createdAt: Date | string | null;
 };
 
 export const aggregateVisits = (
-  visits: AggregateVisitsParams["visits"],
-  uniqueVisits: AggregateVisitsParams["uniqueVisits"],
+  visits: readonly AggregatableVisit[],
+  uniqueVisits: readonly AggregatableUniqueVisit[] | undefined | null,
 ) => {
   const clicksPerDate: Record<string, number> = {};
   const uniqueClicksPerDate: Record<string, number> = {};

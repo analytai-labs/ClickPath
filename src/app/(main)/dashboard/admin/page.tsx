@@ -4,6 +4,7 @@ import { Link } from "next-view-transitions";
 import { useState } from "react";
 
 import { Card } from "@/components/ui/card";
+import { shortLinkHostPrefix } from "@/lib/links/short-link";
 import { timeAgo } from "@/lib/utils";
 import { api } from "@/trpc/react";
 
@@ -212,7 +213,9 @@ export default function AdminPage() {
                 <div key={l.id} className="flex items-center justify-between px-5 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      <span className="text-neutral-400 dark:text-neutral-500">{l.domain}/</span>
+                      <span className="text-neutral-400 dark:text-neutral-500">
+                        {shortLinkHostPrefix(l.domain)}
+                      </span>
                       {l.alias}
                     </p>
                     <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">
@@ -262,7 +265,9 @@ export default function AdminPage() {
                 <div key={l.id} className="flex items-center justify-between px-5 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      <span className="text-neutral-400 dark:text-neutral-500">{l.domain}/</span>
+                      <span className="text-neutral-400 dark:text-neutral-500">
+                        {shortLinkHostPrefix(l.domain)}
+                      </span>
                       {l.alias}
                     </p>
                     <p className="truncate text-[11px] text-neutral-400 dark:text-neutral-500">

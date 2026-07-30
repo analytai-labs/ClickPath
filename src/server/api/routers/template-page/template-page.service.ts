@@ -7,9 +7,10 @@ import {
   canScheduleBioBlocks,
   canUseBioCustomDomain,
   canUseBioCustomThemes,
-  getPlanCaps,
 } from "@/lib/billing/plans";
 import { isPlatformDomain } from "@/lib/constants/domains";
+import { aggregateVisits } from "@/lib/core/analytics";
+import { type AnalyticsRange, resolveAnalyticsRange } from "@/lib/core/analytics/range";
 import { logger } from "@/lib/logger";
 import { getTemplateDefinition, resolveVariantId } from "@/lib/templates/registry";
 import { releaseImages } from "@/server/lib/assets";
@@ -23,7 +24,9 @@ import {
 } from "@/server/lib/tracking-link";
 import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
-import { assertDomainAllowed } from "../link/utils";
+import { isUsableShareDomain } from "@/lib/templates/page-url";
+
+import { assertDomainAllowed, resolveDefaultDomain } from "../link/utils";
 import { collectManagedImageUrls, materializeDataImages } from "./template-data-images";
 import {
   assertSlugAllowed,
@@ -32,6 +35,7 @@ import {
   rethrowTemplateDuplicate,
 } from "./utils";
 
+import { shortLinkUrl } from "@/lib/links/short-link";
 import type { AnyTemplateDefinition, TemplateTypeId } from "@/lib/templates/registry";
 import type { ImageType } from "@/server/lib/storage/types";
 import type { BioBlock, TemplatePage } from "@prisma/client";
@@ -46,7 +50,6 @@ import type {
   UpdateTemplateDataInput,
   UpdateTemplatePageInput,
 } from "./template-page.input";
-import { shortLinkUrl } from "@/lib/links/short-link";
 
 const log = logger.child({ component: "template-page" });
 
@@ -372,6 +375,12 @@ export async function createTemplatePage(
   const definition = getTemplateDefinition(input.templateType);
   const ownership = workspaceOwnership(ctx.workspace);
 
+  // A new page is served from the workspace's default domain, so the QR code the
+  // user prints straight after creating it already points at their own domain.
+  // `shareDomain` only ever holds a customer domain — null means "platform".
+  const defaultDomain = await resolveDefaultDomain(ctx);
+  const shareDomain = isUsableShareDomain(defaultDomain) ? defaultDomain : null;
+
   try {
     const res = await ctx.prisma.templatePage.create({
       data: {
@@ -384,6 +393,7 @@ export async function createTemplatePage(
         templateType: definition.id,
         templateData: definition.defaultData as object,
         theme: { preset: definition.defaultVariantId },
+        shareDomain,
       },
     });
     return { id: res.id, slug: input.slug, templateType: definition.id };
@@ -401,10 +411,6 @@ export async function updateTemplatePage(
   const definition = getTemplateDefinition(page.templateType);
   const updates: Record<string, unknown> = {};
 
-  if (input.slug !== undefined) {
-    assertSlugAllowed(input.slug);
-    updates.slug = input.slug;
-  }
   if (input.title !== undefined) updates.title = input.title;
   if (input.description !== undefined) updates.description = input.description;
   if (input.seoTitle !== undefined) updates.seoTitle = input.seoTitle;
@@ -480,9 +486,6 @@ export async function updateTemplatePage(
 
   await releaseImages(ctx, imagesToDelete);
   revalidateTemplatePath(page.slug);
-  if (typeof updates.slug === "string" && updates.slug !== page.slug) {
-    revalidateTemplatePath(updates.slug);
-  }
   return { success: true };
 }
 
@@ -834,7 +837,12 @@ async function assemblePublicTemplatePage(
       if (b.type === "link") {
         const l = b.linkId ? linkMap.get(b.linkId) : undefined;
         if (!l || l.blocked || l.disabled || !l.alias) return null;
-        return { id: b.id, type: "link", title: b.title, href: shortLinkUrl(l.domain, l.alias ?? "") };
+        return {
+          id: b.id,
+          type: "link",
+          title: b.title,
+          href: shortLinkUrl(l.domain, l.alias ?? ""),
+        };
       }
       if (b.type === "social") {
         return { id: b.id, type: "social", socials: parseSocials(b.content) };
@@ -939,56 +947,82 @@ export async function getPublicTemplatePageByDomain(
 // Analytics
 // ---------------------------------------------------------------------------
 
-const RANGE_DAYS: Record<"7d" | "30d" | "90d" | "all", number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-  all: 3650,
-};
-
-function resolveRangeDays(range: keyof typeof RANGE_DAYS, capDays?: number): number {
-  const base = RANGE_DAYS[range];
-  return capDays !== undefined ? Math.min(base, capDays) : base;
-}
-
+/**
+ * Everything the analytics tab needs about one page.
+ *
+ * A template page is a link with a page attached, so this deliberately mirrors
+ * `link.linkVisits`: the same range handling, the same period-over-period deltas,
+ * and the same per-dimension breakdowns — every dimension below is already
+ * recorded on `TemplatePageView` by `recordTemplatePageView`.
+ */
 export async function getTemplatePageAnalytics(
   ctx: WorkspaceTRPCContext,
-  input: { id: number; range: "7d" | "30d" | "90d" | "all" },
+  input: { id: number; range: AnalyticsRange },
 ) {
   const page = await fetchTemplatePageForWorkspace(ctx, input.id);
-  const caps = getPlanCaps(ctx.workspace.plan);
-  const rangeDays = resolveRangeDays(input.range, caps.analyticsRangeLimitDays);
-  const start = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
+  const isPaid = ctx.workspace.plan !== "free";
+  const { range, start, end, previous } = resolveAnalyticsRange(input.range, { isPaid });
 
-  const viewsAgg = await ctx.prisma.templatePageView.count({
-    where: { templatePageId: page.id, createdAt: { gte: start } },
-  });
-  const uniqueAgg = await ctx.prisma.uniqueTemplatePageView.count({
-    where: { templatePageId: page.id, createdAt: { gte: start } },
-  });
+  const window = { gte: start, lte: end };
 
-  // Raw query uses the actual DB table name (BioPageView) and column (bioPageId) via @@map/@map
-  const viewsByDayRaw = await ctx.prisma.$queryRaw<{ date: string; count: bigint }[]>`
-    SELECT DATE("createdAt") as date, COUNT(*) as count
-    FROM "BioPageView"
-    WHERE "bioPageId" = ${page.id} AND "createdAt" >= ${start}
-    GROUP BY DATE("createdAt")
-  `;
+  const [views, uniqueViews, lifetime, previousCounts, blocks] = await Promise.all([
+    ctx.prisma.templatePageView.findMany({
+      where: { templatePageId: page.id, createdAt: window },
+      select: {
+        createdAt: true,
+        country: true,
+        city: true,
+        continent: true,
+        device: true,
+        os: true,
+        browser: true,
+        model: true,
+        referer: true,
+      },
+    }),
+    ctx.prisma.uniqueTemplatePageView.findMany({
+      where: { templatePageId: page.id, createdAt: window },
+      select: { createdAt: true },
+    }),
+    getTemplatePageLifetimeViews(ctx, page.id),
+    previous
+      ? Promise.all([
+          ctx.prisma.templatePageView.count({
+            where: {
+              templatePageId: page.id,
+              createdAt: { gte: previous.start, lt: previous.end },
+            },
+          }),
+          ctx.prisma.uniqueTemplatePageView.count({
+            where: {
+              templatePageId: page.id,
+              createdAt: { gte: previous.start, lt: previous.end },
+            },
+          }),
+        ])
+      : Promise.resolve(null),
+    ctx.prisma.bioBlock.findMany({
+      where: { templatePageId: page.id },
+      orderBy: { position: "asc" },
+    }),
+  ]);
 
-  const blocks = await ctx.prisma.bioBlock.findMany({
-    where: { templatePageId: page.id },
-    orderBy: { position: "asc" },
-  });
+  const aggregated = aggregateVisits(views, uniqueViews);
+
+  // Referrers are counted here rather than in `aggregateVisits` because the link
+  // side does the same, and "Direct" needs naming rather than dropping.
+  const referers: Record<string, number> = {};
+  for (const view of views) {
+    const key = view.referer && view.referer !== "null" ? view.referer : "Direct";
+    referers[key] = (referers[key] ?? 0) + 1;
+  }
+
   const linkBlocks = blocks.filter((b) => b.type === "link" && b.linkId);
   const linkIds = linkBlocks.map((b) => b.linkId!);
-
   const clickRows = linkIds.length
     ? await ctx.prisma.linkVisit.groupBy({
         by: ["linkId"],
-        where: {
-          linkId: { in: linkIds },
-          createdAt: { gte: start },
-        },
+        where: { linkId: { in: linkIds }, createdAt: window },
         _count: { linkId: true },
       })
     : [];
@@ -1003,22 +1037,59 @@ export async function getTemplatePageAnalytics(
     .sort((a, b) => b.clicks - a.clicks);
 
   const totalClicks = perBlock.reduce((sum, b) => sum + b.clicks, 0);
-  const views = Number(viewsAgg ?? 0);
-  const uniqueViews = Number(uniqueAgg ?? 0);
+  const totalViews = views.length;
 
-  const viewsPerDay: Record<string, number> = {};
-  for (const row of viewsByDayRaw) {
-    viewsPerDay[String(row.date)] = Number(row.count);
-  }
+  const topEntry = (counts: Record<string, number>): string =>
+    Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "N/A";
 
   return {
-    views,
-    uniqueViews,
+    range,
+    views: totalViews,
+    uniqueViews: uniqueViews.length,
+    /** Survives retention pruning — see `getTemplatePageLifetimeViews`. */
+    lifetimeViews: lifetime,
     totalClicks,
-    ctr: views > 0 ? totalClicks / views : 0,
+    ctr: totalViews > 0 ? totalClicks / totalViews : 0,
     perBlock,
-    viewsPerDay,
-    rangeDays,
-    isProPlan: ctx.workspace.plan !== "free",
+    /** Whether per-block clicks mean anything for this template at all. */
+    tracksBlockClicks: getTemplateDefinition(page.templateType).contentModel === "blocks",
+    referers,
+    topReferrer: topEntry(referers),
+    topCountry: topEntry(aggregated.clicksPerCountry),
+    previous: previousCounts ? { views: previousCounts[0], uniqueViews: previousCounts[1] } : null,
+    // `aggregateVisits` names every series "clicks" because it was written for
+    // links; for a page those same numbers are views. Mapped explicitly rather
+    // than spread so its `totalClicks` can't shadow the block-click total above.
+    viewsPerDay: aggregated.clicksPerDate,
+    uniqueViewsPerDay: aggregated.uniqueClicksPerDate ?? {},
+    viewsPerCountry: aggregated.clicksPerCountry,
+    viewsPerCity: aggregated.clicksPerCity,
+    viewsPerContinent: aggregated.clicksPerContinent,
+    viewsPerDevice: aggregated.clicksPerDevice,
+    viewsPerOS: aggregated.clicksPerOS,
+    viewsPerBrowser: aggregated.clicksPerBrowser,
+    viewsPerModel: aggregated.clicksPerModel,
+    isProPlan: isPaid,
   };
+}
+
+/**
+ * Lifetime view count, including days the cleanup cron has already pruned.
+ *
+ * The cron rolls raw `TemplatePageView` rows into `TemplatePageViewDailySummary`
+ * and then deletes them, so counting only raw rows silently loses history past
+ * the retention window. This mirrors `getTotalClicks` on the link side.
+ */
+async function getTemplatePageLifetimeViews(
+  ctx: WorkspaceTRPCContext,
+  templatePageId: number,
+): Promise<number> {
+  const [summarized, live] = await Promise.all([
+    ctx.prisma.templatePageViewDailySummary.aggregate({
+      where: { templatePageId },
+      _sum: { views: true },
+    }),
+    ctx.prisma.templatePageView.count({ where: { templatePageId } }),
+  ]);
+  return Number(summarized._sum.views ?? 0) + live;
 }

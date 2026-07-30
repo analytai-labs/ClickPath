@@ -2,6 +2,7 @@ import { IconClick, IconShieldCheck, IconShieldHalf, IconUsers } from "@tabler/i
 
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
 import { aggregateVisits } from "@/lib/core/analytics";
+import { shortLinkDisplay } from "@/lib/links/short-link";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/server";
 
@@ -60,7 +61,7 @@ export default async function LinkAnalyticsPage(props: LinksAnalyticsPageProps) 
       <div className="flex flex-col items-center justify-between md:flex-row">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold leading-tight tracking-tight text-neutral-900 dark:text-foreground md:text-2xl">
-            {searchParams?.domain}/{params.alias}
+            {shortLinkDisplay(domain, params.alias)}
           </h1>
           {!isProPlan && (
             <p className="mt-1 text-[13px] text-neutral-400 dark:text-neutral-500">

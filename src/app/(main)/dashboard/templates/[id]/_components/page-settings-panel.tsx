@@ -1,6 +1,6 @@
 "use client";
 
-import { IconLock } from "@tabler/icons-react";
+import { IconLock, IconWand } from "@tabler/icons-react";
 import { Link } from "next-view-transitions";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getAppBaseDomain } from "@/lib/constants/domains";
 import { templatePageDisplayUrl } from "@/lib/templates/page-url";
 import { getTemplateDefinition } from "@/lib/templates/registry";
+import { resolveShareMetadata } from "@/lib/templates/share-metadata";
 import { api } from "@/trpc/react";
 
 import { EditorCard, Field, SettingRow } from "./editor-ui";
@@ -30,7 +31,7 @@ import type { TemplatePageData } from "./editor-types";
 // Radix Select forbids empty-string item values, so use a sentinel for "no domain".
 const NO_DOMAIN = "__none__";
 
-type Draft = {
+export type SettingsDraft = {
   slug: string;
   title: string;
   description: string;
@@ -38,6 +39,9 @@ type Draft = {
   socialImageUrl: string | null;
   seoTitle: string;
   seoDescription: string;
+  /** When true the SEO title follows the page content instead of an override. */
+  autoSeoTitle: boolean;
+  autoSeoDescription: boolean;
   /** Domain the public URL is built from. "" = platform domain. */
   shareDomain: string;
   /** Whether that domain's root should also serve this page. */
@@ -45,7 +49,7 @@ type Draft = {
   removeBranding: boolean;
 };
 
-function toDraft(page: TemplatePageData): Draft {
+function toDraft(page: TemplatePageData): SettingsDraft {
   return {
     slug: page.slug,
     title: page.title ?? "",
@@ -54,30 +58,78 @@ function toDraft(page: TemplatePageData): Draft {
     socialImageUrl: page.socialImageUrl ?? null,
     seoTitle: page.seoTitle ?? "",
     seoDescription: page.seoDescription ?? "",
+    // A stored null means "follow the content" — see `resolveShareMetadata`.
+    autoSeoTitle: !page.seoTitle,
+    autoSeoDescription: !page.seoDescription,
     shareDomain: page.shareDomain ?? "",
     serveAtRoot: Boolean(page.customDomain),
     removeBranding: page.removeBranding ?? false,
   };
 }
 
+export type PageSettingsState = ReturnType<typeof usePageSettings>;
+
 /**
- * Page-level settings — handle, metadata, domain, SEO and branding. These are
+ * The Settings tab's form state, owned by the editor shell rather than by the
+ * panel. Lifting it means a trip to another tab can't discard half-filled
+ * settings, and the share preview in the right rail can read the same unsaved
+ * draft the form is editing.
+ */
+export function usePageSettings(page: TemplatePageData, onSaved: () => void) {
+  const [draft, setDraft] = useState<SettingsDraft>(() => toDraft(page));
+
+  const save = api.templatePage.update.useMutation({
+    onSuccess: () => {
+      toast.success("Settings saved.");
+      onSaved();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const definition = getTemplateDefinition(page.templateType);
+
+  function patch(next: Partial<SettingsDraft>) {
+    setDraft((d) => ({ ...d, ...next }));
+  }
+
+  function submit() {
+    save.mutate({
+      id: page.id,
+      title: draft.title.trim() || null,
+      description: draft.description.trim() || null,
+      avatarUrl: definition.usesAvatar ? draft.avatarUrl : undefined,
+      socialImageUrl: draft.socialImageUrl,
+      // Null hands the field back to the content, which is exactly what the
+      // "follow the page content" switch promises.
+      seoTitle: draft.autoSeoTitle ? null : draft.seoTitle.trim() || null,
+      seoDescription: draft.autoSeoDescription ? null : draft.seoDescription.trim() || null,
+      shareDomain: draft.shareDomain.trim() || null,
+      // The root binding only exists on the page's own public domain.
+      customDomain: draft.serveAtRoot ? draft.shareDomain.trim() || null : null,
+      removeBranding: draft.removeBranding,
+    });
+  }
+
+  return { draft, patch, submit, saving: save.isLoading };
+}
+
+/**
+ * Page-level settings — metadata, domain, SEO and branding. These are
  * template-agnostic, so every template gets the same Settings tab; only the
  * avatar field is conditional on the template actually rendering one.
  */
 export function PageSettingsPanel({
   page,
   plan,
-  onSaved,
+  state,
 }: {
   page: TemplatePageData;
   plan: Plan;
-  onSaved: () => void;
+  state: PageSettingsState;
 }) {
+  const { draft, patch, submit, saving } = state;
   const definition = getTemplateDefinition(page.templateType);
   const isPaid = plan !== "free";
-
-  const [draft, setDraft] = useState<Draft>(() => toDraft(page));
 
   // Only verified domains in this workspace can serve a page (the server
   // enforces this on save), so offer exactly those instead of a free-text field.
@@ -90,52 +142,34 @@ export function PageSettingsPanel({
     domainOptions.unshift(draft.shareDomain);
   }
 
-  const save = api.templatePage.update.useMutation({
-    onSuccess: () => {
-      toast.success("Settings saved.");
-      onSaved();
-    },
-    onError: (e) => toast.error(e.message),
+  // The values a share would use right now, so the "auto" fields can show the
+  // real thing instead of a placeholder.
+  const share = resolveShareMetadata({
+    slug: draft.slug || page.slug,
+    title: draft.title.trim() || null,
+    description: draft.description.trim() || null,
+    seoTitle: null,
+    seoDescription: null,
+    templateType: page.templateType,
+    templateData: page.templateData,
   });
-
-  function patch(next: Partial<Draft>) {
-    setDraft((d) => ({ ...d, ...next }));
-  }
-
-  function handleSave() {
-    save.mutate({
-      id: page.id,
-      slug: draft.slug,
-      title: draft.title.trim() || null,
-      description: draft.description.trim() || null,
-      avatarUrl: definition.usesAvatar ? draft.avatarUrl : undefined,
-      socialImageUrl: draft.socialImageUrl,
-      seoTitle: draft.seoTitle.trim() || null,
-      seoDescription: draft.seoDescription.trim() || null,
-      shareDomain: draft.shareDomain.trim() || null,
-      // The root binding only exists on the page's own public domain.
-      customDomain: draft.serveAtRoot ? draft.shareDomain.trim() || null : null,
-      removeBranding: draft.removeBranding,
-    });
-  }
 
   return (
     <>
       <EditorCard title="Page" description="How this page is addressed and described.">
         <div className="space-y-4">
-          <Field label="Handle" htmlFor="settings-slug">
-            <div className="flex h-9 items-center overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-border dark:bg-card dark:shadow-none">
-              <span className="flex h-full select-none items-center border-r border-gray-200 bg-gray-50 px-3 text-[13px] text-gray-500 dark:border-border dark:bg-muted dark:text-gray-400">
+          <Field
+            label="Handle"
+            hint="Fixed once the page is created — printed QR codes and shared links depend on it."
+          >
+            <div className="flex h-9 items-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm dark:border-border dark:bg-muted/50 dark:shadow-none">
+              <span className="flex h-full select-none items-center border-r border-gray-200 bg-gray-100 px-3 text-[13px] text-gray-500 dark:border-border dark:bg-muted dark:text-gray-400">
                 /p/
               </span>
-              <input
-                id="settings-slug"
-                value={draft.slug}
-                onChange={(e) =>
-                  patch({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "-") })
-                }
-                className="h-full flex-1 bg-transparent px-3 text-sm font-medium text-gray-900 outline-none placeholder:text-gray-500 dark:text-foreground dark:placeholder:text-gray-400"
-              />
+              <span className="flex h-full flex-1 items-center px-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+                {page.slug}
+              </span>
+              <IconLock size={13} className="mr-3 shrink-0 text-gray-400" />
             </div>
           </Field>
 
@@ -170,36 +204,53 @@ export function PageSettingsPanel({
         </div>
       </EditorCard>
 
-      <EditorCard title="Sharing" description="How this page looks in search results and previews.">
-        <div className="space-y-4">
-          <Field
+      <EditorCard
+        title="Sharing"
+        description="This is what people see when your link is shared — in chats, posts and search results. The preview on the right updates as you type."
+      >
+        <div className="space-y-5">
+          <AutoField
             label="SEO title"
             htmlFor="settings-seo-title"
-            hint="Overrides the page title in the browser tab and search results."
+            auto={draft.autoSeoTitle}
+            onAutoChange={(auto) => patch({ autoSeoTitle: auto })}
+            autoValue={share.autoTitle}
+            autoHint={`Follows this page's content — currently "${share.autoTitle}".`}
           >
             <Input
               id="settings-seo-title"
               value={draft.seoTitle}
               onChange={(e) => patch({ seoTitle: e.target.value })}
-              placeholder={page.displayTitle ?? `@${draft.slug}`}
+              placeholder={share.autoTitle}
             />
-          </Field>
+          </AutoField>
 
-          <Field label="SEO description" htmlFor="settings-seo-description">
+          <AutoField
+            label="SEO description"
+            htmlFor="settings-seo-description"
+            auto={draft.autoSeoDescription}
+            onAutoChange={(auto) => patch({ autoSeoDescription: auto })}
+            autoValue={share.autoDescription ?? ""}
+            autoHint={
+              share.autoDescription
+                ? "Follows this page's content."
+                : "Nothing to follow yet — add a description above, or fill in the page content."
+            }
+          >
             <Textarea
               id="settings-seo-description"
               value={draft.seoDescription}
               onChange={(e) => patch({ seoDescription: e.target.value })}
-              placeholder="Shown under the title in search results and link previews."
+              placeholder={share.autoDescription ?? "Shown under the title in previews."}
               rows={2}
             />
-          </Field>
+          </AutoField>
 
           <Field
             label="Social preview image"
             hint={
               isPaid
-                ? "Replaces the generated share card. 1200×630 works best."
+                ? "Replaces the generated share card above. 1200×630 works best."
                 : "Available on Pro and Ultra plans."
             }
           >
@@ -325,10 +376,71 @@ export function PageSettingsPanel({
       </EditorCard>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={save.isLoading}>
-          {save.isLoading ? "Saving…" : "Save settings"}
+        <Button onClick={submit} disabled={saving}>
+          {saving ? "Saving…" : "Save settings"}
         </Button>
       </div>
     </>
+  );
+}
+
+/**
+ * A field that either follows the page content or is overridden by hand.
+ *
+ * The auto value is shown in a disabled input rather than as placeholder text,
+ * because a placeholder reads as "empty" and users retype what the page already
+ * says — the whole point is that they don't have to.
+ */
+function AutoField({
+  label,
+  htmlFor,
+  auto,
+  onAutoChange,
+  autoValue,
+  autoHint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  auto: boolean;
+  onAutoChange: (auto: boolean) => void;
+  autoValue: string;
+  autoHint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <label
+          htmlFor={htmlFor}
+          className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300"
+        >
+          {label}
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            <IconWand size={12} stroke={1.5} /> Auto
+          </span>
+          <Switch checked={auto} onCheckedChange={onAutoChange} />
+        </div>
+      </div>
+
+      {auto ? (
+        <Input
+          id={htmlFor}
+          value={autoValue}
+          readOnly
+          disabled
+          placeholder="—"
+          className="cursor-not-allowed"
+        />
+      ) : (
+        children
+      )}
+
+      <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+        {auto ? autoHint : "Turn Auto back on to follow the page content again."}
+      </p>
+    </div>
   );
 }

@@ -99,6 +99,12 @@ export interface QRCodeGeneratorState extends QrCodeGeneratorMarkerState {
   logoSize: number; // Percentage of QR code size (10-30)
   logoMargin: number; // Padding around the logo in pixels
   logoBorderRadius: number; // Border radius percentage (0-50 for circle)
+  /**
+   * Leave a module-aligned gap in the middle for the logo instead of drawing it
+   * on top of the code. On by default; turn it off for a logo that should blend
+   * into the pattern rather than sit in a cut-out.
+   */
+  logoClearSpace: boolean;
 }
 
 export interface QRCodeGenerateResult {

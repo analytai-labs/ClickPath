@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { TemplatePublicView } from "@/components/templates/public-views";
+import { resolveShareMetadata } from "@/lib/templates/share-metadata";
 import { api } from "@/trpc/server";
 
 import type { Metadata } from "next";
@@ -36,15 +37,14 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const { host, slug } = await props.params;
   const domain = safeDecode(host);
-  const title = page.seoTitle || page.displayTitle || page.slug;
-  const description = page.seoDescription || page.description || undefined;
+  const { title, description } = resolveShareMetadata(page);
 
   return {
     title: { absolute: title },
-    description,
+    description: description ?? undefined,
     alternates: { canonical: `https://${domain}/p/${slug}` },
-    openGraph: { title, description, type: "profile" },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { title, description: description ?? undefined, type: "profile" },
+    twitter: { card: "summary_large_image", title, description: description ?? undefined },
   };
 }
 

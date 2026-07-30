@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { defaultGeneratorState, generateQRCode } from "@/lib/qr-generator";
+import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
 
 type QRCodeModalProps = {
   open: boolean;
@@ -49,7 +49,7 @@ export function QRCodeModal({
     if (!canvasRef.current || !destinationUrl) return;
 
     try {
-      await generateQRCode(canvasRef.current, {
+      await renderQrInto(canvasRef.current, {
         ...defaultGeneratorState(),
         text: destinationUrl,
         scale: 10,

@@ -1,4 +1,5 @@
 export { generateQRCode } from "./generate";
+export { renderQrInto } from "./render-into";
 export { QRCodeProvider, useQRCode } from "./context";
 export { defaultGeneratorState } from "./state";
 export type {

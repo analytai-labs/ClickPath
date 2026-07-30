@@ -199,6 +199,25 @@ export async function assertDomainAllowed(
   }
 }
 
+/**
+ * The domain a new link or page should get when the caller didn't pick one.
+ *
+ * This is the workspace's configured default, but only if it is still usable: a
+ * default that was later unverified or deleted must not make every new link fail,
+ * so it degrades to the platform domain instead of throwing.
+ */
+export async function resolveDefaultDomain(ctx: WorkspaceTRPCContext): Promise<string> {
+  const preferred = (await getWorkspaceDefaultDomain(ctx)).trim();
+  if (!preferred) return DEFAULT_PLATFORM_DOMAIN;
+
+  try {
+    await assertDomainAllowed(ctx, preferred);
+    return preferred;
+  } catch {
+    return DEFAULT_PLATFORM_DOMAIN;
+  }
+}
+
 const MINIMUM_ALIAS_LENGTH_FREE = 6;
 
 export const validateAlias = (

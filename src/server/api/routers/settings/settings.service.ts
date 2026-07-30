@@ -44,8 +44,6 @@ export async function updateSiteSettings(
     if (!domain) {
       throw new Error("You can only set verified custom domains as your default domain");
     }
-
-    await redis.del(`user_settings_domain:${ctx.auth.userId}`);
   }
 
   if (existingSettings) {
@@ -61,6 +59,12 @@ export async function updateSiteSettings(
       },
     });
   }
+
+  // Invalidate after the write, and for every value — clearing only when the new
+  // domain was custom left the old one cached for 5 minutes when switching back
+  // to the platform domain, and clearing before the write let a concurrent read
+  // re-populate the cache with the stale value.
+  await redis.del(`user_settings_domain:${ctx.auth.userId}`);
 
   return getSiteSettings(ctx);
 }

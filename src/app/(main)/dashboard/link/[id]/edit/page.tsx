@@ -5,6 +5,7 @@ import { notifyPlanLimit } from "@/lib/analytics/upgrade-prompt";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   IconLoader2,
+  IconLock,
   IconX,
   IconQrcode,
   IconSettings,
@@ -20,7 +21,7 @@ import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { defaultGeneratorState, generateQRCode } from "@/lib/qr-generator";
+import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
 import type { QRCodeGeneratorState } from "@/lib/qr-generator";
 import { QRAdvancedCustomization } from "../../../qrcodes/create/_components/qr-advanced-customization";
 import {
@@ -51,7 +52,7 @@ import { OgImageUploader } from "../../new/_components/og-image-uploader";
 
 import type { CustomDomain } from "@prisma/client";
 import type { z } from "zod";
-import { shortLinkUrl } from "@/lib/links/short-link";
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 
 const log = clientLogger.child({ component: "edit-link-page" });
 
@@ -248,7 +249,7 @@ export default function EditLinkPage() {
     if (!canvasRef.current) return;
     try {
       const dest = destinationURL || form.getValues("url") || (link?.alias ? shortLinkUrl(link.domain, link.alias) : "https://clickpath.analytai.in");
-      await generateQRCode(canvasRef.current, {
+      await renderQrInto(canvasRef.current, {
         ...qrState,
         text: dest,
       });
@@ -458,7 +459,7 @@ export default function EditLinkPage() {
               Edit link
             </h2>
             <p className="mt-1 text-[13px] text-neutral-400">
-              {link.domain}/{link.alias}
+              {shortLinkDisplay(link.domain, link.alias ?? "")}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
@@ -519,34 +520,26 @@ export default function EditLinkPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="alias"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                      Link Alias
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex h-9 w-full items-center overflow-hidden rounded-lg border border-neutral-200 dark:border-border bg-white dark:bg-card transition-colors hover:border-neutral-300 dark:hover:border-border focus-within:border-neutral-300 focus-within:ring-1 focus-within:ring-neutral-300">
-                        <div className="flex h-full w-max shrink-0 items-center gap-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-500">
-                          {link.domain || DEFAULT_PLATFORM_DOMAIN}
-                        </div>
-                        <div className="h-4 w-px bg-neutral-200 dark:bg-border" />
-                        <input
-                          placeholder="short-link"
-                          className="h-full flex-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-900 dark:text-foreground placeholder:text-neutral-400 focus:outline-none"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
-                      Note: You cannot change the domain for an existing link, only the alias.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/*
+                The short URL is fixed once the link exists: it is what printed QR
+                codes and already-shared links resolve through, and renaming it
+                would break them with no way to reach whoever still has the old one.
+              */}
+              <FormItem>
+                <FormLabel className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                  Short link
+                </FormLabel>
+                <div className="flex h-9 w-full items-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 dark:border-border dark:bg-muted/50">
+                  <span className="flex h-full flex-1 items-center px-3 text-[13px] font-medium text-neutral-500 dark:text-neutral-400">
+                    {shortLinkDisplay(link.domain || DEFAULT_PLATFORM_DOMAIN, link.alias ?? "")}
+                  </span>
+                  <IconLock size={13} className="mr-3 shrink-0 text-neutral-400" />
+                </div>
+                <FormDescription className="text-[12px] text-neutral-400 dark:text-neutral-500">
+                  Fixed once created — printed QR codes and shared links depend on it. Create a new
+                  link if you need a different address.
+                </FormDescription>
+              </FormItem>
             </div>
 
             <div className="flex rounded-xl bg-neutral-100 dark:bg-muted p-1 gap-1">
@@ -1014,6 +1007,8 @@ export default function EditLinkPage() {
                   setLogoMargin={(logoMargin) => updateQrState({ logoMargin })}
                   logoBorderRadius={qrState.logoBorderRadius}
                   setLogoBorderRadius={(logoBorderRadius) => updateQrState({ logoBorderRadius })}
+                  logoClearSpace={qrState.logoClearSpace}
+                  setLogoClearSpace={(logoClearSpace) => updateQrState({ logoClearSpace })}
                 />
               </div>
             )}

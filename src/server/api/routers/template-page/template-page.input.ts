@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ANALYTICS_RANGES } from "@/lib/core/analytics/range";
 import { templateQrDesignSchema } from "@/lib/templates/qr-design";
 import { TEMPLATE_TYPE_IDS } from "@/lib/templates/registry";
 
@@ -48,10 +49,15 @@ export const createTemplatePageSchema = z.object({
   templateType: templateTypeSchema.default("bio"),
 });
 
-/** Page-level settings, shared by every template. */
+/**
+ * Page-level settings, shared by every template.
+ *
+ * `slug` is deliberately absent: the handle is what printed QR codes and already
+ * shared links resolve through, so it is fixed at creation. Renaming would break
+ * every code in the field with no way to tell who is still scanning the old one.
+ */
 export const updateTemplatePageSchema = z.object({
   id: z.number(),
-  slug: templateSlugSchema.optional(),
   title: z.string().max(255).nullish(),
   description: z.string().max(1000).nullish(),
   avatarUrl: z.string().nullish(),
@@ -100,7 +106,8 @@ export const publicSlugForHostSchema = z.object({
 
 export const templatePageAnalyticsSchema = z.object({
   id: z.number(),
-  range: z.enum(["7d", "30d", "90d", "all"]).default("7d"),
+  // Same ranges as link analytics — a template page is a link with a page on it.
+  range: z.enum(ANALYTICS_RANGES).default("7d"),
 });
 
 const blockFieldsSchema = {

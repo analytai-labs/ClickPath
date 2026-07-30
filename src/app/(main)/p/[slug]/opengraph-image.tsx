@@ -15,6 +15,8 @@ const OG_SELECT = {
   socialImageUrl: true,
   templateType: true,
   templateData: true,
+  shareDomain: true,
+  customDomain: true,
 } as const;
 
 type Props = { params: Promise<{ slug: string }> };

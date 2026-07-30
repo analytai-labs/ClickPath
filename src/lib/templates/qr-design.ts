@@ -29,6 +29,8 @@ export const templateQrDesignSchema = z.object({
   logoSize: z.number().int().min(10).max(30).default(25),
   logoMargin: z.number().int().min(0).max(40).default(4),
   logoBorderRadius: z.number().int().min(0).max(50).default(8),
+  /** Clear a gap in the code for the logo rather than drawing it on top. */
+  logoClearSpace: z.boolean().default(true),
 });
 
 export type TemplateQrDesign = z.infer<typeof templateQrDesignSchema>;
@@ -63,6 +65,7 @@ export function qrDesignToGeneratorState(
     logoSize: design.logoSize,
     logoMargin: design.logoMargin,
     logoBorderRadius: design.logoBorderRadius,
+    logoClearSpace: design.logoClearSpace,
     // Deterministic: the same design must always produce the same QR image.
     seed: 1,
   };

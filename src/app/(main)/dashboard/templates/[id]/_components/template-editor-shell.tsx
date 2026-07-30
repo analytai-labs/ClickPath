@@ -10,6 +10,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { Link } from "next-view-transitions";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +27,9 @@ import { api } from "@/trpc/react";
 
 import { AnalyticsPanel } from "./analytics-panel";
 import { CopyUrlButton } from "./copy-url-button";
-import { PageSettingsPanel } from "./page-settings-panel";
-import { QrPanel } from "./qr-panel";
+import { PageSettingsPanel, usePageSettings } from "./page-settings-panel";
+import { QrPanel, QrPreviewRail, useQrDesign } from "./qr-panel";
+import { SharePreviewCard } from "./share-preview-card";
 
 import type { Plan } from "@/lib/billing/plans";
 import type { TemplatePageData } from "./editor-types";
@@ -36,6 +38,8 @@ import type { TemplatePageData } from "./editor-types";
 const TAB_BODY =
   "mt-4 space-y-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-both motion-safe:duration-300";
 const NARROW_TAB_BODY = `${TAB_BODY} max-w-2xl`;
+
+type TabId = "content" | "design" | "qr" | "settings" | "analytics";
 
 type Props = {
   page: TemplatePageData;
@@ -69,6 +73,14 @@ export function TemplateEditorShell({
   // Preview links stay same-origin (a customer domain may not point here yet),
   // but everything the user copies or prints uses the canonical URL.
   const previewPath = templatePagePreviewPath(page);
+
+  const [tab, setTab] = useState<TabId>("content");
+
+  // The shell owns the state for the tabs it renders itself, so an unsaved QR
+  // design or half-filled settings form survives switching tabs — and so the
+  // right rail can preview the same unsaved values the form is editing.
+  const qr = useQrDesign(page, onChanged);
+  const settings = usePageSettings(page, onChanged);
 
   const togglePublished = api.templatePage.togglePublished.useMutation({
     onSuccess: (res) => {
@@ -150,7 +162,7 @@ export function TemplateEditorShell({
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
         {/* Editor — takes the remaining width; the preview is a sticky right rail. */}
         <div className="min-w-0 flex-1">
-          <Tabs defaultValue="content">
+          <Tabs value={tab} onValueChange={(value) => setTab(value as TabId)}>
             <TabsList>
               <TabsTrigger value="content" className="gap-1.5">
                 <IconPencil size={15} stroke={1.5} /> Content
@@ -178,23 +190,31 @@ export function TemplateEditorShell({
             </TabsContent>
 
             <TabsContent value="qr" className={NARROW_TAB_BODY}>
-              <QrPanel page={page} onSaved={onChanged} />
+              <QrPanel page={page} state={qr} />
             </TabsContent>
 
-            {/* forceMount so half-filled settings survive a trip to another tab. */}
-            <TabsContent value="settings" forceMount className={NARROW_TAB_BODY}>
-              <PageSettingsPanel page={page} plan={plan} onSaved={onChanged} />
+            <TabsContent value="settings" className={NARROW_TAB_BODY}>
+              <PageSettingsPanel page={page} plan={plan} state={settings} />
             </TabsContent>
 
+            {/* Analytics gets the whole width — there is nothing to preview. */}
             <TabsContent value="analytics" className={TAB_BODY}>
-              <AnalyticsPanel pageId={page.id} plan={plan} />
+              <AnalyticsPanel page={page} plan={plan} />
             </TabsContent>
           </Tabs>
         </div>
 
-        <div className="shrink-0 lg:sticky lg:top-6 lg:w-[360px]">
-          <PreviewFrame>{preview}</PreviewFrame>
-        </div>
+        {tab !== "analytics" && (
+          <div className="shrink-0 lg:sticky lg:top-6 lg:w-[360px]">
+            {tab === "qr" ? (
+              <QrPreviewRail state={qr} />
+            ) : tab === "settings" ? (
+              <SharePreviewCard page={page} draft={settings.draft} />
+            ) : (
+              <PreviewFrame>{preview}</PreviewFrame>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

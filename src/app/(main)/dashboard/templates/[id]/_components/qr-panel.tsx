@@ -1,10 +1,11 @@
 "use client";
 
 import { IconDownload, IconRefresh } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
+import { QrPreviewCanvas } from "@/components/qr/qr-preview-canvas";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -33,20 +34,20 @@ const EXPORT_SCALE = 20;
 
 const NO_PRESET = "__none__";
 
+export type QrPanelState = ReturnType<typeof useQrDesign>;
+
 /**
- * The page's QR code. It always encodes the page's canonical URL, so once the
- * page is published on the customer's own domain the printed code no longer
- * depends on the platform domain existing.
+ * The QR tab's design state, owned by the editor shell.
+ *
+ * Lifted for the same reason as the settings draft: the live preview lives in the
+ * shell's right rail, and an unsaved design must survive switching tabs.
  */
-export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: () => void }) {
+export function useQrDesign(page: TemplatePageData, onSaved: () => void) {
   const url = templatePageUrl(page);
 
   const [design, setDesign] = useState<TemplateQrDesign>(() => normalizeQrDesign(page.qrDesign));
   const [dirty, setDirty] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [debouncedDesign] = useDebounce(design, 120);
-
-  const { data: presets } = api.qrCode.listPresets.useQuery();
 
   const save = api.templatePage.updateQrDesign.useMutation({
     onSuccess: () => {
@@ -62,16 +63,23 @@ export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: ()
     setDirty(true);
   }, []);
 
-  // Re-render the preview whenever the design or the encoded URL changes.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    void generateQRCode(canvas, qrDesignToGeneratorState(debouncedDesign, url)).catch((err) => {
-      console.error("Failed to render QR preview:", err);
-    });
-  }, [debouncedDesign, url]);
+  const reset = useCallback(() => {
+    setDesign(DEFAULT_TEMPLATE_QR_DESIGN);
+    setDirty(true);
+  }, []);
 
-  async function download() {
+  const submit = useCallback(() => {
+    save.mutate({ id: page.id, qrDesign: design });
+  }, [design, page.id, save]);
+
+  // Memoized so the preview only re-renders when the debounced design actually
+  // changes, not on every keystroke elsewhere in the editor.
+  const previewState = useMemo(
+    () => qrDesignToGeneratorState(debouncedDesign, url),
+    [debouncedDesign, url],
+  );
+
+  const download = useCallback(async () => {
     try {
       const canvas = document.createElement("canvas");
       await generateQRCode(canvas, {
@@ -86,7 +94,51 @@ export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: ()
       console.error("Failed to export QR code:", err);
       toast.error("Could not generate the QR image. Please try again.");
     }
-  }
+  }, [design, page.slug, url]);
+
+  return {
+    design,
+    previewState,
+    url,
+    dirty,
+    update,
+    reset,
+    submit,
+    download,
+    saving: save.isLoading,
+  };
+}
+
+/** The QR code as it will be printed, shown in the editor's right rail. */
+export function QrPreviewRail({ state }: { state: QrPanelState }) {
+  return (
+    <div className="space-y-3">
+      <div className="mx-auto w-full max-w-[320px] rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-border dark:bg-card">
+        <QrPreviewCanvas state={state.previewState} className="h-auto w-full rounded-lg" />
+      </div>
+      <div className="space-y-1 text-center">
+        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">Scans to</p>
+        <p className="break-all px-2 font-mono text-[11px] text-neutral-600 dark:text-neutral-300">
+          {state.url}
+        </p>
+      </div>
+      <div className="flex justify-center">
+        <Button variant="outline" size="sm" onClick={state.download} className="gap-1.5">
+          <IconDownload size={15} stroke={1.5} /> Download PNG
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Controls for the page's QR code. It always encodes the page's canonical URL,
+ * so once the page is published on the customer's own domain the printed code no
+ * longer depends on the platform domain.
+ */
+export function QrPanel({ page, state }: { page: TemplatePageData; state: QrPanelState }) {
+  const { design, update } = state;
+  const { data: presets } = api.qrCode.listPresets.useQuery();
 
   function applyPreset(presetId: string) {
     if (presetId === NO_PRESET) return;
@@ -106,41 +158,25 @@ export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: ()
       logoSize: Math.min(preset.logoSize ?? 25, 30),
       logoMargin: preset.logoMargin ?? 4,
       logoBorderRadius: preset.logoBorderRadius ?? 8,
+      logoClearSpace: preset.logoClearSpace ?? true,
     });
   }
 
   return (
     <>
       <EditorCard
-        title="QR code"
-        description="Encodes this page's public URL. Re-print only if that URL changes."
-        action={
-          <Button variant="outline" size="sm" onClick={download} className="gap-1.5">
-            <IconDownload size={15} stroke={1.5} /> PNG
-          </Button>
-        }
+        title="Encoded URL"
+        description="Re-print only if this URL changes. The preview on the right is what gets printed."
       >
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-          <div className="shrink-0 rounded-xl border border-neutral-200 bg-white p-3 dark:border-border">
-            <canvas ref={canvasRef} className="h-[168px] w-[168px] rounded-md" />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                Encoded URL
-              </p>
-              <p className="mt-1 break-all font-mono text-[12px] text-neutral-700 dark:text-neutral-300">
-                {url}
-              </p>
-            </div>
-            {!page.shareDomain && (
-              <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
-                This code points at the platform domain. Set a public domain you own in Settings
-                first, so printed codes keep working if that domain ever changes.
-              </p>
-            )}
-          </div>
-        </div>
+        <p className="break-all font-mono text-[12px] text-neutral-700 dark:text-neutral-300">
+          {state.url}
+        </p>
+        {!page.shareDomain && (
+          <p className="mt-2 text-[11px] leading-relaxed text-amber-600 dark:text-amber-500">
+            This code points at the platform domain. Set a public domain you own in Settings first,
+            so printed codes keep working if that domain ever changes.
+          </p>
+        )}
       </EditorCard>
 
       {presets && presets.length > 0 && (
@@ -188,6 +224,8 @@ export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: ()
           setLogoMargin={(logoMargin) => update({ logoMargin })}
           logoBorderRadius={design.logoBorderRadius}
           setLogoBorderRadius={(logoBorderRadius) => update({ logoBorderRadius })}
+          logoClearSpace={design.logoClearSpace}
+          setLogoClearSpace={(logoClearSpace) => update({ logoClearSpace })}
         />
       </EditorCard>
 
@@ -196,18 +234,12 @@ export function QrPanel({ page, onSaved }: { page: TemplatePageData; onSaved: ()
           variant="ghost"
           size="sm"
           className="gap-1.5 text-neutral-500"
-          onClick={() => {
-            setDesign(DEFAULT_TEMPLATE_QR_DESIGN);
-            setDirty(true);
-          }}
+          onClick={state.reset}
         >
           <IconRefresh size={15} stroke={1.5} /> Reset to default
         </Button>
-        <Button
-          onClick={() => save.mutate({ id: page.id, qrDesign: design })}
-          disabled={!dirty || save.isLoading}
-        >
-          {save.isLoading ? "Saving…" : "Save QR code"}
+        <Button onClick={state.submit} disabled={!state.dirty || state.saving}>
+          {state.saving ? "Saving…" : "Save QR code"}
         </Button>
       </div>
     </>

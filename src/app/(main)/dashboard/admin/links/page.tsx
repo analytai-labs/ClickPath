@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { shortLinkHostPrefix } from "@/lib/links/short-link";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 
@@ -171,7 +172,7 @@ export default function AdminLinksPage() {
                         <div className="min-w-0">
                           <p className="text-[13px] font-medium text-neutral-800 dark:text-neutral-200">
                             <span className="text-neutral-400 dark:text-neutral-500">
-                              {link.domain}/
+                              {shortLinkHostPrefix(link.domain)}
                             </span>
                             {link.alias}
                           </p>
@@ -305,7 +306,7 @@ export default function AdminLinksPage() {
             <div className="rounded-lg bg-neutral-50 dark:bg-accent/50 p-3">
               <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
                 <span className="text-neutral-400 dark:text-neutral-500">
-                  {linkToBlock?.domain}/
+                  {linkToBlock ? shortLinkHostPrefix(linkToBlock.domain) : ""}
                 </span>
                 {linkToBlock?.alias}
               </p>

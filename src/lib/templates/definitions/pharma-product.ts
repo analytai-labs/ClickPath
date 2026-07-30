@@ -295,6 +295,12 @@ export const pharmaProductTemplate: TemplateDefinition<PharmaProductData> = {
   usesAvatar: false,
   // Tolerates rows written before a field existed, so a legacy blob can't throw.
   deriveTitle: (data) => normalizePharmaProductData(data).productName.trim() || null,
+  // Composition is what a prescriber scanning the code wants to see first, so it
+  // beats the longer overview as the one line shown in a link preview.
+  deriveDescription: (data) => {
+    const { composition, productOverview } = normalizePharmaProductData(data);
+    return composition.trim() || productOverview.trim() || null;
+  },
   resolveOgColors: (theme) => {
     const t = resolvePharmaTheme(theme?.preset);
     return {

@@ -38,6 +38,8 @@ export const bioTemplate: TemplateDefinition<BioTemplateData> = {
   supportsRichTheme: true,
   usesAvatar: true,
   deriveTitle: () => null,
+  // A bio page's content is its blocks, none of which reads as a description.
+  deriveDescription: () => null,
   resolveOgColors: (theme) => {
     const t = resolveBioTheme((theme ?? null) as BioPageTheme | null);
     return {

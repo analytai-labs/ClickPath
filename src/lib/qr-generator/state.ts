@@ -43,6 +43,7 @@ export function defaultGeneratorState(): QRCodeGeneratorState {
     logoSize: 25, // 25% of QR code size
     logoMargin: 4,
     logoBorderRadius: 8,
+    logoClearSpace: true,
   };
 }
 

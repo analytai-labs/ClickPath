@@ -19,9 +19,9 @@ import { runBackgroundTask } from "@/lib/utils/background";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
 import { hashIp } from "@/lib/utils/ip-hash";
 import { prisma } from "@/server/db";
+import { releaseImage, uploadAndRecordAsset } from "@/server/lib/assets";
 import { checkAndFireMilestones } from "@/server/lib/milestone-check";
 import { assertUrlSafe } from "@/server/lib/phishing";
-import { releaseImage, uploadAndRecordAsset } from "@/server/lib/assets";
 import { isUploadableDataUrl, uploadImage } from "@/server/lib/storage";
 import {
   assertCanEnableVerifiedClicks,
@@ -50,9 +50,11 @@ import {
   checkWorkspaceLinkLimit,
   getWorkspaceDefaultDomain,
   incrementWorkspaceLinkCount,
+  resolveDefaultDomain,
   validateAlias,
 } from "./utils";
 
+import { shortLinkDisplay } from "@/lib/links/short-link";
 import type { Link } from "@prisma/client";
 import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
@@ -66,7 +68,6 @@ import type {
   ToggleArchiveInput,
   UpdateLinkInput,
 } from "./link.input";
-import { shortLinkDisplay } from "@/lib/links/short-link";
 
 const log = logger.child({ component: "link.service" });
 
@@ -268,7 +269,7 @@ export const getLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput) =>
     },
     include: {
       qrCodes: true,
-    }
+    },
   });
 
   if (!linkData) return null;
@@ -327,7 +328,7 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
   const { plan, currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
   const isPaidPlan = plan !== "free";
 
-  const domain = input.domain?.trim() || DEFAULT_PLATFORM_DOMAIN;
+  const domain = input.domain?.trim() || (await resolveDefaultDomain(ctx));
   await assertDomainAllowed(ctx, domain);
   const alias = input.alias && input.alias !== "" ? input.alias : await generateShortLink();
 
@@ -442,7 +443,6 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
     const linkId = createdLink.id;
     let qrCodeId: number | undefined;
     if (qrCode && (qrCode.enabled || qrCode.patternStyle || qrCode.selectedColor)) {
-
       const createdQrCode = await tx.qrCode.create({
         data: {
           userId: ownership.userId,
@@ -570,10 +570,15 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
     await assertDomainAllowed(ctx, input.domain);
   }
 
-  // If alias is being changed, validate it
+  // The alias is the address printed on QR codes and already shared with people,
+  // so it is fixed once the link exists. The editor sends it back unchanged; a
+  // different value can only come from a hand-made request.
   if (input.alias && input.alias !== existingLink.alias) {
-    const domain = input.domain ?? existingLink.domain;
-    await validateAlias(ctx, input.alias, domain, isPaidUser);
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "A link's alias can't be changed after it's created — existing QR codes and shared links point at it. Create a new link instead.",
+    });
   }
 
   // Check for UTM params - Ultra plan only
@@ -671,13 +676,13 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
           patternStyle: (qrCode.patternStyle || existingQr.patternStyle) as any,
           logoImage: qrCode.logoImage !== undefined ? qrCode.logoImage : existingQr.logoImage,
           effect: qrCode.effect || existingQr.effect || "none",
-          marginNoise: qrCode.marginNoise !== undefined ? qrCode.marginNoise : existingQr.marginNoise,
+          marginNoise:
+            qrCode.marginNoise !== undefined ? qrCode.marginNoise : existingQr.marginNoise,
           markerInnerShape: qrCode.markerInnerShape || existingQr.markerInnerShape || "auto",
         },
       });
       qrCodeId = existingQr.id;
     } else if (qrCode.enabled || qrCode.patternStyle || qrCode.selectedColor) {
-
       const createdQr = await prisma.qrCode.create({
         data: {
           userId: existingLink.userId,
@@ -1659,6 +1664,8 @@ export const bulkCreateLinks = async (ctx: WorkspaceTRPCContext, csvContent: str
   }) as LinkRecord[];
 
   const ownership = workspaceOwnership(ctx.workspace);
+  // Resolved once rather than per row: it is the same for every link in the file.
+  const defaultDomain = await resolveDefaultDomain(ctx);
 
   // we need to check for alias clashes and report those to the user, if we use promise.all, it will
   // fail if there is an alias clash so we need to use promise.allSettled
@@ -1676,7 +1683,7 @@ export const bulkCreateLinks = async (ctx: WorkspaceTRPCContext, csvContent: str
           userId: ownership.userId,
           teamId: ownership.teamId,
           createdByUserId: ctx.auth.userId, // Track the actual user who created the link
-          domain: record.domain?.trim() || DEFAULT_PLATFORM_DOMAIN,
+          domain: record.domain?.trim() || defaultDomain,
           note: record.note,
         },
       });

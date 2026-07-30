@@ -519,6 +519,7 @@ model QrPreset {
   logoSize         Int       @default(25)
   logoMargin       Int       @default(4)
   logoBorderRadius Int       @default(8)
+  logoClearSpace   Boolean   @default(true)
   createdAt        DateTime? @default(now())
   updatedAt        DateTime? @updatedAt
 

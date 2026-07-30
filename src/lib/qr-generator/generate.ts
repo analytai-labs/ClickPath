@@ -65,6 +65,53 @@ export async function generateQRCode(
   const width: number = (qr.size + marginLeft + marginRight) * cell;
   const height: number = (qr.size + marginTop + marginBottom) * cell;
 
+  /**
+   * Half-width of the area kept clear for the logo, in canvas pixels.
+   *
+   * Modules inside it are never drawn, so the logo sits in a deliberate hole
+   * instead of being pasted on top of the code. Painting over the modules looks
+   * similar at a glance but leaves the logo's edge slicing modules into slivers,
+   * which reads as damage rather than design.
+   *
+   * Zero when there is no logo, or when the option is off (then the logo is
+   * painted over the modules as before).
+   */
+  function resolveLogoClearSpace(): number {
+    if (!state.logoClearSpace || !state.logoImage) return 0;
+
+    // Sized against the whole canvas, exactly as `drawLogo` sizes the logo.
+    const logoPx = (Math.min(width, height) * state.logoSize) / 100 + state.logoMargin * 2;
+    // Round out to whole modules and add a one-module quiet ring, so the logo's
+    // edge always lands on a module boundary.
+    const modules = Math.ceil(logoPx / cell) + 2;
+    // Error correction is forced to level H (~30% recoverable) whenever a logo is
+    // set; capping the hole at 40% of the symbol's width keeps the cleared area
+    // near 16% — comfortably inside that budget even at the largest logo size.
+    const maxModules = Math.floor(qr.size * 0.4);
+
+    return (Math.min(modules, maxModules) * cell) / 2;
+  }
+
+  const logoClearSpaceRadius = resolveLogoClearSpace();
+
+  /** Whether a module's cell overlaps the logo's clear space, in grid coords. */
+  function isInLogoClearSpace(gridX: number, gridY: number): boolean {
+    if (logoClearSpaceRadius <= 0) return false;
+
+    const left = gridX * cell;
+    const top = gridY * cell;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Strict comparisons so a module merely touching the boundary is kept.
+    return (
+      left < centerX + logoClearSpaceRadius &&
+      left + cell > centerX - logoClearSpaceRadius &&
+      top < centerY + logoClearSpaceRadius &&
+      top + cell > centerY - logoClearSpaceRadius
+    );
+  }
+
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -306,6 +353,12 @@ export async function generateQRCode(
 
     targetX += marginLeft;
     targetY += marginTop;
+
+    // Checked against the drawn position, so it stays correct under rotation.
+    if (isInLogoClearSpace(targetX, targetY)) {
+      isDark = false;
+      isIgnored = true;
+    }
 
     if (renderPointsType === "guide" && marker) {
       isDark = false;

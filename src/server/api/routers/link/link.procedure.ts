@@ -10,6 +10,7 @@ import {
 import * as inputs from "./link.input";
 import * as services from "./link.service";
 import * as transferServices from "./transfer.service";
+import { resolveDefaultDomain } from "./utils";
 
 import type { PublicTRPCContext } from "../../trpc";
 
@@ -65,6 +66,15 @@ export const linkRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => {
       return services.shortenLinkWithAutoAlias(ctx, input);
     }),
+
+  /**
+   * The domain a new link gets by default in this workspace. Exposed so the
+   * create form preselects the same value the server would fall back to, instead
+   * of hardcoding the platform domain and silently ignoring the user's setting.
+   */
+  defaultDomain: workspaceProcedure.query(async ({ ctx }) => {
+    return { domain: await resolveDefaultDomain(ctx) };
+  }),
 
   linkVisits: workspaceProcedure
     .input(

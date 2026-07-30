@@ -21,7 +21,7 @@ import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { defaultGeneratorState, generateQRCode } from "@/lib/qr-generator";
+import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
 import type { QRCodeGeneratorState } from "@/lib/qr-generator";
 import { QRAdvancedCustomization } from "../../qrcodes/create/_components/qr-advanced-customization";
 import { IconQrcode, IconSettings, IconRoute } from "@tabler/icons-react";
@@ -120,6 +120,7 @@ export default function CreateLinkPage() {
 
   const userSubscription = api.subscriptions.get.useQuery();
   const customDomainsQuery = api.customDomain.list.useQuery();
+  const defaultDomainQuery = api.link.defaultDomain.useQuery();
   const generateAliasMutation = api.ai.generateAlias.useMutation({
     onSuccess: (data) => {
       setGeneratedAliases(data.alias);
@@ -141,6 +142,17 @@ export default function CreateLinkPage() {
   const [debouncedUrl] = useDebounce(destinationURL, 500);
   const [debouncedAlias] = useDebounce(form.watch("alias"), 500);
   const selectedDomain = form.watch("domain") ?? DEFAULT_PLATFORM_DOMAIN;
+
+  // The workspace's default domain arrives after the form is built, so apply it
+  // once — and only while the field is still untouched, so it never overrides a
+  // domain the user has already picked.
+  const workspaceDefaultDomain = defaultDomainQuery.data?.domain;
+  useEffect(() => {
+    if (!workspaceDefaultDomain) return;
+    if (form.getFieldState("domain").isDirty) return;
+    if (form.getValues("domain") === workspaceDefaultDomain) return;
+    form.setValue("domain", workspaceDefaultDomain);
+  }, [workspaceDefaultDomain, form]);
 
   async function generateAliases(metadata: {
     title: string;
@@ -284,7 +296,7 @@ export default function CreateLinkPage() {
   const regenerateQRCode = useCallback(async () => {
     if (!canvasRef.current) return;
     try {
-      await generateQRCode(canvasRef.current, {
+      await renderQrInto(canvasRef.current, {
         ...qrState,
         text: destinationURL || "https://clickpath.analytai.in",
       });
@@ -324,6 +336,7 @@ export default function CreateLinkPage() {
         logoSize: Math.min(preset.logoSize ?? 25, 30),
         logoMargin: preset.logoMargin ?? 4,
         logoBorderRadius: preset.logoBorderRadius ?? 8,
+        logoClearSpace: preset.logoClearSpace ?? true,
       }));
     },
     [presets],
@@ -1278,6 +1291,8 @@ export default function CreateLinkPage() {
                   setLogoMargin={(logoMargin) => updateQrState({ logoMargin })}
                   logoBorderRadius={qrState.logoBorderRadius}
                   setLogoBorderRadius={(logoBorderRadius) => updateQrState({ logoBorderRadius })}
+                  logoClearSpace={qrState.logoClearSpace}
+                  setLogoClearSpace={(logoClearSpace) => updateQrState({ logoClearSpace })}
                 />
               </div>
             )}
