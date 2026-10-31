@@ -6,45 +6,6 @@ import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "ai.service" });
 
-const aliasSchema = z.object({
-  recommendations: z.array(z.string()),
-});
-
-export async function generateAliasFromMetadata(metadata: {
-  title?: string;
-  description?: string;
-  keywords?: string[];
-  url: string;
-}): Promise<Array<string>> {
-  if (!process.env.OPENAI_API_KEY) {
-    return [];
-  }
-
-  const result = await generateText({
-    model: openai("gpt-4o-mini"),
-    output: Output.object({
-      schema: aliasSchema,
-    }),
-    prompt: `You are a helpful assistant for a url shortening service,
-  your goal is to generate recommended aliases for the given metadata of a url in other to
-  relieve the burden of thinking harrddd for an alias. Here is the metadata of the url:
-  ${JSON.stringify(metadata)}
-  Please generate a list of recommended aliases for the url.
-
-  The alias should be:
-  - Short (preferably 5-45 characters)
-  - Memorable
-  - Catchy
-  - Relevant to the content
-  - Lowercase, alphanumeric characters & underscores and hyphens only (no spaces or special characters)
-  - Should not be more than 20 characters
-  `,
-  });
-
-  const output = result.output as z.infer<typeof aliasSchema> | undefined;
-  return output?.recommendations ?? [];
-}
-
 interface URLFeatures {
   url_length: number;
   num_dots: number;

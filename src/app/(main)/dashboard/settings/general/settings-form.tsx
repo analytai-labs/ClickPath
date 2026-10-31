@@ -16,7 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PLATFORM_DOMAINS } from "@/lib/constants/domains";
+import {
+  DEFAULT_PLATFORM_DOMAIN,
+  PLATFORM_DOMAINS,
+  isPlatformDomain,
+} from "@/lib/constants/domains";
 import { api } from "@/trpc/react";
 
 import type { RouterOutputs } from "@/trpc/shared";
@@ -33,19 +37,29 @@ type SettingsFormProps = {
 export function SettingsForm({ userSettings, availableDomains }: SettingsFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const utils = api.useUtils();
+
+  const currentDefaultDomain = userSettings?.defaultDomain || DEFAULT_PLATFORM_DOMAIN;
+  const isTeamDefault = userSettings?.defaultDomainScope === "team";
+  const canEdit = userSettings?.canEditDefaultDomain ?? true;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      defaultDomain: userSettings!.defaultDomain!,
+      defaultDomain: currentDefaultDomain,
     },
   });
 
   const { mutate: updateSettings } = api.siteSettings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
+      form.reset(variables);
       setIsSaving(false);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
+      await Promise.all([
+        utils.siteSettings.get.invalidate(),
+        utils.link.defaultDomain.invalidate(),
+      ]);
       toast.success("Settings updated");
     },
     onError: (error) => {
@@ -62,6 +76,11 @@ export function SettingsForm({ userSettings, availableDomains }: SettingsFormPro
   const activeDomains = [
     ...PLATFORM_DOMAINS.map((domain) => ({ domain, status: "active" as const })),
     ...availableDomains.filter((d) => d.status === "active"),
+    ...(currentDefaultDomain &&
+    !isPlatformDomain(currentDefaultDomain) &&
+    !availableDomains.some((d) => d.domain === currentDefaultDomain)
+      ? [{ domain: currentDefaultDomain, status: "active" as const }]
+      : []),
   ];
 
   return (
@@ -74,9 +93,13 @@ export function SettingsForm({ userSettings, availableDomains }: SettingsFormPro
             render={({ field }) => (
               <FormItem>
                 <label className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
-                  Default Domain
+                  {isTeamDefault ? "Team Default Domain" : "Default Domain"}
                 </label>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={!canEdit}
+                >
                   <FormControl>
                     <SelectTrigger className="h-9 border-neutral-200 dark:border-border bg-white dark:bg-card text-[13px]">
                       <SelectValue placeholder="Select a domain" />
@@ -102,7 +125,11 @@ export function SettingsForm({ userSettings, availableDomains }: SettingsFormPro
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                  Used when creating quick shortened links.{" "}
+                  {isTeamDefault
+                    ? canEdit
+                      ? "Default for new links and pages in this team."
+                      : "The team's default for new links and pages. Only team owners and admins can change it."
+                    : "Used when creating quick shortened links."}{" "}
                   <a
                     href="/dashboard/domains"
                     className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -118,7 +145,7 @@ export function SettingsForm({ userSettings, availableDomains }: SettingsFormPro
           <div className="flex justify-end">
             <Button
               type="submit"
-              disabled={isSaving || !form.formState.isDirty}
+              disabled={!canEdit || isSaving || !form.formState.isDirty}
               className="h-9 bg-blue-600 text-[13px] hover:bg-blue-700"
             >
               {isSaving ? (

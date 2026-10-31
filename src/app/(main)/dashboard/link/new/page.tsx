@@ -2,15 +2,10 @@
 
 import { POSTHOG_EVENTS, trackEvent } from "@/lib/analytics/events";
 import { notifyPlanLimit } from "@/lib/analytics/upgrade-prompt";
+import { shortLinkUrl } from "@/lib/links/short-link";
+import { generateRandomSlug, slugifyLinkName } from "@/lib/utils/slugify";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconLoader2,
-  IconSparkles,
-  IconX,
-} from "@tabler/icons-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { IconDice, IconLoader2, IconWand, IconX } from "@tabler/icons-react";
 import { useTransitionRouter } from "next-view-transitions";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -20,11 +15,6 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
-import type { QRCodeGeneratorState } from "@/lib/qr-generator";
-import { QRAdvancedCustomization } from "../../qrcodes/create/_components/qr-advanced-customization";
-import { IconQrcode, IconSettings, IconRoute } from "@tabler/icons-react";
 import {
   Form,
   FormControl,
@@ -44,11 +34,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_PLATFORM_DOMAIN, PLATFORM_DOMAINS } from "@/lib/constants/domains";
+import {
+  DEFAULT_PLATFORM_DOMAIN,
+  PLATFORM_DOMAINS,
+  isPlatformDomain,
+} from "@/lib/constants/domains";
 import { clientLogger } from "@/lib/logger/client";
+import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
+import type { QRCodeGeneratorState } from "@/lib/qr-generator";
+import { cn } from "@/lib/utils";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
 import { createLinkSchema } from "@/server/api/routers/link/link.input";
 import { api } from "@/trpc/react";
+import { IconQrcode, IconRoute, IconSettings } from "@tabler/icons-react";
+import { QRAdvancedCustomization } from "../../qrcodes/create/_components/qr-advanced-customization";
 
 const log = clientLogger.child({ component: "create-link-page" });
 
@@ -65,9 +64,7 @@ import { revalidateHomepage } from "../../revalidate-homepage";
 
 import { LinkPreviewComponent } from "./_components/link-preview";
 import { OgImageUploader } from "./_components/og-image-uploader";
-import UpgradeToProAIButtonTooltip from "./_components/upgrade-to-pro-ai-tooltip";
 
-import type { CustomDomain } from "@prisma/client";
 import type { z } from "zod";
 
 type MetaData = {
@@ -85,12 +82,9 @@ export default function CreateLinkPage() {
   const initialCampaignId =
     Number.isInteger(campaignIdParam) && campaignIdParam > 0 ? campaignIdParam : undefined;
   const [destinationURL, setDestinationURL] = useState<string | undefined>(initialUrl);
-  const [userDomains, setUserDomains] = useState<CustomDomain[]>([]);
   const [isCustomMetadataOpen, setIsCustomMetadataOpen] = useState(false);
   const [isUtmParamsOpen, setIsUtmParamsOpen] = useState(false);
   const [isOptionalSettingsOpen, setIsOptionalSettingsOpen] = useState(false);
-  const [generatedAliases, setGeneratedAliases] = useState<string[]>([]);
-  const [currentAliasIndex, setCurrentAliasIndex] = useState(0);
   const [metaData, setMetaData] = useState({
     title: "",
     description: "",
@@ -120,13 +114,8 @@ export default function CreateLinkPage() {
 
   const userSubscription = api.subscriptions.get.useQuery();
   const customDomainsQuery = api.customDomain.list.useQuery();
+  const userDomains = customDomainsQuery.data ?? [];
   const defaultDomainQuery = api.link.defaultDomain.useQuery();
-  const generateAliasMutation = api.ai.generateAlias.useMutation({
-    onSuccess: (data) => {
-      setGeneratedAliases(data.alias);
-      form.setValue("alias", data.alias[0]);
-    },
-  });
   const { data: userTags } = api.tag.list.useQuery();
   const { data: campaigns } = api.campaign.listNames.useQuery();
 
@@ -143,88 +132,44 @@ export default function CreateLinkPage() {
   const [debouncedAlias] = useDebounce(form.watch("alias"), 500);
   const selectedDomain = form.watch("domain") ?? DEFAULT_PLATFORM_DOMAIN;
 
-  // The workspace's default domain arrives after the form is built, so apply it
-  // once — and only while the field is still untouched, so it never overrides a
-  // domain the user has already picked.
+  const [hasUserSelectedDomain, setHasUserSelectedDomain] = useState(false);
   const workspaceDefaultDomain = defaultDomainQuery.data?.domain;
   useEffect(() => {
-    if (!workspaceDefaultDomain) return;
-    if (form.getFieldState("domain").isDirty) return;
-    if (form.getValues("domain") === workspaceDefaultDomain) return;
-    form.setValue("domain", workspaceDefaultDomain);
-  }, [workspaceDefaultDomain, form]);
-
-  async function generateAliases(metadata: {
-    title: string;
-    description: string;
-  }) {
-    generateAliasMutation.mutate({
-      url: form.getValues("url"),
-      title: metadata.title,
-      description: metadata.description,
-    });
-  }
-
-  const cycleAlias = (direction: "up" | "down") => {
-    let newIndex: number;
-    if (direction === "up") {
-      newIndex = (currentAliasIndex + 1) % generatedAliases.length;
-    } else {
-      newIndex = (currentAliasIndex - 1 + generatedAliases.length) % generatedAliases.length;
+    if (!workspaceDefaultDomain || hasUserSelectedDomain) return;
+    if (form.getValues("domain") !== workspaceDefaultDomain) {
+      form.setValue("domain", workspaceDefaultDomain, { shouldDirty: false, shouldValidate: true });
     }
-    setCurrentAliasIndex(newIndex);
-    form.setValue("alias", generatedAliases[newIndex]);
-  };
+  }, [workspaceDefaultDomain, hasUserSelectedDomain, form]);
 
-  const handleRegenerateClick = async () => {
-    setCurrentAliasIndex(0);
-    setGeneratedAliases([]);
-    form.setValue("alias", "");
+  const handleAutoGenerate = () => {
+    const name = form.getValues("name")?.trim();
+    const url = form.getValues("url")?.trim();
 
-    const url = form.getValues("url");
-    if (!url) {
-      toast.error("Please enter a valid URL first");
+    let sourceText = name;
+    if (!sourceText && url) {
+      try {
+        const parsed = new URL(url);
+        const pathSegments = parsed.pathname.split("/").filter(Boolean);
+        sourceText = pathSegments[pathSegments.length - 1] || parsed.hostname;
+      } catch {
+        sourceText = url;
+      }
+    }
+
+    if (!sourceText) {
+      toast.error("Please enter a link name or destination URL first.");
       return;
     }
 
-    // Get custom metadata from form - these take priority
-    const customTitle = form.getValues("metadata.title");
-    const customDescription = form.getValues("metadata.description");
-    const customImage = form.getValues("metadata.image");
+    const slug = slugifyLinkName(sourceText);
+    form.setValue("alias", slug, { shouldValidate: true, shouldDirty: true });
+    toast.success("Alias auto-generated from name.");
+  };
 
-    let currentMetadata = metaData;
-
-    // Only fetch if we don't have any metadata yet (custom or fetched)
-    if (
-      !currentMetadata.title &&
-      !currentMetadata.description &&
-      !customTitle &&
-      !customDescription
-    ) {
-      try {
-        const fetchedMetadata = await fetchMetadataInfo(url);
-        currentMetadata = {
-          title: customTitle || fetchedMetadata.title,
-          description: customDescription || fetchedMetadata.description,
-          image: customImage || fetchedMetadata.image,
-          favicon: fetchedMetadata.favicon,
-        };
-        setMetaData(currentMetadata);
-      } catch {
-        toast.error("Failed to fetch metadata. Please try again.");
-        return;
-      }
-    } else {
-      // Use custom values if available
-      currentMetadata = {
-        ...currentMetadata,
-        title: customTitle || currentMetadata.title,
-        description: customDescription || currentMetadata.description,
-        image: customImage || currentMetadata.image,
-      };
-    }
-
-    await generateAliases(currentMetadata);
+  const handleRandomGenerate = () => {
+    const slug = generateRandomSlug(7);
+    form.setValue("alias", slug, { shouldValidate: true, shouldDirty: true });
+    toast.success("Random alias generated.");
   };
 
   const formUpdateMutation = api.link.create.useMutation({
@@ -292,24 +237,30 @@ export default function CreateLinkPage() {
         .map((tag) => tag.name)
     : [];
 
+  const currentAlias = form.watch("alias");
+  const previewShortUrl = useMemo(() => {
+    const alias = currentAlias?.trim() || "your-link";
+    return shortLinkUrl(selectedDomain, alias);
+  }, [selectedDomain, currentAlias]);
+
   const [debouncedQrState] = useDebounce(qrState, 100);
   const regenerateQRCode = useCallback(async () => {
     if (!canvasRef.current) return;
     try {
       await renderQrInto(canvasRef.current, {
         ...qrState,
-        text: destinationURL || "https://clickpath.analytai.in",
+        text: previewShortUrl,
       });
     } catch (err) {
       console.error("Failed to generate QR code preview:", err);
     }
-  }, [qrState, destinationURL]);
+  }, [qrState, previewShortUrl]);
 
   useEffect(() => {
     if (activeTab === "qr") {
       void regenerateQRCode();
     }
-  }, [debouncedQrState, destinationURL, activeTab, regenerateQRCode]);
+  }, [debouncedQrState, previewShortUrl, activeTab, regenerateQRCode]);
 
   const updateQrState = useCallback((updates: Partial<QRCodeGeneratorState>) => {
     setQrState((prev) => ({ ...prev, ...updates }));
@@ -373,9 +324,12 @@ export default function CreateLinkPage() {
       if (result?.qrCodeId) {
         try {
           const finalCanvas = document.createElement("canvas");
+          const targetQrUrl =
+            result.shortUrl ||
+            shortLinkUrl(result.domain || selectedDomain, result.alias || values.alias || "link");
           await generateQRCode(finalCanvas, {
             ...qrState,
-            text: values.url,
+            text: targetQrUrl,
             scale: 20,
           });
           const qrCodeBase64 = finalCanvas.toDataURL("image/png", 1.0);
@@ -389,7 +343,9 @@ export default function CreateLinkPage() {
         }
       }
 
-      toast.success(isQrCodeOnlyParam ? "QR Code created successfully" : "Link created successfully");
+      toast.success(
+        isQrCodeOnlyParam ? "QR Code created successfully" : "Link created successfully",
+      );
       router.push("/dashboard");
     } catch (err) {
       // Error handled by mutation onError
@@ -413,12 +369,6 @@ export default function CreateLinkPage() {
       });
     }
   }
-
-  useEffect(() => {
-    if (customDomainsQuery.data) {
-      setUserDomains(customDomainsQuery.data);
-    }
-  }, [customDomainsQuery.data]);
 
   // Fetch platform-default metadata on initial load
   useEffect(() => {
@@ -456,10 +406,6 @@ export default function CreateLinkPage() {
         return;
       }
 
-      // Clear previous alias suggestions when URL changes
-      setGeneratedAliases([]);
-      form.setValue("alias", "");
-
       // Get custom metadata from form - these take priority over fetched metadata
       const customTitle = form.getValues("metadata.title");
       const customDescription = form.getValues("metadata.description");
@@ -475,14 +421,6 @@ export default function CreateLinkPage() {
           image: customImage || fetchedMetadata.image,
           favicon: fetchedMetadata.favicon,
         }));
-
-        if ((userSubscription?.data?.plan ?? "free") !== "free") {
-          generateAliasMutation.mutate({
-            url: debouncedUrl,
-            title: customTitle || fetchedMetadata.title,
-            description: customDescription || fetchedMetadata.description,
-          });
-        }
       } catch (error) {
         // User-typing races and arbitrary destination URLs routinely fail
         // this fetch — not actionable, so warn-level avoids polluting error
@@ -575,11 +513,11 @@ export default function CreateLinkPage() {
           Create a new link to share with your audience.
         </p>
         <Form {...form}>
-          <form 
+          <form
             onSubmit={form.handleSubmit(onSubmit, (errors) => {
               toast.error("Please check the form for errors before saving.");
               log.error({ errors }, "Form validation failed in CreateLinkPage");
-            })} 
+            })}
             className="mt-5 space-y-5"
           >
             <div className="space-y-4 rounded-lg border border-neutral-200 dark:border-border p-4">
@@ -641,11 +579,17 @@ export default function CreateLinkPage() {
                         <Select
                           value={selectedDomain}
                           onValueChange={(value) => {
-                            form.setValue("domain", value);
+                            setHasUserSelectedDomain(true);
+                            form.setValue("domain", value, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
                           }}
                         >
                           <SelectTrigger className="h-full w-max shrink-0 gap-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-500 shadow-none ring-0 hover:text-neutral-700 focus:ring-0">
-                            <SelectValue placeholder={DEFAULT_PLATFORM_DOMAIN} />
+                            <SelectValue placeholder={selectedDomain || DEFAULT_PLATFORM_DOMAIN}>
+                              {selectedDomain}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
@@ -660,80 +604,47 @@ export default function CreateLinkPage() {
                                     {domain.domain}
                                   </SelectItem>
                                 ))}
+                              {selectedDomain &&
+                                !isPlatformDomain(selectedDomain) &&
+                                !userDomains.some((d) => d.domain === selectedDomain) && (
+                                  <SelectItem key={selectedDomain} value={selectedDomain}>
+                                    {selectedDomain}
+                                  </SelectItem>
+                                )}
                             </SelectGroup>
                           </SelectContent>
                         </Select>
                         <div className="h-4 w-px bg-neutral-200 dark:bg-border" />
                         <input
                           placeholder="short-link"
+                          maxLength={20}
                           className="h-full flex-1 border-0 bg-transparent px-3 text-[13px] font-medium text-neutral-900 dark:text-foreground placeholder:text-neutral-400 focus:outline-none"
                           {...field}
                         />
-                        <div className="flex h-full items-center border-l border-neutral-200 dark:border-border px-2">
-                          {generateAliasMutation.isLoading ? (
-                            <IconLoader2
-                              size={16}
-                              stroke={1.5}
-                              className="animate-spin text-neutral-400"
-                            />
-                          ) : generatedAliases.length > 0 ? (
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() => cycleAlias("up")}
-                                aria-label="Previous alias suggestion"
-                                className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-600"
-                              >
-                                <IconChevronUp size={14} stroke={1.5} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => cycleAlias("down")}
-                                aria-label="Next alias suggestion"
-                                className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-600"
-                              >
-                                <IconChevronDown size={14} stroke={1.5} />
-                              </button>
-                            </div>
-                          ) : !isProUser ? (
-                            <UpgradeToProAIButtonTooltip />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={handleRegenerateClick}
-                              aria-label="Generate alias suggestions"
-                              className="rounded p-1 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-accent hover:text-neutral-600"
-                            >
-                              <IconSparkles size={16} stroke={1.5} />
-                            </button>
-                          )}
+                        <div className="flex h-full items-center gap-1 border-l border-neutral-200 dark:border-border px-1.5">
+                          <button
+                            type="button"
+                            onClick={handleAutoGenerate}
+                            aria-label="Auto-generate alias from link name"
+                            title="Auto-generate slug from name"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-accent dark:hover:text-foreground"
+                          >
+                            <IconWand size={13} stroke={1.5} />
+                            <span>Auto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRandomGenerate}
+                            aria-label="Generate random alias"
+                            title="Generate random slug"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-accent dark:hover:text-foreground"
+                          >
+                            <IconDice size={13} stroke={1.5} />
+                            <span>Random</span>
+                          </button>
                         </div>
                       </div>
                     </FormControl>
-                    <AnimatePresence>
-                      {generatedAliases.length > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <FormDescription className="flex justify-between text-[12px] text-neutral-400">
-                            <motion.span key={currentAliasIndex}>
-                              Suggestion {currentAliasIndex + 1} of {generatedAliases.length}
-                            </motion.span>
-                            <motion.span
-                              className="cursor-pointer text-neutral-500 hover:text-neutral-700"
-                              onClick={handleRegenerateClick}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Regenerate
-                            </motion.span>
-                          </FormDescription>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1325,16 +1236,24 @@ export default function CreateLinkPage() {
                 Live preview of your customized QR code
               </p>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-border bg-white dark:bg-card p-6 shadow-sm">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-border bg-white dark:bg-card p-5 shadow-sm">
               <div className="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm">
                 <canvas ref={canvasRef} className="max-w-[240px] max-h-[240px] w-full h-full" />
               </div>
-              <p className="mt-4 text-center text-xs text-neutral-400">
-                Scans to:{" "}
-                <span className="font-medium text-neutral-600 dark:text-neutral-300 break-all">
-                  {destinationURL || "https://clickpath.analytai.in"}
-                </span>
-              </p>
+              <div className="mt-4 w-full space-y-2 border-t border-neutral-100 dark:border-border/60 pt-3 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-neutral-400 shrink-0">QR Scans to:</span>
+                  <span className="font-mono font-medium text-blue-600 dark:text-blue-400 break-all text-right">
+                    {previewShortUrl}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-neutral-400 shrink-0">Redirects to:</span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300 break-all text-right truncate max-w-[220px]">
+                    {destinationURL || "Destination URL"}
+                  </span>
+                </div>
+              </div>
             </div>
             {presets && presets.length > 0 && (
               <div className="mt-2 space-y-2">

@@ -7,7 +7,7 @@ import { releaseImage } from "@/server/lib/assets";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import { insertHiddenTrackingLink, prepareHiddenTrackingLink } from "@/server/lib/tracking-link";
-import { workspaceOwnership, workspaceFilter } from "@/server/lib/workspace";
+import { workspaceFilter, workspaceOwnership } from "@/server/lib/workspace";
 
 import { updateLink } from "../link/link.service";
 
@@ -78,7 +78,7 @@ export const createQrCode = userFacing(
           teamId: ownership.teamId,
           title: input.title,
           color: input.selectedColor,
-          content: input.content,
+          content: prepared.trackingUrl,
           cornerStyle: input.cornerStyle as any,
           patternStyle: input.patternStyle as any,
           linkId: hiddenLinkId,
@@ -315,9 +315,8 @@ export const updateQrCode = userFacing(
       await assertUrlSafe(input.url);
     }
 
-    const qrUpdates: { title?: string; content?: string } = {};
+    const qrUpdates: { title?: string } = {};
     if (input.title !== undefined) qrUpdates.title = input.title;
-    if (input.url !== undefined) qrUpdates.content = input.url;
 
     // Apply the link update first so a failure there leaves both the live
     // redirect target and the QR metadata at their prior values. assertUrlSafe

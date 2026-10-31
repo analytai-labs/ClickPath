@@ -153,7 +153,9 @@ export async function getWorkspaceDefaultDomain(ctx: WorkspaceTRPCContext): Prom
       return cachedDomain;
     }
 
-    // Get team's default domain from the team record
+    // Get team's default domain from the team record. A team without one gets the
+    // platform domain — never the member's personal default, which is scoped to
+    // their personal workspace and cannot be used for the team's links.
     const teamRecord = await prisma.team.findFirst({
       where: { id: ctx.workspace.teamId },
     });
@@ -166,6 +168,19 @@ export async function getWorkspaceDefaultDomain(ctx: WorkspaceTRPCContext): Prom
 
   // Personal workspace: use user's default domain
   return getUserDefaultDomain(ctx);
+}
+
+/**
+ * Where-clause for the custom domains a workspace may use: a team workspace uses
+ * that team's domains, a personal workspace the user's own (`teamId: null`).
+ * Deliberately not widened to "any team the user belongs to" — a domain is
+ * managed by its workspace, so links created on it elsewhere would resolve on
+ * that team's domain while being invisible to its owners.
+ */
+export function workspaceDomainScope(workspace: WorkspaceTRPCContext["workspace"]) {
+  return workspace.type === "team"
+    ? { teamId: workspace.teamId }
+    : { userId: workspace.userId, teamId: null };
 }
 
 /**
@@ -185,9 +200,7 @@ export async function assertDomainAllowed(
     where: {
       domain: normalized,
       status: "active",
-      ...(ctx.workspace.type === "team"
-        ? { teamId: ctx.workspace.teamId }
-        : { userId: ctx.workspace.userId, teamId: null }),
+      ...workspaceDomainScope(ctx.workspace),
     },
   });
 

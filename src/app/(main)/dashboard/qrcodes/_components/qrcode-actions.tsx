@@ -27,10 +27,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { POSTHOG_EVENTS, trackEvent } from "@/lib/analytics/events";
+import { DOWNLOAD_FORMATS, type DownloadFormat, downloadImageSrc } from "@/lib/qr-generator/export";
 import { api } from "@/trpc/react";
 
 import { revalidateRoute } from "../../revalidate-homepage";
@@ -75,18 +80,22 @@ export function QRCodeActions({ qr }: QRCodeActionsProps) {
     setOpenEditDrawer(true);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async (format: DownloadFormat) => {
     if (!qr.qrCode) {
       toast.error("QR code image is not available for download.");
       return;
     }
-    const a = document.createElement("a");
-    a.href = qr.qrCode;
-    a.download = qr.title ?? "qr-code";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    trackEvent(POSTHOG_EVENTS.QR_CODE_DOWNLOADED);
+
+    try {
+      await downloadImageSrc(qr.qrCode, qr.title ?? "qr-code", format);
+      trackEvent(POSTHOG_EVENTS.QR_CODE_DOWNLOADED);
+    } catch {
+      toast.error(
+        format === "jpeg"
+          ? "Couldn't convert this QR image to JPEG. Download the PNG instead."
+          : "Failed to download QR code.",
+      );
+    }
   };
 
   const handleToggleStatus = () => {
@@ -127,17 +136,29 @@ export function QRCodeActions({ qr }: QRCodeActionsProps) {
             />
             Edit QR code
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleDownload}
-            className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
-          >
-            <IconDownload
-              size={15}
-              stroke={1.5}
-              className="mr-2 text-neutral-400 dark:text-neutral-500"
-            />
-            Download
-          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground">
+              <IconDownload
+                size={15}
+                stroke={1.5}
+                className="mr-2 text-neutral-400 dark:text-neutral-500"
+              />
+              Download
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="w-36">
+                {DOWNLOAD_FORMATS.map(({ format, label }) => (
+                  <DropdownMenuItem
+                    key={format}
+                    onClick={() => handleDownload(format)}
+                    className="rounded-md px-2 py-1.5 text-[13px] text-neutral-600 dark:text-neutral-400 focus:bg-neutral-50 dark:focus:bg-accent/50 focus:text-neutral-900 dark:focus:text-foreground"
+                  >
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
 
           <DropdownMenuSeparator className="my-1 bg-neutral-100 dark:bg-muted" />
 
