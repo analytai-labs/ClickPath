@@ -478,7 +478,7 @@ export const deleteQrPreset = userFacing(
     // preset is only one of the places that may point at it.
     if (preset.logoImage) {
       try {
-        await releaseImage(ctx, preset.logoImage, { except: { kind: "qr-preset", id } });
+        await releaseImage(ctx, preset.logoImage, { except: [{ kind: "qr-preset", id }] });
       } catch (error) {
         log.error(
           { err: error, presetId: id, action: "delete-preset" },
@@ -528,7 +528,7 @@ export const updateQrPreset = userFacing(
       if (preset.logoImage) {
         try {
           await releaseImage(ctx, preset.logoImage, {
-            except: { kind: "qr-preset", id: input.id },
+            except: [{ kind: "qr-preset", id: input.id }],
           });
         } catch (error) {
           log.error(
@@ -552,7 +552,7 @@ export const updateQrPreset = userFacing(
         if (preset.logoImage && preset.logoImage !== logoImageUrl) {
           try {
             await releaseImage(ctx, preset.logoImage, {
-              except: { kind: "qr-preset", id: input.id },
+              except: [{ kind: "qr-preset", id: input.id }],
             });
           } catch (error) {
             log.error(

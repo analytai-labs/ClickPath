@@ -183,8 +183,13 @@ async function resolveImageUpdate(
   next: string | null | undefined,
   previous: string | null,
 ): Promise<{ value: string | null; previousToDelete: string | null }> {
+  // A fresh key per upload, not one per page: a duplicated page shares its
+  // source's image URLs, so overwriting `<page>.png` in place would silently
+  // change the copy too. The old object is released (and kept while anything
+  // still uses it) by the caller.
+  const uploadId = `${resourceId}-${Date.now().toString(36)}`;
   const value = next
-    ? ((await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next)
+    ? ((await uploadImage(ctx, { image: next, resourceId: uploadId, imageType })) ?? next)
     : null;
   return { value, previousToDelete: previous && previous !== value ? previous : null };
 }
@@ -459,14 +464,27 @@ export async function duplicateTemplatePage(
         })
       : [];
 
+  // The copy is held to the plan as it is now, like `update` and `addBlock`:
+  // a workspace that downgraded cannot mint new pages with paid-only settings.
+  if (source.removeBranding && !canRemoveBioBranding(ctx.workspace.plan)) {
+    throw forbidden("Removing ClickPath branding is available on Pro and Ultra plans.");
+  }
+  const theme = normalizeTheme(ctx, definition, source.theme as TemplatePageTheme | null);
+  for (const block of blocks) {
+    assertSchedulingAllowed(ctx, block.scheduledAt, block.scheduledUntil);
+  }
+
   // Prepare every tracking link before the transaction (it validates URLs and
-  // domains), and check the link quota once for all of them.
+  // domains), and check the link quota once for all of them — only when the
+  // copy creates links at all, since create itself has no link quota.
   const linkBlocks = blocks.filter((b) => b.type === "link" && b.url);
-  const { currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
-  if (limit !== undefined && currentCount + linkBlocks.length > limit) {
-    throw forbidden(
-      `This page has ${linkBlocks.length} link blocks, which would exceed your monthly link limit.`,
-    );
+  if (linkBlocks.length > 0) {
+    const { currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
+    if (limit !== undefined && currentCount + linkBlocks.length > limit) {
+      throw forbidden(
+        `This page has ${linkBlocks.length} link blocks, which would exceed your monthly link limit.`,
+      );
+    }
   }
   const preparedLinks = new Map<number, Awaited<ReturnType<typeof prepareHiddenTrackingLink>>>();
   for (const [i, block] of linkBlocks.entries()) {
@@ -491,7 +509,7 @@ export async function duplicateTemplatePage(
           title: source.title,
           description: source.description,
           avatarUrl: source.avatarUrl,
-          theme: source.theme ?? undefined,
+          theme,
           socialImageUrl: source.socialImageUrl,
           seoTitle: source.seoTitle,
           seoDescription: source.seoDescription,

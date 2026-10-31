@@ -824,7 +824,7 @@ export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput)
   const metadata = linkToDelete.metadata as { image?: string } | null;
   if (metadata?.image) {
     try {
-      await releaseImage(ctx, metadata.image, { except: { kind: "link", id: input.id } });
+      await releaseImage(ctx, metadata.image, { except: [{ kind: "link", id: input.id }] });
     } catch (error) {
       log.error({ err: error, linkId: input.id }, "failed to release OG image");
     }
@@ -885,11 +885,13 @@ export const bulkDeleteLinks = async (ctx: WorkspaceTRPCContext, linkIds: number
   const validLinkIds = linksToDelete.map((l) => l.id);
 
   // Release OG images before removing links; library assets are left alone.
+  const batchRefs = validLinkIds.map((id) => ({ kind: "link" as const, id }));
   for (const l of linksToDelete) {
     const metadata = l.metadata as { image?: string } | null;
     if (metadata?.image) {
       try {
-        await releaseImage(ctx, metadata.image, { except: { kind: "link", id: l.id } });
+        // Every link in the batch is going, so none of them keeps the image.
+        await releaseImage(ctx, metadata.image, { except: batchRefs });
       } catch (error) {
         log.error({ err: error, linkId: l.id }, "failed to release OG image for link");
       }

@@ -72,7 +72,23 @@ describe("releaseImage", () => {
 
   test("a caller releasing before its own delete is not counted as a user", async () => {
     linksWithImage = [{ id: 5, alias: "spring" }];
-    await releaseImage(ctx, IMAGE, { except: { kind: "link", id: 5 } });
+    await releaseImage(ctx, IMAGE, { except: [{ kind: "link", id: 5 }] });
+    expect(deleted).toEqual(["bio-og/1.png"]);
+  });
+
+  test("links deleted together do not keep each other's image alive", async () => {
+    linksWithImage = [
+      { id: 5, alias: "spring" },
+      { id: 6, alias: "summer" },
+    ];
+    await releaseImage(ctx, IMAGE, { except: [{ kind: "link", id: 5 }] });
+    expect(deleted).toEqual([]);
+    await releaseImage(ctx, IMAGE, {
+      except: [
+        { kind: "link", id: 5 },
+        { kind: "link", id: 6 },
+      ],
+    });
     expect(deleted).toEqual(["bio-og/1.png"]);
   });
 

@@ -80,19 +80,21 @@ export async function uploadAndRecordAsset(
  * URL. Nor is an image that anything in the workspace still references: a
  * duplicated template page shares its source's image URLs, so deleting or
  * editing one copy must not remove the bytes the other still shows. A caller
- * that releases before its own write names itself in `except` so it is not
- * counted. Unreferenced untracked legacy URLs are deleted as before.
+ * that releases before its own delete names the rows it is deleting in
+ * `except` so they are not counted. Unreferenced untracked legacy URLs are deleted as before.
  */
 export async function releaseImage(
   ctx: WorkspaceTRPCContext,
   url: string,
-  options: { except?: Pick<AssetUsageRef, "kind" | "id"> } = {},
+  options: { except?: readonly Pick<AssetUsageRef, "kind" | "id">[] } = {},
 ): Promise<void> {
   if (!isManagedImageUrl(url)) return;
 
-  const { except } = options;
+  const except = options.except ?? [];
   const usage = await findAssetUsage(ctx, url);
-  if (usage.some((ref) => !(except && ref.kind === except.kind && ref.id === except.id))) return;
+  const isExcepted = (ref: AssetUsageRef) =>
+    except.some((e) => e.kind === ref.kind && e.id === ref.id);
+  if (usage.some((ref) => !isExcepted(ref))) return;
 
   const asset = await ctx.prisma.asset.findFirst({
     where: { url, ...workspaceFilter(ctx.workspace) },

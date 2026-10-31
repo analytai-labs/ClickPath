@@ -75,7 +75,9 @@ export async function downloadImageSrc(src: string, filename: string, format: Do
       return;
     }
     try {
-      const response = await fetch(src);
+      // Bypass the HTTP cache: the list renders the same URL in a plain <img>,
+      // and a cached copy of that response carries no CORS headers.
+      const response = await fetch(src, { cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       downloadBlob(await response.blob(), `${filename}.png`);
     } catch {
@@ -87,13 +89,19 @@ export async function downloadImageSrc(src: string, filename: string, format: Do
   }
 
   const img = new Image();
+  let imageSrc = src;
   if (!src.startsWith("data:")) {
     img.crossOrigin = "anonymous";
+    // A distinct URL so the browser cannot reuse the cached non-CORS response
+    // from the list's <img>, which would taint the canvas.
+    const url = new URL(src, window.location.href);
+    url.searchParams.set("cors", "1");
+    imageSrc = url.toString();
   }
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => reject(new Error("Could not load the QR image"));
-    img.src = src;
+    img.src = imageSrc;
   });
 
   const canvas = document.createElement("canvas");

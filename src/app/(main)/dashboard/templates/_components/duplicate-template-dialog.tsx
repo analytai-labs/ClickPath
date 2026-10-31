@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -97,12 +97,16 @@ export function DuplicateTemplateDialog({
     normalizedSlug.length <= MAX_SLUG_LENGTH &&
     !duplicate.isLoading;
 
+  // Start from the source's current domain and path every time the dialog
+  // opens — the source may have moved since this component mounted.
+  useEffect(() => {
+    if (!open) return;
+    setSlug("");
+    setShareDomain(source.shareDomain ?? "");
+    setPathPrefix(toPathPrefix(source.pathPrefix));
+  }, [open, source.shareDomain, source.pathPrefix]);
+
   function handleOpenChange(next: boolean) {
-    if (!next) {
-      setSlug("");
-      setShareDomain(source.shareDomain ?? "");
-      setPathPrefix(toPathPrefix(source.pathPrefix));
-    }
     onOpenChange(next);
   }
 

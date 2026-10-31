@@ -190,7 +190,14 @@ export async function getDomainDeletionImpact(ctx: WorkspaceTRPCContext, domainI
 
   const [links, qrCodeLinks, pageLinkBlocks, pages] = await Promise.all([
     ctx.prisma.link.count({
-      where: { ...onDomain, isQrCode: { not: true }, isBioLink: { not: true } },
+      // The flags are nullable, and `not: true` would skip NULL rows in SQL.
+      where: {
+        ...onDomain,
+        AND: [
+          { OR: [{ isQrCode: false }, { isQrCode: null }] },
+          { OR: [{ isBioLink: false }, { isBioLink: null }] },
+        ],
+      },
     }),
     ctx.prisma.link.count({ where: { ...onDomain, isQrCode: true } }),
     ctx.prisma.link.count({ where: { ...onDomain, isBioLink: true } }),
