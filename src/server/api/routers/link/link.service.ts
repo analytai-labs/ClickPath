@@ -824,7 +824,7 @@ export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput)
   const metadata = linkToDelete.metadata as { image?: string } | null;
   if (metadata?.image) {
     try {
-      await releaseImage(ctx, metadata.image);
+      await releaseImage(ctx, metadata.image, { except: { kind: "link", id: input.id } });
     } catch (error) {
       log.error({ err: error, linkId: input.id }, "failed to release OG image");
     }
@@ -889,7 +889,7 @@ export const bulkDeleteLinks = async (ctx: WorkspaceTRPCContext, linkIds: number
     const metadata = l.metadata as { image?: string } | null;
     if (metadata?.image) {
       try {
-        await releaseImage(ctx, metadata.image);
+        await releaseImage(ctx, metadata.image, { except: { kind: "link", id: l.id } });
       } catch (error) {
         log.error({ err: error, linkId: l.id }, "failed to release OG image for link");
       }

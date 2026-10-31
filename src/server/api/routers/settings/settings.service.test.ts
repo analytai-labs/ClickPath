@@ -44,14 +44,16 @@ const fakePrisma = {
   },
 };
 
-const fakeRedis = {
+mock.module("@/server/db", () => ({ prisma: fakePrisma }));
+
+// The Redis client connects lazily; stub the calls instead of mocking the module,
+// so other importers keep the module's remaining exports.
+const { redis } = await import("@/lib/core/cache");
+Object.assign(redis, {
   get: async () => null,
   set: async () => "OK",
   del: async () => 1,
-};
-
-mock.module("@/server/db", () => ({ prisma: fakePrisma }));
-mock.module("@/lib/core/cache", () => ({ redis: fakeRedis }));
+});
 
 const { assertDomainAllowed, getWorkspaceDefaultDomain } = await import("../link/utils");
 const { getSiteSettings, updateSiteSettings } = await import("./settings.service");

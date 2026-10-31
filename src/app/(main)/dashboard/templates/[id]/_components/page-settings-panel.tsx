@@ -18,11 +18,17 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getAppBaseDomain } from "@/lib/constants/domains";
-import { templatePageDisplayUrl } from "@/lib/templates/page-url";
+import {
+  DEFAULT_TEMPLATE_PATH_PREFIX,
+  type TemplatePathPrefix,
+  templatePageDisplayUrl,
+  templatePagePathPrefix,
+} from "@/lib/templates/page-url";
 import { getTemplateDefinition } from "@/lib/templates/registry";
 import { resolveShareMetadata } from "@/lib/templates/share-metadata";
 import { api } from "@/trpc/react";
 
+import { PathPrefixSelect, toPathPrefix } from "../../_components/path-prefix-select";
 import { EditorCard, Field, SettingRow } from "./editor-ui";
 
 import type { Plan } from "@/lib/billing/plans";
@@ -44,6 +50,8 @@ export type SettingsDraft = {
   autoSeoDescription: boolean;
   /** Domain the public URL is built from. "" = platform domain. */
   shareDomain: string;
+  /** First path segment on that domain; always `p` on the platform domain. */
+  pathPrefix: TemplatePathPrefix;
   /** Whether that domain's root should also serve this page. */
   serveAtRoot: boolean;
   removeBranding: boolean;
@@ -62,6 +70,7 @@ function toDraft(page: TemplatePageData): SettingsDraft {
     autoSeoTitle: !page.seoTitle,
     autoSeoDescription: !page.seoDescription,
     shareDomain: page.shareDomain ?? "",
+    pathPrefix: toPathPrefix(page.pathPrefix),
     serveAtRoot: Boolean(page.customDomain),
     removeBranding: page.removeBranding ?? false,
   };
@@ -104,6 +113,7 @@ export function usePageSettings(page: TemplatePageData, onSaved: () => void) {
       seoTitle: draft.autoSeoTitle ? null : draft.seoTitle.trim() || null,
       seoDescription: draft.autoSeoDescription ? null : draft.seoDescription.trim() || null,
       shareDomain: draft.shareDomain.trim() || null,
+      pathPrefix: draft.shareDomain.trim() ? draft.pathPrefix : DEFAULT_TEMPLATE_PATH_PREFIX,
       // The root binding only exists on the page's own public domain.
       customDomain: draft.serveAtRoot ? draft.shareDomain.trim() || null : null,
       removeBranding: draft.removeBranding,
@@ -164,7 +174,7 @@ export function PageSettingsPanel({
           >
             <div className="flex h-9 items-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm dark:border-border dark:bg-muted/50 dark:shadow-none">
               <span className="flex h-full select-none items-center border-r border-gray-200 bg-gray-100 px-3 text-[13px] text-gray-500 dark:border-border dark:bg-muted dark:text-gray-400">
-                /p/
+                /{templatePagePathPrefix({ ...draft, slug: page.slug })}/
               </span>
               <span className="flex h-full flex-1 items-center px-3 text-sm font-medium text-gray-500 dark:text-gray-400">
                 {page.slug}
@@ -279,7 +289,7 @@ export function PageSettingsPanel({
             label="Domain"
             hint={
               isPaid && domainOptions.length > 0
-                ? "Every verified domain in this workspace serves all of its pages at /p/<handle>, so your pages and printed QR codes don't depend on the ClickPath domain."
+                ? "Every verified domain in this workspace serves all of its pages at their path, so your pages and printed QR codes don't depend on the ClickPath domain."
                 : undefined
             }
           >
@@ -305,8 +315,10 @@ export function PageSettingsPanel({
                 onValueChange={(v) =>
                   patch({
                     shareDomain: v === NO_DOMAIN ? "" : v,
-                    // A root binding cannot outlive the domain it belongs to.
+                    // A root binding cannot outlive the domain it belongs to,
+                    // and the platform domain only serves /p/<handle>.
                     serveAtRoot: v === NO_DOMAIN ? false : draft.serveAtRoot,
+                    pathPrefix: v === NO_DOMAIN ? DEFAULT_TEMPLATE_PATH_PREFIX : draft.pathPrefix,
                   })
                 }
               >
@@ -325,6 +337,25 @@ export function PageSettingsPanel({
             )}
           </Field>
 
+          {isPaid && domainOptions.length > 0 && (
+            <Field
+              label="Path"
+              htmlFor="settings-path-prefix"
+              hint={
+                draft.shareDomain
+                  ? "/productdetails/<handle> matches product QR codes printed before this domain moved to ClickPath. Changing the path changes the page's URL — codes already printed keep the old one."
+                  : "The ClickPath domain always uses /p/<handle>. Pick a custom domain to choose another path."
+              }
+            >
+              <PathPrefixSelect
+                id="settings-path-prefix"
+                value={draft.pathPrefix}
+                onChange={(pathPrefix) => patch({ pathPrefix })}
+                hasCustomDomain={Boolean(draft.shareDomain)}
+              />
+            </Field>
+          )}
+
           <div className="rounded-lg bg-neutral-50 px-3 py-2.5 dark:bg-muted/50">
             <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
               Public URL
@@ -334,6 +365,7 @@ export function PageSettingsPanel({
                 slug: draft.slug || "your-handle",
                 shareDomain: draft.shareDomain || null,
                 customDomain: draft.serveAtRoot ? draft.shareDomain || null : null,
+                pathPrefix: draft.pathPrefix,
               })}
             </p>
           </div>

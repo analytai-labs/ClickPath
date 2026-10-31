@@ -14,6 +14,11 @@ export const templatePageRouter = createTRPCRouter({
     .input(inputs.createTemplatePageSchema)
     .mutation(({ ctx, input }) => services.createTemplatePage(ctx, input)),
 
+  /** Copy a page (content, blocks, theme, SEO, QR design) under a new slug, unpublished. */
+  duplicate: workspaceProcedure
+    .input(inputs.duplicateTemplatePageSchema)
+    .mutation(({ ctx, input }) => services.duplicateTemplatePage(ctx, input)),
+
   /** Page-level settings — handle, SEO, domain, branding. Every template. */
   update: workspaceProcedure
     .input(inputs.updateTemplatePageSchema)
@@ -67,10 +72,10 @@ export const templatePageRouter = createTRPCRouter({
     .input(inputs.publicDomainSchema)
     .query(({ ctx, input }) => services.getPublicTemplatePageByDomain(ctx, input.domain)),
 
-  /** /p/<slug> requested from a customer domain — the host must be authorized. */
+  /** /<prefix>/<slug> requested from a customer domain — the host must be authorized. */
   getBySlugForHost: publicProcedure
     .input(inputs.publicSlugForHostSchema)
     .query(({ ctx, input }) =>
-      services.getPublicTemplatePageBySlugForHost(ctx, input.slug, input.host),
+      services.getPublicTemplatePageBySlugForHost(ctx, input.slug, input.host, input.prefix),
     ),
 });

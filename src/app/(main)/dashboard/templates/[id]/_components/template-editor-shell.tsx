@@ -3,6 +3,7 @@
 import {
   IconArrowLeft,
   IconChartBar,
+  IconCopy,
   IconExternalLink,
   IconPalette,
   IconPencil,
@@ -25,6 +26,7 @@ import {
 import { getTemplateDefinition } from "@/lib/templates/registry";
 import { api } from "@/trpc/react";
 
+import { DuplicateTemplateDialog } from "../../_components/duplicate-template-dialog";
 import { AnalyticsPanel } from "./analytics-panel";
 import { CopyUrlButton } from "./copy-url-button";
 import { PageSettingsPanel, usePageSettings } from "./page-settings-panel";
@@ -75,6 +77,7 @@ export function TemplateEditorShell({
   const previewPath = templatePagePreviewPath(page);
 
   const [tab, setTab] = useState<TabId>("content");
+  const [duplicating, setDuplicating] = useState(false);
 
   // The shell owns the state for the tabs it renders itself, so an unsaved QR
   // design or half-filled settings form survives switching tabs — and so the
@@ -131,6 +134,19 @@ export function TemplateEditorShell({
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setDuplicating(true)}
+            className="inline-flex items-center gap-1 text-[13px] text-neutral-500 hover:text-neutral-800 dark:hover:text-foreground"
+          >
+            <IconCopy size={14} /> Duplicate
+          </button>
+          <DuplicateTemplateDialog
+            source={page}
+            open={duplicating}
+            onOpenChange={setDuplicating}
+            hasUnsavedChanges={Boolean(save?.dirty)}
+          />
           {page.isPublished && (
             <a
               href={previewPath}

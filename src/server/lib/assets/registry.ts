@@ -7,6 +7,8 @@ import {
 } from "@/server/lib/storage";
 import { workspaceFilter, workspaceOwnership } from "@/server/lib/workspace";
 
+import { type AssetUsageRef, findAssetUsage } from "./usage";
+
 import type { WorkspaceTRPCContext } from "@/server/api/trpc";
 import type { UploadedImage } from "@/server/lib/storage";
 import type { Asset } from "@prisma/client";
@@ -75,10 +77,22 @@ export async function uploadAndRecordAsset(
  * Removes the R2 object only when nothing in the library stands behind it — a
  * saved asset is deliberately kept, because other resources (and QR codes that
  * are already printed and still re-rendered on demand) may point at the same
- * URL. Untracked legacy URLs keep the old behaviour and are deleted.
+ * URL. Nor is an image that anything in the workspace still references: a
+ * duplicated template page shares its source's image URLs, so deleting or
+ * editing one copy must not remove the bytes the other still shows. A caller
+ * that releases before its own write names itself in `except` so it is not
+ * counted. Unreferenced untracked legacy URLs are deleted as before.
  */
-export async function releaseImage(ctx: WorkspaceTRPCContext, url: string): Promise<void> {
+export async function releaseImage(
+  ctx: WorkspaceTRPCContext,
+  url: string,
+  options: { except?: Pick<AssetUsageRef, "kind" | "id"> } = {},
+): Promise<void> {
   if (!isManagedImageUrl(url)) return;
+
+  const { except } = options;
+  const usage = await findAssetUsage(ctx, url);
+  if (usage.some((ref) => !(except && ref.kind === except.kind && ref.id === except.id))) return;
 
   const asset = await ctx.prisma.asset.findFirst({
     where: { url, ...workspaceFilter(ctx.workspace) },
