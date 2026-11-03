@@ -781,9 +781,13 @@ model TemplatePage {
   seoTitle        String?      @db.VarChar(255)
   seoDescription  String?      @db.VarChar(500)
   /// Verified workspace domain the page's public URL is built from
-  /// (https://<shareDomain>/p/<slug>). Null falls back to the platform domain.
+  /// (https://<shareDomain>/<pathPrefix>/<slug>). Null falls back to the platform domain.
   /// Not unique: one domain serves every page in the workspace.
   shareDomain     String?      @db.VarChar(255)
+  /// First path segment of the page's URL on a custom share domain, from the
+  /// fixed list TEMPLATE_PATH_PREFIXES in src/lib/templates/page-url.ts. Anything
+  /// other than "p" requires a custom shareDomain; the platform serves /p/ only.
+  pathPrefix      String       @default("p") @db.VarChar(30)
   /// Optional extra binding: this domain's ROOT also serves this page. Unique,
   /// because a domain root can only show one page.
   customDomain    String?      @unique @db.VarChar(255)

@@ -17,6 +17,7 @@ const OG_SELECT = {
   templateData: true,
   shareDomain: true,
   customDomain: true,
+  pathPrefix: true,
 } as const;
 
 type Props = { params: Promise<{ slug: string }> };

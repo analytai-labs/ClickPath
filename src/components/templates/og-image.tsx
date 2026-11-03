@@ -28,6 +28,7 @@ export type TemplateOgPage = {
   templateData: Prisma.JsonValue;
   shareDomain: string | null;
   customDomain: string | null;
+  pathPrefix: string | null;
 } | null;
 
 /**
@@ -69,6 +70,7 @@ export function templateOgImageResponse(page: TemplateOgPage, slug: string): Ima
       slug: handle,
       shareDomain: page?.shareDomain ?? null,
       customDomain: page?.customDomain ?? null,
+      pathPrefix: page?.pathPrefix ?? null,
     });
   const isGradient = colors.background.startsWith("linear-gradient");
 

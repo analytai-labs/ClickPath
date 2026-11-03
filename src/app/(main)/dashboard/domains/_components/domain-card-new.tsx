@@ -55,6 +55,12 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
     { enabled: !!domain.domain },
   );
 
+  const impactQuery = api.customDomain.deletionImpact.useQuery(
+    { id: domain.id },
+    { enabled: deleteDialogOpen, refetchOnWindowFocus: false },
+  );
+  const impact = impactQuery.data;
+
   const deleteMutation = api.customDomain.delete.useMutation({
     onSuccess: async () => {
       toast.success("Domain deleted successfully");
@@ -186,10 +192,16 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <DomainDeletionImpact
+            isLoading={impactQuery.isLoading}
+            isError={impactQuery.isError}
+            impact={impact}
+          />
           <AlertDialogFooter>
             <AlertDialogCancel className="h-9 text-[13px]">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteMutation.mutate({ id: domain.id })}
+              disabled={!impact}
               className="h-9 bg-red-600 text-[13px] hover:bg-red-700"
             >
               {deleteMutation.isLoading ? "Deleting..." : "Delete"}
@@ -198,5 +210,65 @@ export function DomainCardNew({ domain, index }: DomainCardProps) {
         </AlertDialogContent>
       </AlertDialog>
     </motion.div>
+  );
+}
+
+type DeletionImpact = RouterOutputs["customDomain"]["deletionImpact"];
+
+function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** What deleting the domain takes with it — shown before the user confirms. */
+function DomainDeletionImpact({
+  isLoading,
+  isError,
+  impact,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  impact: DeletionImpact | undefined;
+}) {
+  if (isError) {
+    return (
+      <p className="text-[12px] text-red-600 dark:text-red-400">
+        Couldn't check what this domain is used by. Close this dialog and try again.
+      </p>
+    );
+  }
+  if (isLoading || !impact) {
+    return (
+      <p className="text-[12px] text-neutral-400 dark:text-neutral-500">
+        Checking what uses this domain…
+      </p>
+    );
+  }
+
+  const items = [
+    impact.links > 0 && `${plural(impact.links, "short link")} will be deleted`,
+    impact.qrCodeLinks > 0 &&
+      `${plural(impact.qrCodeLinks, "QR code")} on this domain will stop resolving`,
+    impact.pageLinkBlocks > 0 &&
+      `${plural(impact.pageLinkBlocks, "link block")} on template pages will be removed`,
+    impact.pages.length > 0 &&
+      `${plural(impact.pages.length, "template page")} will move back to the platform domain (/p/<slug>): ${impact.pages
+        .map((p) => p.title?.trim() || p.slug)
+        .join(", ")}`,
+  ].filter((item): item is string => Boolean(item));
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
+        No links or pages use this domain.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="list-disc space-y-1 rounded-lg border border-red-100 bg-red-50/60 py-2.5 pl-6 pr-3 text-[12px] text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   );
 }

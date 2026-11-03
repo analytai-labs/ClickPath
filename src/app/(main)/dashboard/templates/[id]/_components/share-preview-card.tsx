@@ -32,6 +32,7 @@ export function SharePreviewCard({
     slug: draft.slug || page.slug,
     shareDomain: draft.shareDomain || null,
     customDomain: draft.serveAtRoot ? draft.shareDomain || null : null,
+    pathPrefix: draft.pathPrefix,
   };
 
   const { title, description } = resolveShareMetadata({

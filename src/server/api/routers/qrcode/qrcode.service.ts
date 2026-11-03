@@ -7,7 +7,7 @@ import { releaseImage } from "@/server/lib/assets";
 import { assertUrlSafe } from "@/server/lib/phishing";
 import { deleteImage, uploadImage } from "@/server/lib/storage";
 import { insertHiddenTrackingLink, prepareHiddenTrackingLink } from "@/server/lib/tracking-link";
-import { workspaceOwnership, workspaceFilter } from "@/server/lib/workspace";
+import { workspaceFilter, workspaceOwnership } from "@/server/lib/workspace";
 
 import { updateLink } from "../link/link.service";
 
@@ -78,7 +78,7 @@ export const createQrCode = userFacing(
           teamId: ownership.teamId,
           title: input.title,
           color: input.selectedColor,
-          content: input.content,
+          content: prepared.trackingUrl,
           cornerStyle: input.cornerStyle as any,
           patternStyle: input.patternStyle as any,
           linkId: hiddenLinkId,
@@ -315,9 +315,8 @@ export const updateQrCode = userFacing(
       await assertUrlSafe(input.url);
     }
 
-    const qrUpdates: { title?: string; content?: string } = {};
+    const qrUpdates: { title?: string } = {};
     if (input.title !== undefined) qrUpdates.title = input.title;
-    if (input.url !== undefined) qrUpdates.content = input.url;
 
     // Apply the link update first so a failure there leaves both the live
     // redirect target and the QR metadata at their prior values. assertUrlSafe
@@ -479,7 +478,7 @@ export const deleteQrPreset = userFacing(
     // preset is only one of the places that may point at it.
     if (preset.logoImage) {
       try {
-        await releaseImage(ctx, preset.logoImage);
+        await releaseImage(ctx, preset.logoImage, { except: [{ kind: "qr-preset", id }] });
       } catch (error) {
         log.error(
           { err: error, presetId: id, action: "delete-preset" },
@@ -528,7 +527,9 @@ export const updateQrPreset = userFacing(
       logoImageUrl = null;
       if (preset.logoImage) {
         try {
-          await releaseImage(ctx, preset.logoImage);
+          await releaseImage(ctx, preset.logoImage, {
+            except: [{ kind: "qr-preset", id: input.id }],
+          });
         } catch (error) {
           log.error(
             { err: error, presetId: input.id, action: "remove-logo" },
@@ -550,7 +551,9 @@ export const updateQrPreset = userFacing(
         // Delete old logo from R2 if it's being replaced
         if (preset.logoImage && preset.logoImage !== logoImageUrl) {
           try {
-            await releaseImage(ctx, preset.logoImage);
+            await releaseImage(ctx, preset.logoImage, {
+              except: [{ kind: "qr-preset", id: input.id }],
+            });
           } catch (error) {
             log.error(
               { err: error, presetId: input.id, action: "replace-logo" },

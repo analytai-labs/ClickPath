@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import { PLAN_CAPS, isSubscriptionEntitled, resolvePlan } from "@/lib/billing/plans";
+import { DEFAULT_TEMPLATE_PATH_PREFIX } from "@/lib/templates/page-url";
 import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
 import {
@@ -85,7 +86,8 @@ export async function addDomainToUserAccount(
       targetCustomHostname = existingCloudflareDomain;
     }
 
-    const wellConfigured = targetCustomHostname.status === "active" && targetCustomHostname.ssl.status === "active";
+    const wellConfigured =
+      targetCustomHostname.status === "active" && targetCustomHostname.ssl.status === "active";
     const verificationDetails = [];
 
     // Add ownership verification TXT record (if required)
@@ -102,7 +104,7 @@ export async function addDomainToUserAccount(
       for (const record of targetCustomHostname.ssl.validation_records) {
         // Prevent duplicate TXT records only if both name and value are exactly the same
         const exists = verificationDetails.find(
-          (v) => v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value
+          (v) => v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value,
         );
         if (!exists) {
           verificationDetails.push({
@@ -151,6 +153,67 @@ export async function getCustomDomainsForUser(ctx: WorkspaceTRPCContext) {
   return customDomains;
 }
 
+function domainWorkspaceWhere(workspace: WorkspaceTRPCContext["workspace"]) {
+  return workspace.type === "team"
+    ? { teamId: workspace.teamId }
+    : { userId: workspace.userId, teamId: null };
+}
+
+async function findWorkspaceDomain(ctx: WorkspaceTRPCContext, domainId: number) {
+  const domain = await ctx.prisma.customDomain.findFirst({
+    where: {
+      id: domainId,
+      ...domainWorkspaceWhere(ctx.workspace),
+    },
+  });
+
+  if (!domain?.domain) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Domain not found or you don't have permission to delete it",
+    });
+  }
+
+  return { ...domain, domain: domain.domain };
+}
+
+/**
+ * What deleting a domain takes with it, for the confirmation dialog: every short
+ * link on it (including the hidden ones behind QR codes and page link blocks,
+ * which go too), and the template pages whose URL is on it — those are kept but
+ * move back to the platform domain at /p/<slug>.
+ */
+export async function getDomainDeletionImpact(ctx: WorkspaceTRPCContext, domainId: number) {
+  const domain = await findWorkspaceDomain(ctx, domainId);
+  const workspaceWhere = domainWorkspaceWhere(ctx.workspace);
+  const onDomain = { domain: domain.domain, ...workspaceWhere };
+
+  const [links, qrCodeLinks, pageLinkBlocks, pages] = await Promise.all([
+    ctx.prisma.link.count({
+      // The flags are nullable, and `not: true` would skip NULL rows in SQL.
+      where: {
+        ...onDomain,
+        AND: [
+          { OR: [{ isQrCode: false }, { isQrCode: null }] },
+          { OR: [{ isBioLink: false }, { isBioLink: null }] },
+        ],
+      },
+    }),
+    ctx.prisma.link.count({ where: { ...onDomain, isQrCode: true } }),
+    ctx.prisma.link.count({ where: { ...onDomain, isBioLink: true } }),
+    ctx.prisma.templatePage.findMany({
+      where: {
+        ...workspaceWhere,
+        OR: [{ shareDomain: domain.domain }, { customDomain: domain.domain }],
+      },
+      select: { id: true, slug: true, title: true },
+      orderBy: { slug: "asc" },
+    }),
+  ]);
+
+  return { domain: domain.domain, links, qrCodeLinks, pageLinkBlocks, pages };
+}
+
 export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, domainId: number) {
   // Check permission for domain deletion (owners only in team workspaces)
   requirePermission(
@@ -159,31 +222,15 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
     "delete custom domains. Only team owners can manage domains",
   );
 
-  const workspaceWhere =
-    ctx.workspace.type === "team"
-      ? { teamId: ctx.workspace.teamId }
-      : { userId: ctx.workspace.userId, teamId: null };
-
-  const domain = await ctx.prisma.customDomain.findFirst({
-    where: {
-      id: domainId,
-      ...workspaceWhere,
-    },
-  });
-
-  if (!domain) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Domain not found or you don't have permission to delete it",
-    });
-  }
+  const workspaceWhere = domainWorkspaceWhere(ctx.workspace);
+  const domain = await findWorkspaceDomain(ctx, domainId);
 
   // Start a transaction to ensure all operations succeed or fail together
   return await ctx.prisma.$transaction(async (tx) => {
     // Delete all links associated with this domain
     const linksToDelete = await tx.link.findMany({
       where: {
-        domain: domain.domain!,
+        domain: domain.domain,
         ...workspaceWhere,
       },
       select: { id: true },
@@ -201,15 +248,28 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
     // delete all links
     await tx.link.deleteMany({
       where: {
-        domain: domain.domain!,
+        domain: domain.domain,
         ...workspaceWhere,
       },
+    });
+
+    // Pages whose URL was on this domain move back to the platform domain, so
+    // they stop showing (and encoding in new QR codes) a URL that no longer
+    // resolves. The prefix resets too: the platform only serves /p/<slug>.
+    const movedPages = await tx.templatePage.updateMany({
+      where: { ...workspaceWhere, shareDomain: domain.domain },
+      data: { shareDomain: null, customDomain: null, pathPrefix: DEFAULT_TEMPLATE_PATH_PREFIX },
+    });
+    // A root binding always sits on the share domain, but clear any stray one too.
+    await tx.templatePage.updateMany({
+      where: { ...workspaceWhere, customDomain: domain.domain },
+      data: { customDomain: null },
     });
 
     // Check if other workspaces are using this domain BEFORE deleting
     const otherWorkspacesUsingDomain = await tx.customDomain.findFirst({
       where: {
-        domain: domain.domain!,
+        domain: domain.domain,
         id: { not: domainId },
       },
     });
@@ -217,7 +277,7 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
     // If no other workspaces use this domain, delete from Cloudflare first
     if (!otherWorkspacesUsingDomain) {
       // First, lookup the domain to get its ID since Cloudflare uses IDs for deletion
-      const cfDomain = await getCustomHostnameFromCloudflare(domain.domain!);
+      const cfDomain = await getCustomHostnameFromCloudflare(domain.domain);
       if (cfDomain) {
         await deleteCustomHostnameFromCloudflare(cfDomain.id);
       }
@@ -228,7 +288,12 @@ export async function deleteDomainAndAssociatedLinks(ctx: WorkspaceTRPCContext, 
       where: { id: domainId },
     });
 
-    return { success: true, message: "Domain and associated links deleted successfully" };
+    return {
+      success: true,
+      message: "Domain and associated links deleted successfully",
+      deletedLinks: linkIds.length,
+      movedPages: movedPages.count,
+    };
   });
 }
 

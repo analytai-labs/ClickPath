@@ -6,24 +6,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   IconLoader2,
   IconLock,
-  IconX,
   IconQrcode,
-  IconSettings,
   IconRoute,
+  IconSettings,
+  IconX,
 } from "@tabler/icons-react";
 import { useTransitionRouter } from "next-view-transitions";
 import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
-import type { QRCodeGeneratorState } from "@/lib/qr-generator";
-import { QRAdvancedCustomization } from "../../../qrcodes/create/_components/qr-advanced-customization";
 import {
   Form,
   FormControl,
@@ -37,9 +33,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_PLATFORM_DOMAIN } from "@/lib/constants/domains";
 import { clientLogger } from "@/lib/logger/client";
+import { defaultGeneratorState, generateQRCode, renderQrInto } from "@/lib/qr-generator";
+import type { QRCodeGeneratorState } from "@/lib/qr-generator";
+import { cn } from "@/lib/utils";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
 import { updateLinkSchema } from "@/server/api/routers/link/link.input";
 import { api } from "@/trpc/react";
+import { QRAdvancedCustomization } from "../../../qrcodes/create/_components/qr-advanced-customization";
 
 import { LinkExpirationDatePicker } from "../../../_components/links/link-card/update-modal";
 import { PlanBadge, SectionToggle } from "../../../_components/section-toggle";
@@ -50,9 +50,9 @@ import { revalidateHomepage } from "../../../revalidate-homepage";
 import { LinkPreviewComponent } from "../../new/_components/link-preview";
 import { OgImageUploader } from "../../new/_components/og-image-uploader";
 
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 import type { CustomDomain } from "@prisma/client";
 import type { z } from "zod";
-import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 
 const log = clientLogger.child({ component: "edit-link-page" });
 
@@ -103,22 +103,22 @@ export default function EditLinkPage() {
   const [activeTab, setActiveTab] = useState<"settings" | "routing" | "qr">(
     activeTabParam === "qr" || activeTabParam === "routing" ? activeTabParam : "settings",
   );
-  
+
   const [qrState, setQrState] = useState<QRCodeGeneratorState>(defaultGeneratorState);
   const [qrCodeTitle, setQrCodeTitle] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   const { data: existingGeoRules } = api.geoRules.getByLinkId.useQuery(
     { linkId: linkId },
     { enabled: !isNaN(linkId) },
   );
-  
+
   const qrCodeSaveImageMutation = api.qrCode.saveImage.useMutation();
 
   const userSubscription = api.subscriptions.get.useQuery();
   const customDomainsQuery = api.customDomain.list.useQuery();
   const { data: userTags } = api.tag.list.useQuery();
-  
+
   const formUpdateMutation = api.link.update.useMutation({
     onSuccess: async () => {
       await revalidateHomepage();
@@ -132,45 +132,48 @@ export default function EditLinkPage() {
     },
   });
 
-  const getFormDefaults = useCallback((linkData: typeof link, geoRules?: typeof existingGeoRules) => {
-    if (!linkData) return { id: linkId, url: "", alias: "" };
-    
-    const metadata = linkData.metadata as LinkMetadata | undefined;
-    return {
-      id: linkData.id,
-      name: linkData.name ?? "",
-      url: linkData.url ?? "",
-      alias: linkData.alias ?? "",
-      note: linkData.note ?? undefined,
-      disableLinkAfterClicks: linkData.disableLinkAfterClicks ?? undefined,
-      disableLinkAfterDate: linkData.disableLinkAfterDate ?? undefined,
-      tags: (linkData.tags as string[]) || [],
-      metadata: {
-        title: metadata?.title ?? undefined,
-        description: metadata?.description ?? undefined,
-        image: metadata?.image ?? undefined,
-      },
-      utmParams:
-        (linkData.utmParams as {
-          utm_source?: string;
-          utm_medium?: string;
-          utm_campaign?: string;
-          utm_term?: string;
-          utm_content?: string;
-        }) ?? undefined,
-      cloaking: linkData.cloaking ?? false,
-      verifiedClicksEnabled: linkData.verifiedClicksEnabled ?? false,
-      geoRules:
-        geoRules?.map((rule) => ({
-          type: rule.type,
-          condition: rule.condition,
-          values: rule.values as string[],
-          action: rule.action,
-          destination: rule.destination ?? undefined,
-          blockMessage: rule.blockMessage ?? undefined,
-        })) ?? [],
-    };
-  }, [linkId]);
+  const getFormDefaults = useCallback(
+    (linkData: typeof link, geoRules?: typeof existingGeoRules) => {
+      if (!linkData) return { id: linkId, url: "", alias: "" };
+
+      const metadata = linkData.metadata as LinkMetadata | undefined;
+      return {
+        id: linkData.id,
+        name: linkData.name ?? "",
+        url: linkData.url ?? "",
+        alias: linkData.alias ?? "",
+        note: linkData.note ?? undefined,
+        disableLinkAfterClicks: linkData.disableLinkAfterClicks ?? undefined,
+        disableLinkAfterDate: linkData.disableLinkAfterDate ?? undefined,
+        tags: (linkData.tags as string[]) || [],
+        metadata: {
+          title: metadata?.title ?? undefined,
+          description: metadata?.description ?? undefined,
+          image: metadata?.image ?? undefined,
+        },
+        utmParams:
+          (linkData.utmParams as {
+            utm_source?: string;
+            utm_medium?: string;
+            utm_campaign?: string;
+            utm_term?: string;
+            utm_content?: string;
+          }) ?? undefined,
+        cloaking: linkData.cloaking ?? false,
+        verifiedClicksEnabled: linkData.verifiedClicksEnabled ?? false,
+        geoRules:
+          geoRules?.map((rule) => ({
+            type: rule.type,
+            condition: rule.condition,
+            values: rule.values as string[],
+            action: rule.action,
+            destination: rule.destination ?? undefined,
+            blockMessage: rule.blockMessage ?? undefined,
+          })) ?? [],
+      };
+    },
+    [linkId],
+  );
 
   const form = useForm<z.infer<typeof updateLinkSchema>>({
     resolver: zodResolver(updateLinkSchema),
@@ -182,15 +185,15 @@ export default function EditLinkPage() {
       form.reset(getFormDefaults(link, existingGeoRules));
       setDestinationURL(link.url || undefined);
       setTags((link.tags as string[]) || []);
-      
+
       const metadata = link.metadata as LinkMetadata | undefined;
-      setMetaData(prev => ({
+      setMetaData((prev) => ({
         ...prev,
         title: metadata?.title ?? "",
         description: metadata?.description ?? "",
         image: metadata?.image ?? "",
       }));
-      
+
       setQrCodeTitle(link.qrCode?.title ?? "");
       const base = defaultGeneratorState();
       if (link.qrCode) {
@@ -200,8 +203,10 @@ export default function EditLinkPage() {
         if (link.qrCode.lightColor) base.lightColor = link.qrCode.lightColor;
         if (link.qrCode.logoImage) base.logoImage = link.qrCode.logoImage;
         if (link.qrCode.effect) base.effect = link.qrCode.effect as any;
-        if (link.qrCode.marginNoise !== undefined && link.qrCode.marginNoise !== null) base.marginNoise = link.qrCode.marginNoise;
-        if (link.qrCode.markerInnerShape) base.markerInnerShape = link.qrCode.markerInnerShape as any;
+        if (link.qrCode.marginNoise !== undefined && link.qrCode.marginNoise !== null)
+          base.marginNoise = link.qrCode.marginNoise;
+        if (link.qrCode.markerInnerShape)
+          base.markerInnerShape = link.qrCode.markerInnerShape as any;
       }
       setQrState(base);
     }
@@ -244,25 +249,29 @@ export default function EditLinkPage() {
         .map((tag) => tag.name)
     : [];
 
+  const trackingShortUrl = useMemo(() => {
+    if (!link?.alias) return "";
+    return shortLinkUrl(link.domain, link.alias);
+  }, [link?.domain, link?.alias]);
+
   const [debouncedQrState] = useDebounce(qrState, 100);
   const regenerateQRCode = useCallback(async () => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !trackingShortUrl) return;
     try {
-      const dest = destinationURL || form.getValues("url") || (link?.alias ? shortLinkUrl(link.domain, link.alias) : "https://clickpath.analytai.in");
       await renderQrInto(canvasRef.current, {
         ...qrState,
-        text: dest,
+        text: trackingShortUrl,
       });
     } catch (err) {
       console.error("Failed to generate QR code preview:", err);
     }
-  }, [qrState, destinationURL, link]);
+  }, [qrState, trackingShortUrl]);
 
   useEffect(() => {
     if (activeTab === "qr") {
       void regenerateQRCode();
     }
-  }, [debouncedQrState, destinationURL, activeTab, regenerateQRCode]);
+  }, [debouncedQrState, trackingShortUrl, activeTab, regenerateQRCode]);
 
   const updateQrState = useCallback((updates: Partial<QRCodeGeneratorState>) => {
     setQrState((prev) => ({ ...prev, ...updates }));
@@ -292,7 +301,7 @@ export default function EditLinkPage() {
 
     const wasEnabled = link?.verifiedClicksEnabled ?? false;
     const isEnabled = values.verifiedClicksEnabled ?? false;
-    
+
     try {
       const updatedLink = await formUpdateMutation.mutateAsync(values);
       if (updatedLink && updatedLink.qrCode && canvasRef.current) {
@@ -300,7 +309,7 @@ export default function EditLinkPage() {
           const uploadCanvas = document.createElement("canvas");
           await generateQRCode(uploadCanvas, {
             ...qrState,
-            text: values.url || link?.url || (link?.alias ? shortLinkUrl(link.domain, link.alias) : ""),
+            text: trackingShortUrl,
             scale: 20,
             margin: 2,
           });
@@ -327,7 +336,7 @@ export default function EditLinkPage() {
           },
         );
       }
-      
+
       toast.success("Link updated successfully");
       router.push("/dashboard");
     } catch (err) {
@@ -444,7 +453,9 @@ export default function EditLinkPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
         <h2 className="text-xl font-semibold tracking-tight">Link not found</h2>
-        <p className="text-sm text-neutral-500">The link you are trying to edit does not exist or you do not have permission to view it.</p>
+        <p className="text-sm text-neutral-500">
+          The link you are trying to edit does not exist or you do not have permission to view it.
+        </p>
         <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
       </div>
     );
@@ -467,11 +478,11 @@ export default function EditLinkPage() {
           </Button>
         </div>
         <Form {...form}>
-          <form 
+          <form
             onSubmit={form.handleSubmit(onSubmit, (errors) => {
               toast.error("Please check the form for errors before saving.");
               log.error({ errors }, "Form validation failed in EditLinkPage");
-            })} 
+            })}
             className="mt-5 space-y-5"
           >
             <div className="space-y-4 rounded-lg border border-neutral-200 dark:border-border p-4">
@@ -1018,9 +1029,7 @@ export default function EditLinkPage() {
               className="mt-10 w-full bg-blue-600 text-[13px] hover:bg-blue-700"
               disabled={formUpdateMutation.isLoading || qrCodeSaveImageMutation.isLoading}
             >
-              {formUpdateMutation.isLoading
-                ? "Saving..."
-                : "Save Changes"}
+              {formUpdateMutation.isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </form>
         </Form>
@@ -1039,16 +1048,24 @@ export default function EditLinkPage() {
                 Live preview of your customized QR code
               </p>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-border bg-white dark:bg-card p-6 shadow-sm">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 dark:border-border bg-white dark:bg-card p-5 shadow-sm">
               <div className="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm">
                 <canvas ref={canvasRef} className="max-w-[240px] max-h-[240px] w-full h-full" />
               </div>
-              <p className="mt-4 text-center text-xs text-neutral-400">
-                Scans to:{" "}
-                <span className="font-medium text-neutral-600 dark:text-neutral-300 break-all">
-                  {destinationURL || (link?.alias ? shortLinkUrl(link.domain, link.alias) : "https://clickpath.analytai.in")}
-                </span>
-              </p>
+              <div className="mt-4 w-full space-y-2 border-t border-neutral-100 dark:border-border/60 pt-3 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-neutral-400 shrink-0">QR Scans to:</span>
+                  <span className="font-mono font-medium text-blue-600 dark:text-blue-400 break-all text-right">
+                    {trackingShortUrl}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-neutral-400 shrink-0">Redirects to:</span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300 break-all text-right truncate max-w-[220px]">
+                    {destinationURL || form.getValues("url") || link?.url || "Destination URL"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         ) : (

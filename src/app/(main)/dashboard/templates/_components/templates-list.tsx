@@ -1,6 +1,12 @@
 "use client";
 
-import { IconExternalLink, IconLayoutList, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconCopy,
+  IconExternalLink,
+  IconLayoutList,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { Link } from "next-view-transitions";
 import { useRouter } from "next/navigation";
@@ -37,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 
 import { CreateTemplateDialog } from "./create-template-dialog";
+import { DuplicateTemplateDialog } from "./duplicate-template-dialog";
 
 import type { AnyTemplateDefinition } from "@/lib/templates/registry";
 import type { RouterOutputs } from "@/trpc/shared";
@@ -128,6 +135,7 @@ export function TemplatesList({ pages, templatePageLimit }: TemplatesListProps) 
               key={page.id}
               page={page}
               index={index}
+              canDuplicate={!atLimit}
               onDelete={() => deletePage.mutate({ id: page.id })}
             />
           ))}
@@ -146,12 +154,15 @@ export function TemplatesList({ pages, templatePageLimit }: TemplatesListProps) 
 function TemplateRow({
   page,
   index,
+  canDuplicate,
   onDelete,
 }: {
   page: TemplatePageRow;
   index: number;
+  canDuplicate: boolean;
   onDelete: () => void;
 }) {
+  const [duplicating, setDuplicating] = useState(false);
   const definition = getTemplateDefinition(page.templateType);
   const Icon = templateIconFor(page.templateType);
   // Show where the page actually lives; open it same-origin, since a customer
@@ -207,6 +218,19 @@ function TemplateRow({
             <IconExternalLink size={16} stroke={1.5} />
           </a>
         )}
+        <button
+          type="button"
+          onClick={() => setDuplicating(true)}
+          disabled={!canDuplicate}
+          aria-label="Duplicate page"
+          title={
+            canDuplicate ? "Duplicate page" : "You've reached your plan's template page limit."
+          }
+          className="rounded-md p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-muted"
+        >
+          <IconCopy size={16} stroke={1.5} />
+        </button>
+        <DuplicateTemplateDialog source={page} open={duplicating} onOpenChange={setDuplicating} />
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <button

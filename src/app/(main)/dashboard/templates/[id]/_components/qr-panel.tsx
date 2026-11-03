@@ -1,12 +1,18 @@
 "use client";
 
-import { IconDownload, IconRefresh } from "@tabler/icons-react";
+import { IconChevronDown, IconDownload, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { QrPreviewCanvas } from "@/components/qr/qr-preview-canvas";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -15,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { generateQRCode } from "@/lib/qr-generator";
+import { DOWNLOAD_FORMATS, type DownloadFormat, downloadCanvas } from "@/lib/qr-generator/export";
 import { templatePageUrl } from "@/lib/templates/page-url";
 import {
   DEFAULT_TEMPLATE_QR_DESIGN,
@@ -79,22 +86,23 @@ export function useQrDesign(page: TemplatePageData, onSaved: () => void) {
     [debouncedDesign, url],
   );
 
-  const download = useCallback(async () => {
-    try {
-      const canvas = document.createElement("canvas");
-      await generateQRCode(canvas, {
-        ...qrDesignToGeneratorState(design, url),
-        scale: EXPORT_SCALE,
-      });
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png", 1.0);
-      link.download = `${page.slug}-qr.png`;
-      link.click();
-    } catch (err) {
-      console.error("Failed to export QR code:", err);
-      toast.error("Could not generate the QR image. Please try again.");
-    }
-  }, [design, page.slug, url]);
+  const download = useCallback(
+    async (format: DownloadFormat) => {
+      try {
+        const canvas = document.createElement("canvas");
+        await generateQRCode(canvas, {
+          ...qrDesignToGeneratorState(design, url),
+          scale: EXPORT_SCALE,
+        });
+
+        await downloadCanvas(canvas, `${page.slug}-qr`, format);
+      } catch (err) {
+        console.error("Failed to export QR code:", err);
+        toast.error("Could not generate the QR image. Please try again.");
+      }
+    },
+    [design, page.slug, url],
+  );
 
   return {
     design,
@@ -123,9 +131,21 @@ export function QrPreviewRail({ state }: { state: QrPanelState }) {
         </p>
       </div>
       <div className="flex justify-center">
-        <Button variant="outline" size="sm" onClick={state.download} className="gap-1.5">
-          <IconDownload size={15} stroke={1.5} /> Download PNG
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <IconDownload size={15} stroke={1.5} /> Download{" "}
+              <IconChevronDown size={14} stroke={1.5} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {DOWNLOAD_FORMATS.map(({ format, label }) => (
+              <DropdownMenuItem key={format} onClick={() => state.download(format)}>
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import {
   setInCache,
 } from "@/lib/core/cache";
 import { generateShortLink } from "@/lib/core/links";
+import { shortLinkDisplay, shortLinkUrl } from "@/lib/links/short-link";
 import { logger } from "@/lib/logger";
 import { runBackgroundTask } from "@/lib/utils/background";
 import { fetchMetadataInfo } from "@/lib/utils/fetch-link-metadata";
@@ -54,7 +55,6 @@ import {
   validateAlias,
 } from "./utils";
 
-import { shortLinkDisplay } from "@/lib/links/short-link";
 import type { Link } from "@prisma/client";
 import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
@@ -450,7 +450,7 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
           title: qrCode.title || name || "Untitled QR Code",
           color: qrCode.selectedColor || "#000000",
           lightColor: qrCode.lightColor || "#ffffff",
-          content: input.url,
+          content: shortLinkUrl(domain, alias),
           cornerStyle: (qrCode.cornerStyle || "rounded") as any,
           patternStyle: (qrCode.patternStyle || "rounded") as any,
           logoImage: qrCode.logoImage ?? null,
@@ -499,7 +499,13 @@ export const createLink = async (ctx: WorkspaceTRPCContext, input: CreateLinkInp
     return { linkId, qrCodeId };
   });
 
-  const result = { insertId: linkId, qrCodeId };
+  const result = {
+    insertId: linkId,
+    qrCodeId,
+    alias,
+    domain,
+    shortUrl: shortLinkUrl(domain, alias),
+  };
   if (tagNames.length > 0) {
     await associateTagsWithLink(ctx, linkId, tagNames);
   }
@@ -660,6 +666,9 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
     data: linkData as any,
   });
 
+  const finalDomain = input.domain?.trim() || existingLink.domain;
+  const finalAlias = existingLink.alias ?? "";
+
   let qrCodeId: number | undefined;
   if (qrCode) {
     const existingQr = await prisma.qrCode.findFirst({
@@ -670,6 +679,7 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
         where: { id: existingQr.id },
         data: {
           title: qrCode.title || existingLink.name || "Untitled QR Code",
+          content: shortLinkUrl(finalDomain, finalAlias),
           color: qrCode.selectedColor || existingQr.color,
           lightColor: qrCode.lightColor || existingQr.lightColor || "#ffffff",
           cornerStyle: (qrCode.cornerStyle || existingQr.cornerStyle) as any,
@@ -690,7 +700,7 @@ export const updateLink = async (ctx: WorkspaceTRPCContext, input: UpdateLinkInp
           title: qrCode.title || existingLink.name || "Untitled QR Code",
           color: qrCode.selectedColor || "#000000",
           lightColor: qrCode.lightColor || "#ffffff",
-          content: existingLink.url || "https://clickpath.analytai.in",
+          content: shortLinkUrl(finalDomain, finalAlias),
           cornerStyle: (qrCode.cornerStyle || "rounded") as any,
           patternStyle: (qrCode.patternStyle || "rounded") as any,
           logoImage: qrCode.logoImage ?? null,
@@ -814,7 +824,7 @@ export const deleteLink = async (ctx: WorkspaceTRPCContext, input: GetLinkInput)
   const metadata = linkToDelete.metadata as { image?: string } | null;
   if (metadata?.image) {
     try {
-      await releaseImage(ctx, metadata.image);
+      await releaseImage(ctx, metadata.image, { except: [{ kind: "link", id: input.id }] });
     } catch (error) {
       log.error({ err: error, linkId: input.id }, "failed to release OG image");
     }
@@ -875,11 +885,13 @@ export const bulkDeleteLinks = async (ctx: WorkspaceTRPCContext, linkIds: number
   const validLinkIds = linksToDelete.map((l) => l.id);
 
   // Release OG images before removing links; library assets are left alone.
+  const batchRefs = validLinkIds.map((id) => ({ kind: "link" as const, id }));
   for (const l of linksToDelete) {
     const metadata = l.metadata as { image?: string } | null;
     if (metadata?.image) {
       try {
-        await releaseImage(ctx, metadata.image);
+        // Every link in the batch is going, so none of them keeps the image.
+        await releaseImage(ctx, metadata.image, { except: batchRefs });
       } catch (error) {
         log.error({ err: error, linkId: l.id }, "failed to release OG image for link");
       }
@@ -1644,7 +1656,10 @@ export const checkAliasAvailability = async (
   input: { alias: string; domain: string },
 ) => {
   const existingLink = await prisma.link.findFirst({
-    where: { alias: input.alias, domain: input.domain },
+    where: {
+      alias: { equals: input.alias.trim(), mode: "insensitive" },
+      domain: input.domain.trim(),
+    },
   });
 
   return { isAvailable: !existingLink };

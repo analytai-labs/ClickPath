@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ANALYTICS_RANGES } from "@/lib/core/analytics/range";
+import { TEMPLATE_PATH_PREFIXES } from "@/lib/templates/page-url";
 import { templateQrDesignSchema } from "@/lib/templates/qr-design";
 import { TEMPLATE_TYPE_IDS } from "@/lib/templates/registry";
 
@@ -42,6 +43,9 @@ export const templateSlugSchema = z
 
 export const templateTypeSchema = z.enum(TEMPLATE_TYPE_IDS);
 
+/** First path segment of the page URL on a custom domain — see page-url.ts. */
+export const templatePathPrefixSchema = z.enum(TEMPLATE_PATH_PREFIXES);
+
 export const createTemplatePageSchema = z.object({
   slug: templateSlugSchema,
   title: z.string().max(255).optional(),
@@ -67,8 +71,10 @@ export const updateTemplatePageSchema = z.object({
   seoDescription: z.string().max(500).nullish(),
   /** Verified workspace domain the public URL is built from. Null = platform domain. */
   shareDomain: z.string().max(255).nullish(),
-  /** Optional root binding on the same domain. Null = only /p/<slug>. */
+  /** Optional root binding on the same domain. Null = only /<pathPrefix>/<slug>. */
   customDomain: z.string().max(255).nullish(),
+  /** URL path prefix on the share domain; anything but `p` needs a custom share domain. */
+  pathPrefix: templatePathPrefixSchema.optional(),
   removeBranding: z.boolean().optional(),
 });
 
@@ -102,6 +108,20 @@ export const publicDomainSchema = z.object({ domain: z.string() });
 export const publicSlugForHostSchema = z.object({
   slug: z.string(),
   host: z.string().max(255),
+  prefix: templatePathPrefixSchema.default("p"),
+});
+
+/**
+ * Copy a page into the same workspace under a new slug. Content, theme, SEO and
+ * QR design are copied; the root-domain binding and analytics are not, and the
+ * copy starts unpublished.
+ */
+export const duplicateTemplatePageSchema = z.object({
+  id: z.number(),
+  slug: templateSlugSchema,
+  /** Null/omitted = the platform domain. */
+  shareDomain: z.string().max(255).nullish(),
+  pathPrefix: templatePathPrefixSchema.optional(),
 });
 
 export const templatePageAnalyticsSchema = z.object({
@@ -140,6 +160,7 @@ export const reorderBlocksSchema = z.object({
 
 export type CreateTemplatePageInput = z.infer<typeof createTemplatePageSchema>;
 export type UpdateTemplatePageInput = z.infer<typeof updateTemplatePageSchema>;
+export type DuplicateTemplatePageInput = z.infer<typeof duplicateTemplatePageSchema>;
 export type UpdateTemplateDataInput = z.infer<typeof updateTemplateDataSchema>;
 export type UpdateQrDesignInput = z.infer<typeof updateQrDesignSchema>;
 export type AddBioBlockInput = z.infer<typeof addBioBlockSchema>;

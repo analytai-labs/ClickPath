@@ -44,6 +44,13 @@ export const customDomainRouter = createTRPCRouter({
     return services.getCustomDomainsForUser(ctx);
   }),
 
+  /** Counts shown in the delete confirmation: links that go, pages that move. */
+  deletionImpact: workspaceProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      return services.getDomainDeletionImpact(ctx, input.id);
+    }),
+
   delete: workspaceProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -70,10 +77,10 @@ export const customDomainRouter = createTRPCRouter({
       }
 
       const isVerified = cfDomain.status === "active" && cfDomain.ssl.status === "active";
-      let status: "pending" | "active" | "invalid" = isVerified ? "active" : "pending";
-      
+      const status: "pending" | "active" | "invalid" = isVerified ? "active" : "pending";
+
       const challenges = [];
-      
+
       // If not fully active, provide verification details
       if (!isVerified) {
         if (cfDomain.ownership_verification) {
@@ -83,11 +90,12 @@ export const customDomainRouter = createTRPCRouter({
             value: cfDomain.ownership_verification.value,
           });
         }
-        
+
         if (cfDomain.ssl?.validation_records) {
           for (const record of cfDomain.ssl.validation_records) {
             const exists = challenges.find(
-              (v) => v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value
+              (v) =>
+                v.type === "TXT" && v.domain === record.txt_name && v.value === record.txt_value,
             );
             if (!exists) {
               challenges.push({
@@ -98,7 +106,7 @@ export const customDomainRouter = createTRPCRouter({
             }
           }
         }
-        
+
         challenges.push({
           type: "CNAME",
           domain: domain,
@@ -106,10 +114,7 @@ export const customDomainRouter = createTRPCRouter({
         });
       }
 
-      log.debug(
-        { domain, status, challengeCount: challenges.length },
-        "domain status resolved",
-      );
+      log.debug({ domain, status, challengeCount: challenges.length }, "domain status resolved");
 
       await ctx.prisma.customDomain.updateMany({
         where: {

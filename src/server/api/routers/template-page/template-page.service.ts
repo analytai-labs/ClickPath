@@ -24,9 +24,14 @@ import {
 } from "@/server/lib/tracking-link";
 import { requirePermission, workspaceOwnership } from "@/server/lib/workspace";
 
-import { isUsableShareDomain } from "@/lib/templates/page-url";
+import {
+  DEFAULT_TEMPLATE_PATH_PREFIX,
+  isPathPrefixAllowed,
+  isUsableShareDomain,
+  templatePagePathPrefix,
+} from "@/lib/templates/page-url";
 
-import { assertDomainAllowed, resolveDefaultDomain } from "../link/utils";
+import { assertDomainAllowed, checkWorkspaceLinkLimit, resolveDefaultDomain } from "../link/utils";
 import { collectManagedImageUrls, materializeDataImages } from "./template-data-images";
 import {
   assertSlugAllowed,
@@ -43,6 +48,7 @@ import type { PublicTRPCContext, WorkspaceTRPCContext } from "../../trpc";
 import type {
   AddBioBlockInput,
   CreateTemplatePageInput,
+  DuplicateTemplatePageInput,
   ReorderBlocksInput,
   TemplateThemeInput,
   UpdateBioBlockInput,
@@ -69,6 +75,11 @@ function forbidden(message: string): TRPCError {
   return new TRPCError({ code: "FORBIDDEN", message });
 }
 
+/**
+ * Revalidate the platform route, which serves every page at /p/<slug> whatever
+ * its own prefix. The custom-domain routes (/p-host/<host>/<prefix>/<slug>) are
+ * force-dynamic, so there is nothing cached there to revalidate.
+ */
 function revalidateTemplatePath(slug: string): void {
   try {
     revalidatePath(`/p/${slug}`);
@@ -140,6 +151,19 @@ function normalizeHost(host: string): string {
     .split(":")[0]!;
 }
 
+/**
+ * A path prefix other than the default needs a custom share domain: the
+ * platform domain only ever serves /p/<slug>.
+ */
+function assertPathPrefixAllowed(prefix: string, shareDomain: string | null): void {
+  if (!isPathPrefixAllowed(prefix, shareDomain)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `The /${prefix} path is only available on a custom domain. Choose a custom domain first.`,
+    });
+  }
+}
+
 function assertContentModel(definition: AnyTemplateDefinition, model: "blocks" | "data"): void {
   if (definition.contentModel !== model) {
     throw new TRPCError({
@@ -159,8 +183,13 @@ async function resolveImageUpdate(
   next: string | null | undefined,
   previous: string | null,
 ): Promise<{ value: string | null; previousToDelete: string | null }> {
+  // A fresh key per upload, not one per page: a duplicated page shares its
+  // source's image URLs, so overwriting `<page>.png` in place would silently
+  // change the copy too. The old object is released (and kept while anything
+  // still uses it) by the caller.
+  const uploadId = `${resourceId}-${Date.now().toString(36)}`;
   const value = next
-    ? ((await uploadImage(ctx, { image: next, resourceId, imageType })) ?? next)
+    ? ((await uploadImage(ctx, { image: next, resourceId: uploadId, imageType })) ?? next)
     : null;
   return { value, previousToDelete: previous && previous !== value ? previous : null };
 }
@@ -287,6 +316,7 @@ export async function listTemplatePages(ctx: WorkspaceTRPCContext) {
       templateData: true,
       shareDomain: true,
       customDomain: true,
+      pathPrefix: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -402,6 +432,125 @@ export async function createTemplatePage(
   }
 }
 
+/**
+ * Copy a page into the same workspace under a new slug.
+ *
+ * Copies content, theme, SEO, branding and QR design, and every block in order.
+ * Link blocks get their own hidden tracking link — sharing the source's would
+ * merge the two pages' click counts, and deleting either page deletes its
+ * blocks' links. Not copied: the root-domain binding (`customDomain` is unique)
+ * and analytics. The copy starts unpublished. Images are shared by URL; the
+ * asset registry keeps an image while any page still references it.
+ */
+export async function duplicateTemplatePage(
+  ctx: WorkspaceTRPCContext,
+  input: DuplicateTemplatePageInput,
+) {
+  const source = await fetchTemplatePageForWorkspace(ctx, input.id);
+  requirePermission(ctx.workspace, "bio.create", "create template pages");
+  assertSlugAllowed(input.slug);
+  await checkTemplatePageLimit(ctx);
+
+  const shareDomain = await resolveCustomerDomain(ctx, input.shareDomain ?? null);
+  const pathPrefix = input.pathPrefix ?? DEFAULT_TEMPLATE_PATH_PREFIX;
+  assertPathPrefixAllowed(pathPrefix, shareDomain);
+
+  const definition = getTemplateDefinition(source.templateType);
+  const blocks =
+    definition.contentModel === "blocks"
+      ? await ctx.prisma.bioBlock.findMany({
+          where: { templatePageId: source.id },
+          orderBy: [{ position: "asc" }, { id: "asc" }],
+        })
+      : [];
+
+  // The copy is held to the plan as it is now, like `update` and `addBlock`:
+  // a workspace that downgraded cannot mint new pages with paid-only settings.
+  if (source.removeBranding && !canRemoveBioBranding(ctx.workspace.plan)) {
+    throw forbidden("Removing ClickPath branding is available on Pro and Ultra plans.");
+  }
+  const theme = normalizeTheme(ctx, definition, source.theme as TemplatePageTheme | null);
+  for (const block of blocks) {
+    assertSchedulingAllowed(ctx, block.scheduledAt, block.scheduledUntil);
+  }
+
+  // Prepare every tracking link before the transaction (it validates URLs and
+  // domains), and check the link quota once for all of them — only when the
+  // copy creates links at all, since create itself has no link quota.
+  const linkBlocks = blocks.filter((b) => b.type === "link" && b.url);
+  if (linkBlocks.length > 0) {
+    const { currentCount, limit } = await checkWorkspaceLinkLimit(ctx);
+    if (limit !== undefined && currentCount + linkBlocks.length > limit) {
+      throw forbidden(
+        `This page has ${linkBlocks.length} link blocks, which would exceed your monthly link limit.`,
+      );
+    }
+  }
+  const preparedLinks = new Map<number, Awaited<ReturnType<typeof prepareHiddenTrackingLink>>>();
+  for (const [i, block] of linkBlocks.entries()) {
+    const prepared = await prepareHiddenTrackingLink(ctx, {
+      url: block.url!,
+      name: block.title || source.title || "Bio link",
+      kind: "bio",
+    });
+    // Each insert writes `currentCount + 1`; offset them so N links count as N.
+    preparedLinks.set(block.id, { ...prepared, currentCount: prepared.currentCount + i });
+  }
+
+  const ownership = workspaceOwnership(ctx.workspace);
+  try {
+    const page = await ctx.prisma.$transaction(async (tx) => {
+      const created = await tx.templatePage.create({
+        data: {
+          slug: input.slug,
+          userId: ownership.userId,
+          teamId: ownership.teamId,
+          createdByUserId: ctx.auth.userId,
+          title: source.title,
+          description: source.description,
+          avatarUrl: source.avatarUrl,
+          theme,
+          socialImageUrl: source.socialImageUrl,
+          seoTitle: source.seoTitle,
+          seoDescription: source.seoDescription,
+          removeBranding: source.removeBranding,
+          templateType: source.templateType,
+          templateData: source.templateData ?? undefined,
+          qrDesign: source.qrDesign ?? undefined,
+          shareDomain,
+          pathPrefix,
+          customDomain: null,
+          isPublished: false,
+        },
+      });
+
+      for (const [position, block] of blocks.entries()) {
+        const prepared = preparedLinks.get(block.id);
+        const linkId = prepared ? await insertHiddenTrackingLink(tx, ctx, prepared) : null;
+        await tx.bioBlock.create({
+          data: {
+            templatePageId: created.id,
+            type: block.type,
+            title: block.title,
+            content: block.content,
+            url: block.url,
+            linkId,
+            isVisible: block.isVisible,
+            position,
+            scheduledAt: block.scheduledAt,
+            scheduledUntil: block.scheduledUntil,
+          },
+        });
+      }
+
+      return created;
+    });
+    return { id: page.id, slug: page.slug, templateType: definition.id };
+  } catch (error) {
+    rethrowTemplateDuplicate(error);
+  }
+}
+
 export async function updateTemplatePage(
   ctx: WorkspaceTRPCContext,
   input: UpdateTemplatePageInput,
@@ -447,6 +596,20 @@ export async function updateTemplatePage(
     // Share domain changed (or cleared) while a root binding existed — move the
     // binding with it so the two can never drift apart.
     updates.customDomain = updates.shareDomain;
+  }
+
+  if (input.pathPrefix !== undefined || updates.shareDomain !== undefined) {
+    const shareDomain = (
+      updates.shareDomain !== undefined ? updates.shareDomain : page.shareDomain
+    ) as string | null;
+    if (input.pathPrefix !== undefined) {
+      assertPathPrefixAllowed(input.pathPrefix, shareDomain);
+      updates.pathPrefix = input.pathPrefix;
+    } else if (!isPathPrefixAllowed(page.pathPrefix, shareDomain)) {
+      // Moved back to the platform domain without naming a prefix: fall back to
+      // /p rather than keep a prefix the platform does not serve.
+      updates.pathPrefix = DEFAULT_TEMPLATE_PATH_PREFIX;
+    }
   }
 
   const imagesToDelete: string[] = [];
@@ -796,6 +959,8 @@ export type PublicTemplatePage = {
   socialImageUrl: string | null;
   shareDomain: string | null;
   customDomain: string | null;
+  /** The prefix the page is served at on a custom domain (always `p` without one). */
+  pathPrefix: string;
   ownerId: string;
   templateType: TemplateTypeId;
   templateData: unknown;
@@ -873,6 +1038,7 @@ async function assemblePublicTemplatePage(
     socialImageUrl: page.socialImageUrl,
     shareDomain: page.shareDomain,
     customDomain: page.customDomain,
+    pathPrefix: templatePagePathPrefix(page),
     ownerId: page.userId,
     templateType: definition.id,
     templateData: page.templateData ?? definition.defaultData,
@@ -892,25 +1058,29 @@ export async function getPublicTemplatePageBySlug(
 }
 
 /**
- * A page requested from a customer domain at /p/<slug>.
+ * A page requested from a customer domain at /<prefix>/<slug>.
  *
  * The host must be a verified domain of the workspace that owns the page — not
  * merely the page's own `shareDomain`. That deliberate looseness is what makes
  * the platform domain disposable: point any verified domain at this app and
  * every page in that workspace keeps resolving, printed QR codes included.
+ *
+ * The prefix, on the other hand, must be the page's own, so a page has one URL
+ * per domain: a `productdetails` page is not found at /p/<slug> and vice versa.
  */
 export async function getPublicTemplatePageBySlugForHost(
   ctx: PublicTRPCContext,
   slug: string,
   host: string,
+  prefix: string = DEFAULT_TEMPLATE_PATH_PREFIX,
 ): Promise<PublicTemplatePage | null> {
   const normalized = normalizeHost(host);
   if (!normalized) return null;
 
   const page = await ctx.prisma.templatePage.findFirst({
-    where: { slug, isPublished: true },
+    where: { slug: slug.trim().toLowerCase(), isPublished: true },
   });
-  if (!page) return null;
+  if (!page || templatePagePathPrefix(page) !== prefix) return null;
 
   // The platform's own hosts always serve every page.
   if (!isPlatformDomain(normalized)) {
